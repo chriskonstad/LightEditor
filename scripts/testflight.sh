@@ -4,6 +4,7 @@
 #   scripts/testflight.sh                  archive, upload, and send to the external
 #                                          "Friends" group (waits for processing)
 #   scripts/testflight.sh --internal-only  archive and upload for internal testers only
+#                                          (marked TestFlight-internal, so it can't go to the App Store)
 #   scripts/testflight.sh --no-upload      archive and export an .ipa only
 #
 # Internal testers ("Me") get every build automatically. The external group needs

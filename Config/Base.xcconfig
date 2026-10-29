@@ -1,0 +1,10 @@
+// Shared settings for the LightEditor target.
+// Signing is per developer: copy Config/Signing.local.xcconfig.example to
+// Config/Signing.local.xcconfig (git-ignored) and set your team ID to build for
+// devices and TestFlight. Builds for the Mac and the Simulator need neither.
+
+// The published app's bundle ID. Set your own in Signing.local.xcconfig: Apple only
+// lets the team that registered an ID sign it.
+PRODUCT_BUNDLE_IDENTIFIER = com.chriskonstad.lighteditor
+
+#include? "Signing.local.xcconfig"

@@ -1,0 +1,7 @@
+// Copy to Config/Signing.local.xcconfig (git-ignored) to build for your own devices.
+
+// Your team ID, from developer.apple.com › Membership details.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// A bundle ID your team can register, e.g. com.<you>.lighteditor.
+PRODUCT_BUNDLE_IDENTIFIER = com.example.lighteditor

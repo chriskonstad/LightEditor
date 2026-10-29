@@ -2,14 +2,12 @@
 
 A free, open-source RAW photo editor for iPhone, iPad and Mac, built for quick, color-focused edits while traveling. Apple Photos is the library: your originals stay untouched, edits are saved non-destructively, and iCloud Photos syncs them. Everything runs on your device. There are no accounts, servers, ads or analytics, and it will always be free of subscriptions.
 
-It's on the App Store for iPhone and iPad; the Mac version is coming.
+Coming to the App Store for iPhone and iPad, with the Mac version to follow.
 
-<!-- Screenshots: add docs/images/iphone.png, ipad.png and mac.png (see docs/app-store/screenshots.md), then uncomment.
 <p align="center">
-  <img src="docs/images/iphone.png" width="24%" alt="Editing a RAW photo on iPhone">
-  <img src="docs/images/ipad.png" width="48%" alt="The iPad editor with the library filmstrip">
+  <img src="docs/images/iphone.jpg" width="24%" alt="Editing a RAW sunset on iPhone">
+  <img src="docs/images/ipad.jpg" width="72%" alt="The iPad editor with the filmstrip and Light panel">
 </p>
--->
 
 ## Features
 

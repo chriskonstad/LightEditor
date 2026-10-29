@@ -46,3 +46,12 @@ Notes:
 ## App preview video (optional)
 
 A 15–30 s screen recording per platform: drag exposure and a color wheel, tap an AI sky mask, paint a removal. `xcrun simctl io <udid> recordVideo preview.mov`. Skip for the first release unless you want it.
+
+## Captured for 1.0 (2026-10-28)
+
+From an iPhone 18 Pro Max simulator (1320 × 2868) and an iPad Pro 13-inch (M5) simulator in landscape (2752 × 2064), both running a folder library of the test fixtures (`-FixtureLibrary`). Saved in `build/screenshots/` (git-ignored); README images are in `docs/images/`.
+
+- iPhone: Light (Auto), Grade wheels, Color/HSL mixer, mask picker, presets, Settings.
+- iPad: Light, Grade, mask picker, presets.
+
+Not capturable in the Simulator: AI masks (Vision segmentation fails there) and a clean removal (LaMa fills look smeared on the Simulator's CPU path). Add those from a real device in a later update.

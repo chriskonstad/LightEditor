@@ -41,9 +41,15 @@ public enum BulkEditor {
         public var total: Int
         /// True while the looks are computed, before full renders start.
         public var preparing: Bool = false
+        /// The photo being rendered at full size (1-based), once full renders start.
+        public var rendering: Int?
 
         public var remaining: Int { total - completed }
-        public var summary: String { preparing ? "Preparing · \(total) photos" : "\(remaining) left · \(completed) of \(total) saved" }
+        public var summary: String {
+            if preparing { return "Preparing · \(total) photos" }
+            if let rendering { return "Rendering \(rendering) of \(total) · \(completed) done" }
+            return "\(remaining) left · \(completed) of \(total) saved"
+        }
     }
 
     @discardableResult
@@ -98,7 +104,15 @@ public enum BulkEditor {
         var saved = 0
         for (index, (session, recipe)) in prepared.enumerated() {
             try Task.checkCancellation()
-            let data = try await Exporter.render(source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: format))
+            // A full-size render takes seconds, so progress moves within each photo too;
+            // a bar that sits still looks frozen, and iOS may end a background task that
+            // seems stalled.
+            let start = 0.25 + Double(index) / Double(total) * 0.75
+            let span = 0.75 / Double(total)
+            progress(Progress(fraction: start, completed: index, total: total, rendering: index + 1))
+            let data = try await Exporter.render(source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: format), progress: { fraction in
+                progress(Progress(fraction: start + fraction * span, completed: index, total: total, rendering: index + 1))
+            })
             pending.append(PendingEdit(session: session, recipe: recipe, rendered: data, format: format))
             if pending.count == batchSize || index == prepared.count - 1 {
                 try await library.saveBatch(pending)

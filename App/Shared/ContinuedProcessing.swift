@@ -41,11 +41,13 @@ enum ContinuedProcessing {
             // The job is already running in the foreground; a task that can't start now is no use later.
             request.strategy = .fail
             // Renders and AI run on the GPU, which needs background GPU access once the app leaves the screen.
-            if BGTaskScheduler.supportedResources.contains(.gpu) {
+            let gpu = BGTaskScheduler.supportedResources.contains(.gpu)
+            if gpu {
                 request.requiredResources = .gpu
             }
             do {
                 try await BGTaskScheduler.shared.submitTaskRequest(request)
+                log.notice("Continued processing accepted for \(title, privacy: .public) (background GPU: \(gpu))")
             } catch {
                 log.error("Continued processing for \(title, privacy: .public) wasn't accepted: \(error.localizedDescription, privacy: .public)")
             }
@@ -67,6 +69,7 @@ enum ContinuedProcessing {
             task.progress.completedUnitCount = Int64((job.progress ?? 0) * Double(units))
             task.updateTitle(job.label, subtitle: job.detail ?? "")
             guard !job.isActive else { return }
+            log.notice("Continued processing ended for \(job.label, privacy: .public): \(String(describing: job.state), privacy: .public)")
             job.onChange = nil
             task.setTaskCompleted(success: job.state == .finished)
         }

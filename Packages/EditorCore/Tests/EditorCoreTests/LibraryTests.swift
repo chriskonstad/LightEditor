@@ -1,5 +1,6 @@
 import CoreImage
 import Foundation
+import Synchronization
 import Testing
 @testable import EditorCore
 
@@ -45,7 +46,29 @@ func makeFolderLibrary(count: Int) throws -> (FolderLibrary, URL) {
         }
     }
 
-    @Test func adjustModeStacksOnExistingEdits() async throws {
+    @Test func reportsProgressWithinEachRender() async throws {
+        let (library, _) = try makeFolderLibrary(count: 3)
+        let assets = await library.assets(in: .recents)
+        let fractions = Mutex<[Double]>([])
+        let summaries = Mutex<[String]>([])
+        try await BulkEditor.apply(
+            .values([.exposure: 0.25], mode: .set),
+            to: (0..<assets.count).map { assets[$0] }, library: library, luts: nil, clock: testClock, format: .jpeg,
+            progress: { progress in
+                fractions.withLock { $0.append(progress.fraction) }
+                summaries.withLock { $0.append(progress.summary) }
+            },
+            thumbnail: { _, _ in }
+        )
+        let values = fractions.withLock { $0 }
+        #expect(zip(values, values.dropFirst()).allSatisfy { $0 <= $1 + 1e-9 }, "progress never goes backwards")
+        #expect(values.last.map { abs($0 - 1) < 1e-9 } == true)
+        // More than one update per photo during the full renders: the bar moves inside each render.
+        #expect(values.filter { $0 > 0.25 }.count > assets.count * 2)
+        #expect(summaries.withLock { $0 }.contains("Rendering 2 of 3 · 1 done"))
+    }
+
+        @Test func adjustModeStacksOnExistingEdits() async throws {
         let (library, _) = try makeFolderLibrary(count: 2)
         let assets = await library.assets(in: .recents)
         let first = try await library.beginEditing(assets[0]) { _ in }

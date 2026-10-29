@@ -26,8 +26,8 @@ Checked against the build settings in `project.yml` and the code as of October 2
 
 - [x] In-app licenses and the diffusion agreement.
 - [x] `MARKETING_VERSION` 1.0.
-- [ ] Repository public, so the privacy policy and support URLs resolve.
-- [ ] App Information, pricing (Free), App Privacy, age rating and the listing text in App Store Connect.
-- [ ] EU Digital Services Act trader status.
-- [ ] Screenshots per `screenshots.md`.
-- [ ] Upload a release build, attach it to the version, add the review notes, submit.
+- [x] Repository public, so the privacy policy and support URLs resolve.
+- [x] App Information, pricing (Free), App Privacy, age rating and the listing text in App Store Connect.
+- [x] EU Digital Services Act trader status (not a trader).
+- [x] Screenshots per `screenshots.md` (iPhone 6.9", iPad 13", iPhone Duo).
+- [x] Build 2610291034 (iOS 27.1 SDK) submitted for review on 2026-10-29. Upload with plain `scripts/testflight.sh`: `--internal-only` builds can't be attached to an App Store version.

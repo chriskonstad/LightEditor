@@ -354,17 +354,19 @@ struct WorkspaceEditorView: View {
     }
 
     private var viewBar: some View {
+        // Every control stays on screen: where the labels don't fit (iPhone Duo's inner
+        // screen sideways, narrow Split View), the buttons drop to icons instead of scrolling.
         ViewThatFits(in: .horizontal) {
-            viewBarContent
-            ScrollView(.horizontal, showsIndicators: false) { viewBarContent }
+            viewBarContent(compact: false)
+            viewBarContent(compact: true)
         }
         .font(.subheadline)
         .frame(height: 48)
         .background(Theme.panel)
     }
 
-    private var viewBarContent: some View {
-        HStack(spacing: 14) {
+    private func viewBarContent(compact: Bool) -> some View {
+        HStack(spacing: compact ? 10 : 14) {
             Picker("Zoom", selection: Binding(
                 get: {
                     switch model.zoom {
@@ -379,7 +381,7 @@ struct WorkspaceEditorView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 140)
+            .frame(width: compact ? 120 : 140)
             .accessibilityIdentifier("view.zoom")
             Text("\(Int((model.zoomScale(drawableSize: model.renderer.lastDrawableSize) * 100).rounded()))%")
                 .font(.caption.monospacedDigit())
@@ -389,11 +391,13 @@ struct WorkspaceEditorView: View {
             Toggle(isOn: $model.showClipping) { Label("Clipping", systemImage: "exclamationmark.triangle") }
                 .toggleStyle(.button)
                 .fixedSize()
+                .frame(minWidth: compact ? Theme.minTouch : nil)
                 .help("Show clipping")
                 .accessibilityIdentifier("view.clipping")
             Toggle(isOn: $model.splitView) { Label("Split", systemImage: "rectangle.split.2x1") }
                 .toggleStyle(.button)
                 .fixedSize()
+                .frame(minWidth: compact ? Theme.minTouch : nil)
                 .help("Split before/after")
                 .accessibilityIdentifier("view.split")
             Button("Crop", systemImage: "crop.rotate") {
@@ -401,19 +405,23 @@ struct WorkspaceEditorView: View {
                 model.isCropping = true
             }
             .fixedSize()
+            .frame(minWidth: compact ? Theme.minTouch : nil)
             .disabled(model.phase != .ready)
             Button("Retouch", systemImage: "bandage") { model.isRetouching = true }
                 .fixedSize()
+                .frame(minWidth: compact ? Theme.minTouch : nil)
                 .disabled(model.phase != .ready)
                 .accessibilityIdentifier("view.retouch")
-            Spacer()
+            Spacer(minLength: compact ? 4 : 8)
             Button("History · \(max(model.history.count - 1, 0))", systemImage: "clock.arrow.circlepath") { showHistory.toggle() }
                 .fixedSize()
+                .frame(minWidth: compact ? Theme.minTouch : nil)
                 .popover(isPresented: $showHistory) {
                     HistoryList(model: model).frame(width: 280, height: 380)
                 }
                 .accessibilityIdentifier("view.history")
         }
+        .iconOnlyLabels(compact)
         .padding(.horizontal)
     }
 
@@ -597,5 +605,12 @@ struct PreviewStatusIndicator: View {
             .accessibilityIdentifier("editor.previewStatus")
             .transition(.opacity)
         }
+    }
+}
+
+private extension View {
+    /// Icon-only labels when space is short; titles stay as accessibility labels.
+    @ViewBuilder func iconOnlyLabels(_ iconOnly: Bool) -> some View {
+        if iconOnly { labelStyle(.iconOnly) } else { self }
     }
 }

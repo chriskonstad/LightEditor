@@ -24,7 +24,7 @@ Coming to the App Store for iPhone and iPad, with the Mac version to follow.
 - **Remote editing:** your iPhone shares its library to your iPad over peer-to-peer Wi-Fi, encrypted end to end, with no router or internet needed.
 - **iPhone Duo:** unfolded, the inner screen gets the iPad layouts: photo and tools side by side when it's sideways, a big photo over a roomy panel when it's upright. Folded, it's the phone editor.
 - **Built for touch:** pull away from a slider for fine control, double-tap to reset, press and hold to compare. Before/after has a draggable split.
-- **A job tray** for every slow task, with progress and cancel.
+- **A job tray** for every slow task, with progress and cancel. On iPhone and iPad, bulk edits and imports keep going when you leave the app or lock the screen, with their progress in a Live Activity.
 
 Requires iOS, iPadOS or macOS 27, because RAW 9 decoding is new in OS 27.
 

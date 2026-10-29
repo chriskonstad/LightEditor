@@ -64,6 +64,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
         "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Resources/LightEditor-macOS.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": App/Resources/LightEditor-iOS.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]": App/Resources/LightEditor-iOS.entitlements
         ENABLE_HARDENED_RUNTIME: YES
         COREML_CODEGEN_LANGUAGE: None
         INFOPLIST_KEY_CFBundleDisplayName: LightEditor

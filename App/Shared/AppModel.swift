@@ -148,7 +148,7 @@ final class AppModel {
         }
         let library = self.library
         let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
-        jobs.run("Importing \(urls.count) files", photos: urls.count) { reporter in
+        jobs.run("Importing \(urls.count) files", photos: urls.count, started: Self.keepRunningInBackground) { reporter in
             defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
             let count = try await PhotoImporter.importFiles(urls, into: library) { reporter.progress($0) }
             await MainActor.run { [weak self] in self?.showToast("Imported \(count) photos") }
@@ -205,7 +205,7 @@ final class AppModel {
         if let remote = remoteLibrary {
             // The other device renders and saves; this one just shows progress.
             let luts = lutFiles(for: change)
-            jobs.run(label, detail: "On \(remote.displayName)", photos: assets.count) { [weak self] reporter in
+            jobs.run(label, detail: "On \(remote.displayName)", photos: assets.count, started: Self.keepRunningInBackground) { [weak self] reporter in
                 _ = try await remote.bulk(change, assets: assets, luts: luts) { fraction, detail in
                     reporter.progress(fraction, detail: detail)
                 }
@@ -217,7 +217,7 @@ final class AppModel {
         let luts = lutStore
         let clock = self.clock
         let total = assets.count
-        jobs.run(label, detail: "Preparing · \(total) photos", photos: total) { [weak self] reporter in
+        jobs.run(label, detail: "Preparing · \(total) photos", photos: total, started: Self.keepRunningInBackground) { [weak self] reporter in
             try await BulkEditor.apply(change, to: assets, library: library, luts: luts, clock: clock) { progress in
                 reporter.progress(progress.fraction, detail: progress.summary, remaining: progress.remaining)
             } thumbnail: { id, image in
@@ -229,6 +229,14 @@ final class AppModel {
                 self?.libraryVersion += 1
             }
         }
+    }
+
+    /// Lets a job the user started keep going after they leave the app or lock the
+    /// screen, with its progress in a Live Activity (iOS and iPadOS).
+    private static func keepRunningInBackground(_ job: Job) {
+        #if os(iOS)
+        ContinuedProcessing.cover(job)
+        #endif
     }
 
     /// The .cube files a bulk change needs, for renders on another device.

@@ -23,6 +23,9 @@ public final class Job: Identifiable {
     /// Jobs that finish within the reveal delay are never shown, so cache hits don't flicker.
     public fileprivate(set) var isRevealed = false
     public let startedAt = Date()
+    /// Called after progress, detail, remaining or state changes, e.g. to mirror the job
+    /// into a system progress UI.
+    @ObservationIgnored public var onChange: (@MainActor (Job) -> Void)?
 
     fileprivate var task: Task<Void, Never>?
 
@@ -36,12 +39,14 @@ public final class Job: Identifiable {
     public func cancel() {
         task?.cancel()
         if state == .running { state = .cancelled }
+        onChange?(self)
     }
 
     fileprivate func finish(_ state: State) {
         if self.state == .running { self.state = state }
         if state == .finished { progress = 1 }
         remaining = nil
+        onChange?(self)
     }
 }
 
@@ -56,6 +61,7 @@ public struct JobReporter: Sendable {
             job.progress = value.map { min(max($0, 0), 1) }
             if let detail { job.detail = detail }
             if let remaining { job.remaining = remaining }
+            job.onChange?(job)
         }
     }
 }
@@ -88,11 +94,13 @@ public final class JobCenter {
         _ label: String,
         detail: String? = nil,
         photos: Int? = nil,
+        started: @MainActor (Job) -> Void = { _ in },
         operation: @escaping @Sendable (JobReporter) async throws -> T
     ) -> Task<T, any Error> {
         let job = Job(label: label, detail: detail)
         job.remaining = photos
         jobs.append(job)
+        started(job)
         let reporter = JobReporter(job: job)
         let work = Task.detached(priority: .userInitiated) {
             try await operation(reporter)

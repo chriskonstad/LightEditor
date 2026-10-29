@@ -274,6 +274,23 @@ func chroma(_ p: SIMD4<Float>) -> Double {
         #expect(center.jobs.first?.state == .cancelled)
     }
 
+    @Test func reportsChangesToObserver() async throws {
+        let center = JobCenter()
+        var seen: [(Double?, String?, Job.State)] = []
+        let task = center.run("Batch", started: { job in
+            job.onChange = { seen.append(($0.progress, $0.detail, $0.state)) }
+        }) { reporter in
+            reporter.progress(0.5, detail: "1 of 2")
+            try await Task.sleep(for: .milliseconds(20))
+            return 2
+        }
+        #expect(try await task.value == 2)
+        for _ in 0..<200 where seen.last?.2 != .finished { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(seen.contains { $0.0 == 0.5 && $0.1 == "1 of 2" })
+        #expect(seen.last?.2 == .finished)
+        #expect(seen.last?.0 == 1)
+    }
+
     @Test func quickJobsStayHidden() async throws {
         let center = JobCenter()
         center.revealDelay = .milliseconds(200)

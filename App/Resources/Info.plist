@@ -6,5 +6,10 @@
 	<array>
 		<string>_lighteditor._tcp</string>
 	</array>
+	<!-- Bulk edits and imports keep running in the background (ContinuedProcessing.swift). -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).bulk.*</string>
+	</array>
 </dict>
 </plist>

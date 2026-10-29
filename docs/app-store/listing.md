@@ -13,7 +13,7 @@ The first release is **iPhone and iPad only**; the Mac version follows later. Ch
 | Primary category | Photo & Video | |
 | Secondary category | Graphics & Design | Optional. |
 | Price | Free | No in-app purchases, no ads. |
-| Platforms | iPhone, iPad (Mac later) | Minimum iOS and iPadOS 27. |
+| Platforms | iPhone (including iPhone Duo), iPad (Mac later) | Minimum iOS and iPadOS 27. Duo layout needs a build made with the iOS 27.1 SDK. |
 | Copyright | `2026 Chris Konstad` | Shown on the store page. |
 
 ## Subtitle (30)
@@ -24,22 +24,22 @@ The first release is **iPhone and iPad only**; the Mac version follows later. Ch
 
 ## Promotional text (170)
 
-> Free and open source, and always subscription-free. Edit RAW photos with fast, precise color tools and on-device AI. No account, no tracking.
+> Free, open source and always subscription-free, now built for iPhone Duo. Edit RAW photos with precise color tools and on-device AI. No account, no tracking.
 
-141/170. Promotional text can change any time without a new build.
+157/170. Promotional text can change any time without a new build.
 
 ## Keywords (100 bytes)
 
 ```
-camera,dng,arw,raf,proraw,lut,preset,color,grading,film,mask,retouch,hsl,curve,remove,subscription
+camera,dng,arw,raf,proraw,lut,preset,color,grading,film,mask,retouch,hsl,duo,remove,subscription
 ```
 
-98/100. Words in the name and subtitle (light, editor, raw, free, open, source) already count, so they're left out. No competitor or camera-brand trademarks ("Lightroom", "Fujifilm", "Sony"): App Review rejects those in keywords (guideline 2.3.7).
+96/100. Words in the name and subtitle (light, editor, raw, free, open, source) already count, so they're left out. No competitor or camera-brand trademarks ("Lightroom", "Fujifilm", "Sony"): App Review rejects those in keywords (guideline 2.3.7).
 
 ## Description (4000)
 
 ```
-LightEditor is a free, open-source RAW photo editor for iPhone and iPad, made for quick, color-focused edits on the road. It will always be free of subscriptions: no subscription, no in-app purchases, no account, no ads, no tracking. Your photos never leave your devices.
+LightEditor is a free, open-source RAW photo editor for iPhone, iPhone Duo and iPad, made for quick, color-focused edits on the road. It will always be free of subscriptions: no subscription, no in-app purchases, no account, no ads, no tracking. Your photos never leave your devices.
 
 YOUR PHOTOS LIBRARY IS THE LIBRARY
 LightEditor edits the photos already in Apple Photos. Originals stay untouched: every edit is saved non-destructively, syncs through iCloud Photos, and can be reverted at any time, in LightEditor or in Photos.
@@ -66,6 +66,9 @@ EDIT MANY PHOTOS AT ONCE
 
 EDIT YOUR IPHONE'S PHOTOS ON YOUR IPAD
 Traveling with an iPhone and an iPad? Your iPhone can share its library straight to your iPad over a direct, encrypted Wi-Fi link. No internet or router needed, and no cloud in between.
+
+BUILT FOR IPHONE DUO
+Unfold iPhone Duo and LightEditor turns into an iPad-class editor. Turn it sideways for the photo and the full set of tools side by side, or hold it upright for a big photo over a roomy panel. Fold it and you're back to the one-handed phone editor.
 
 DESIGNED FOR TOUCH
 Pull away from a slider for fine control, double-tap to reset, press and hold to compare, and drag the before/after split. Every slow task shows its progress in a job tray and can be cancelled.

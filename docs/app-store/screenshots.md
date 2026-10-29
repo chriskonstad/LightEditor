@@ -43,6 +43,10 @@ Notes:
 - Keep captions short and consistent. Plain screenshots without overlays are also fine for App Review.
 - Don't show trademarked film simulation names prominently in captions; showing them inside the preset list is OK.
 
+| iPhone Duo | iPhone Duo simulator (Xcode 27.1), unfolded | 2007 × 2853 inner screen, or 2853 × 2007 sideways | Optional now; required for submissions from April 2027. Filling it shows "optimized for iPhone Duo". |
+
+Unfold the Duo with the Open pose button in its Device Hub window (simctl has no fold command), and capture with the Claude simulator tool: `simctl io screenshot` returns the inner screen black.
+
 ## App preview video (optional)
 
 A 15–30 s screen recording per platform: drag exposure and a color wheel, tap an AI sky mask, paint a removal. `xcrun simctl io <udid> recordVideo preview.mov`. Skip for the first release unless you want it.
@@ -53,5 +57,6 @@ From an iPhone 18 Pro Max simulator (1320 × 2868) and an iPad Pro 13-inch (M5) 
 
 - iPhone: Light (Auto), Grade wheels, Color/HSL mixer, mask picker, presets, Settings.
 - iPad: Light, Grade, mask picker, presets.
+- iPhone Duo (unfolded, iOS 27.1 simulator): editor sideways with the inspector beside the photo, editor upright, Grade sideways.
 
 Not capturable in the Simulator: AI masks (Vision segmentation fails there) and a clean removal (LaMa fills look smeared on the Simulator's CPU path). Add those from a real device in a later update.

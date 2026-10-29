@@ -87,13 +87,21 @@ struct RootView: View {
     private func editor(for asset: PhotoAsset) -> some View {
         EditorContainer(app: app, asset: asset) { model in
             GeometryReader { proxy in
-                // The side-by-side workspace needs about 1100 pt: filmstrip, photo with its
-                // view bar, and inspector. Narrower (iPhone, iPad in portrait or Split View)
-                // stacks the photo over the tools instead.
-                if sizeClass == .compact || proxy.size.width < WorkspaceEditorView.minimumWidth {
-                    CompactEditorView(model: model, roomy: sizeClass != .compact)
-                } else {
+                // Keyed to the window, not the device, so iPad, iPad Split View and iPhone
+                // Duo's inner screen each get what fits. The side-by-side workspace needs
+                // about 1100 pt for filmstrip, photo and inspector, or 800 pt without the
+                // filmstrip in a landscape window (the Duo's inner screen turned sideways).
+                // Anything else stacks the photo over the tools; `roomy` is the
+                // regular-width version of that (iPad and the Duo's inner screen upright).
+                let size = proxy.size
+                if sizeClass == .compact {
+                    CompactEditorView(model: model)
+                } else if size.width >= WorkspaceEditorView.minimumWidth {
                     WorkspaceEditorView(model: model, filmstrip: .vertical) { app.editing = $0 }
+                } else if size.width >= WorkspaceEditorView.minimumWidthWithoutFilmstrip, size.width > size.height {
+                    WorkspaceEditorView(model: model, filmstrip: nil) { app.editing = $0 }
+                } else {
+                    CompactEditorView(model: model, roomy: true)
                 }
             }
         }

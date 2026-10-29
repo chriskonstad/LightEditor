@@ -38,7 +38,8 @@ extension FocusedValues {
 /// The compact editor: photo on top, tabs below, actions along the bottom.
 struct CompactEditorView: View {
     @Bindable var model: EditorModel
-    /// On an iPad in portrait: a taller photo, and tools kept to a readable width.
+    /// Regular width (iPad in portrait, iPhone Duo's inner screen upright): a taller
+    /// photo, and tools kept to a readable width.
     var roomy = false
     @Environment(\.dismiss) private var dismiss
 
@@ -275,31 +276,39 @@ struct EditorMoreMenu: View {
 
 /// The regular-width editor: filmstrip, photo with a view bar, and an inspector.
 struct WorkspaceEditorView: View {
-    /// Below this the view bar and toolbar don't fit; see `RootView`.
+    /// Below this the filmstrip, photo and inspector don't fit side by side; see `RootView`.
     static let minimumWidth: CGFloat = 1100
+    /// Wide, short windows down to this width get the workspace without a filmstrip:
+    /// iPhone Duo's inner screen in landscape (951 pt, about 860 pt once the vertical
+    /// status bar takes its share), iPad Split View and Stage Manager.
+    static let minimumWidthWithoutFilmstrip: CGFloat = 800
 
     @Bindable var model: EditorModel
-    let filmstrip: Filmstrip.Axis
+    /// Where the filmstrip goes, or nil for none.
+    let filmstrip: Filmstrip.Axis?
     let onSelect: (PhotoAsset) -> Void
     @State private var showInspector = true
     @State private var showHistory = false
 
     var body: some View {
         Group {
-            if filmstrip == .vertical {
+            switch filmstrip {
+            case .vertical:
                 HStack(spacing: 0) {
                     Filmstrip(app: model.app, current: model.asset.id, axis: .vertical, onSelect: onSelect)
                         .frame(width: 100)
                     Divider()
                     photoColumn
                 }
-            } else {
+            case .horizontal:
                 VStack(spacing: 0) {
                     photoColumn
                     Divider()
                     Filmstrip(app: model.app, current: model.asset.id, axis: .horizontal, onSelect: onSelect)
                         .frame(height: 88)
                 }
+            case nil:
+                photoColumn
             }
         }
         .background(Theme.ground)

@@ -155,6 +155,8 @@ AI removal: in the editor, open Retouch, choose Remove, and paint over an object
 
 Remote editing (optional) needs two devices on iOS or iPadOS 27: on an iPhone, open Devices and turn on "Let nearby devices edit this library"; on an iPad nearby, open Devices and pick the iPhone under Nearby. It uses a direct peer-to-peer Wi-Fi link (Bonjour + Network framework), which is why the app asks for Local Network access.
 
+Background processing: when the user applies an edit to many photos (Select, then Paste, Adjust or Preset) or imports several files, the job keeps running if they leave the app, as a BGContinuedProcessingTask with the system Live Activity showing its progress. It only starts from that user action, and uses background GPU on supported devices for the renders.
+
 The app makes no internet connections and collects no data. It's free and open source (MIT): https://github.com/chriskonstad/LightEditor
 ```
 

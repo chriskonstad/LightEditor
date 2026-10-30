@@ -30,4 +30,4 @@ Checked against the build settings in `project.yml` and the code as of October 2
 - [x] App Information, pricing (Free), App Privacy, age rating and the listing text in App Store Connect.
 - [x] EU Digital Services Act trader status (not a trader).
 - [x] Screenshots per `screenshots.md` (iPhone 6.9", iPad 13", iPhone Duo).
-- [x] Build 2610291034 (iOS 27.1 SDK) submitted for review on 2026-10-29. Upload with plain `scripts/testflight.sh`: `--internal-only` builds can't be attached to an App Store version.
+- [x] Build 2610291908 (iOS 27.1 SDK, adds background bulk edits) submitted for review on 2026-10-29, replacing 2610291034 before review began. Upload with plain `scripts/testflight.sh`: `--internal-only` builds can't be attached to an App Store version.

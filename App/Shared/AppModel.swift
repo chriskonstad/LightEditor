@@ -44,7 +44,7 @@ final class AppModel {
     private(set) var luts: [LUTRef] = []
     var toast: String?
 
-    var presets: [Preset] { BuiltInPresets.all + FilmSimulations.presets + AdaptivePresets.all + userPresets }
+    var presets: [Preset] { BuiltInPresets.all + FilmSimulations.presets + SonyLooks.presets + AdaptivePresets.all + userPresets }
 
     /// While editing another device's library, the remote library.
     var remoteLibrary: RemoteLibrary? { library as? RemoteLibrary }

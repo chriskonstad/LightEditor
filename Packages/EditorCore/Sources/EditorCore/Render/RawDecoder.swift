@@ -45,6 +45,8 @@ public struct SourceInfo: Sendable, Hashable, Codable {
     public var defaults: PhotoDefaults
     /// The Fujifilm film simulation the photo was shot with, matching a preset name.
     public var filmSimulation: String?
+    /// The Sony Creative Look and adjustments the photo was shot with.
+    public var sonyLook: SonyLooks.CameraSettings?
     /// The camera's electronic level (degrees) for upright landscape RAWs that record it.
     public var cameraRoll: Double?
     /// Whether the decoder has a lens profile for this camera and lens (nil: unknown).
@@ -235,6 +237,7 @@ public actor RawDecoder {
             supportedDecoderVersions: versions,
             defaults: defaults,
             filmSimulation: Self.properties(source.url).flatMap(FilmSimulations.detect),
+            sonyLook: SonyLooks.read(fileAt: source.url),
             cameraRoll: raw.orientation == .up ? CameraLevel.roll(fileAt: source.url) : nil,
             lensCorrectionSupported: raw.isLensCorrectionSupported
         )

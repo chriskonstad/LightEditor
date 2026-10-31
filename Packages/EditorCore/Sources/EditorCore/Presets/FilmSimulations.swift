@@ -12,7 +12,7 @@ public enum FilmSimulations {
 
     private static func id(_ n: Int) -> UUID { UUID(uuidString: String(format: "00000000-0000-0000-0001-%012d", n))! }
 
-    private static func wheel(_ hue: Double, _ strength: Double) -> ParamValue {
+    static func wheel(_ hue: Double, _ strength: Double) -> ParamValue {
         let radians = hue * .pi / 180
         return .point(x: cos(radians) * strength, y: sin(radians) * strength)
     }
@@ -23,8 +23,8 @@ public enum FilmSimulations {
         return preset
     }
 
-    private static let gentleS: ParamValue = .curve([CurvePoint(x: 0, y: 0), CurvePoint(x: 0.25, y: 0.22), CurvePoint(x: 0.75, y: 0.79), CurvePoint(x: 1, y: 1)])
-    private static let fadedS: ParamValue = .curve([CurvePoint(x: 0, y: 0.05), CurvePoint(x: 0.25, y: 0.24), CurvePoint(x: 0.75, y: 0.78), CurvePoint(x: 1, y: 0.97)])
+    static let gentleS: ParamValue = .curve([CurvePoint(x: 0, y: 0), CurvePoint(x: 0.25, y: 0.22), CurvePoint(x: 0.75, y: 0.79), CurvePoint(x: 1, y: 1)])
+    static let fadedS: ParamValue = .curve([CurvePoint(x: 0, y: 0.05), CurvePoint(x: 0.25, y: 0.24), CurvePoint(x: 0.75, y: 0.78), CurvePoint(x: 1, y: 0.97)])
 
     public static let presets: [Preset] = [
         preset(1, "Provia", [.contrast: .scalar(8), .vibrance: .scalar(5)]),

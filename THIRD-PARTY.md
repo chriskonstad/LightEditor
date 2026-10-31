@@ -46,4 +46,4 @@ These run on the developer's Mac and aren't part of the app:
 
 ## Trademarks
 
-Fujifilm film simulation names (Provia, Velvia, Astia, Classic Chrome and others) are trademarks of FUJIFILM Corporation. LightEditor's presets are its own approximations, tuned by eye; the names only say which look a preset aims for. Lightroom is a trademark of Adobe. LightEditor isn't affiliated with or endorsed by Fujifilm, Adobe or Apple.
+Fujifilm film simulation names (Provia, Velvia, Astia, Classic Chrome and others) are trademarks of FUJIFILM Corporation. LightEditor's presets are its own approximations, tuned by eye; the names only say which look a preset aims for. Sony and Creative Look are trademarks of Sony Group Corporation; the Sony presets are likewise approximations. Lightroom is a trademark of Adobe. LightEditor isn't affiliated with or endorsed by Fujifilm, Sony, Adobe or Apple.

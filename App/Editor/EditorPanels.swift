@@ -246,7 +246,7 @@ struct PresetsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let shotAs = model.cameraFilmSimulation {
+            if let shotAs = model.cameraLook {
                 Button {
                     model.apply(shotAs)
                 } label: {
@@ -277,7 +277,14 @@ struct PresetsPanel: View {
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(FilmSimulations.presets) { preset in
                     PresetTile(model: model, preset: preset, title: preset.name,
-                               badge: preset.id == model.cameraFilmSimulation?.id ? "camera" : nil)
+                               badge: preset.id == model.cameraLookTile ? "camera" : nil)
+                }
+            }
+            PanelHeader(title: "Sony Creative Looks")
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(SonyLooks.presets) { preset in
+                    PresetTile(model: model, preset: preset, title: preset.name,
+                               badge: preset.id == model.cameraLookTile ? "camera" : nil)
                 }
             }
             Text("Approximations of each look, made with this app's controls.")

@@ -98,7 +98,7 @@ struct SettingsSheet: View {
                 } header: {
                     Text("Licenses")
                 } footer: {
-                    Text("Fujifilm film simulation names are trademarks of FUJIFILM Corporation, used only to say which look a preset aims for. LightEditor isn't affiliated with Fujifilm, Adobe or Apple.")
+                    Text("Fujifilm film simulation names are trademarks of FUJIFILM Corporation, and Sony and Creative Look of Sony Group Corporation, used only to say which look a preset aims for. LightEditor isn't affiliated with Fujifilm, Sony, Adobe or Apple.")
                 }
             }
             .navigationTitle("Settings")

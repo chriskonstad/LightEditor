@@ -888,18 +888,11 @@ final class EditorModel: Identifiable {
         pushHistory(label: "Auto tone")
     }
 
-    /// The preset matching how the photo was shot: the Fujifilm film simulation, or the
-    /// Sony Creative Look with the camera's own adjustments on top.
-    var cameraLook: Preset? {
-        if let sony = info?.sonyLook, let preset = SonyLooks.cameraPreset(for: sony) { return preset }
-        return info?.filmSimulation.flatMap(FilmSimulations.preset(named:))
-    }
+    /// The preset matching how the photo was shot (see `SourceInfo.cameraLook`).
+    var cameraLook: Preset? { info?.cameraLook }
 
     /// The built-in look the camera used, to badge its tile.
-    var cameraLookTile: Preset.ID? {
-        if let look = info?.sonyLook?.look { return SonyLooks.preset(code: look)?.id }
-        return info?.filmSimulation.flatMap(FilmSimulations.preset(named:))?.id
-    }
+    var cameraLookTile: Preset.ID? { info?.cameraLookTile }
 
     // MARK: Copy, paste, presets
 

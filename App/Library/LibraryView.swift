@@ -118,6 +118,10 @@ struct LibraryView: View {
             if case .success(let urls) = result, !urls.isEmpty { app.importFiles(urls) }
         }
         .confirmationDialog("Apply preset", isPresented: $presetPicking) {
+            Button("Each photo’s camera look") {
+                app.bulkApply(.cameraLook(amount: 1), to: selectedAssets, label: "Applying camera looks to \(selection.count) photos")
+                endSelection()
+            }
             ForEach(app.presets) { preset in
                 Button(preset.name) {
                     app.bulkApply(.preset(preset, amount: 1), to: selectedAssets, label: "Applying “\(preset.name)” to \(selection.count) photos")

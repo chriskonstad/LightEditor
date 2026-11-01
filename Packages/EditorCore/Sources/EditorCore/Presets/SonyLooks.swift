@@ -1,5 +1,20 @@
 import Foundation
 
+extension SourceInfo {
+    /// The preset matching how the photo was shot: its Sony Creative Look with the
+    /// camera's own adjustments on top, or its Fujifilm film simulation.
+    public var cameraLook: Preset? {
+        if let sonyLook, let preset = SonyLooks.cameraPreset(for: sonyLook) { return preset }
+        return filmSimulation.flatMap(FilmSimulations.preset(named:))
+    }
+
+    /// The built-in look the camera used, to badge its tile.
+    public var cameraLookTile: Preset.ID? {
+        if let look = sonyLook?.look { return SonyLooks.preset(code: look)?.id }
+        return filmSimulation.flatMap(FilmSimulations.preset(named:))?.id
+    }
+}
+
 /// Sony Creative Looks: built-in presets with the same names, and the look an ARW was
 /// shot with, read from Sony's maker notes, so an edit can start from the camera's look.
 ///

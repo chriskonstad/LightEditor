@@ -75,6 +75,58 @@ import Testing
         #expect(preset.id == SonyLooks.cameraPreset(for: settings)?.id, "stable, so the editor can match it")
     }
 
+    private func flCamera() -> SonyLooks.CameraSettings {
+        var settings = SonyLooks.CameraSettings(look: "FL")
+        settings.contrast = 2
+        settings.fade = 3
+        settings.amberBlue = 1.5
+        return settings
+    }
+
+    @Test func cameraLookKeysAreInDefaultPasteGroups() throws {
+        let preset = try #require(SonyLooks.cameraPreset(for: flCamera()))
+        let groups = Set(try preset.params.keys.map { key in try #require(ParamCatalog.all.first { $0.key == key }?.group) })
+        #expect(groups == [.light, .color, .grade])
+        #expect(groups.isSubset(of: PasteGroup.defaultSelection), "Copy edits → Paste carries the whole look by default")
+    }
+
+    @Test func pastingCameraLookFiltersByGroup() throws {
+        let preset = try #require(SonyLooks.cameraPreset(for: flCamera()))
+        let applied = Recipe().applying(preset, amount: 1, defaults: .generic, stamp: testClock.now())
+        let clip = RecipeClip(recipe: applied, sourceName: "DSC0001", sourceDefaults: .generic)
+
+        let all = Recipe().pasting(clip, groups: PasteGroup.defaultSelection, mode: .set, targetDefaults: .generic, stamp: testClock.now())
+        for key in preset.params.keys { #expect(all[key] == applied[key], "\(key.rawValue) pastes") }
+
+        let colorOnly = Recipe().pasting(clip, groups: [.color], mode: .set, targetDefaults: .generic, stamp: testClock.now())
+        #expect(colorOnly.scalar(.saturation) == applied.scalar(.saturation))
+        #expect(colorOnly[.hsl(.green, .hue)] == applied[.hsl(.green, .hue)])
+        #expect(colorOnly.scalar(.contrast) == nil, "Light isn't pasted")
+        #expect(colorOnly[.toneCurve] == nil)
+        #expect(colorOnly[.gradeWheel(.shadows)] == nil, "Color grading isn't pasted")
+    }
+
+    @Test func bulkCameraLookUsesEachPhotosOwnSettings() throws {
+        var fl = SourceInfo(isRAW: true, nativeSize: .zero, decoderVersion: "9", supportedDecoderVersions: ["9"], defaults: .generic)
+        fl.sonyLook = flCamera()
+        var vivid = fl
+        vivid.sonyLook = SonyLooks.CameraSettings(look: "VV")
+        let plain = SourceInfo(isRAW: true, nativeSize: .zero, decoderVersion: "9", supportedDecoderVersions: ["9"], defaults: .generic)
+        var fuji = plain
+        fuji.filmSimulation = "Classic Chrome"
+
+        var base = Recipe()
+        base.setScalar(.temperature, 5200, at: testClock.now())
+        let change = BulkChange.cameraLook(amount: 1)
+        let flResult = change.apply(to: base, info: fl, stamp: testClock.now())
+        let vividResult = change.apply(to: base, info: vivid, stamp: testClock.now())
+        #expect(flResult.scalar(.contrast) == SonyLooks.cameraPreset(for: flCamera())?.params[.contrast].flatMap { if case .scalar(let v) = $0 { v } else { nil } })
+        #expect(vividResult.scalar(.saturation) == 24, "VV's own saturation")
+        #expect(flResult.scalar(.temperature) == 5200, "white balance isn't part of the look")
+        #expect(change.apply(to: base, info: plain, stamp: testClock.now()) == base, "no camera look: unchanged")
+        #expect(change.apply(to: base, info: fuji, stamp: testClock.now()).scalar(.saturation) == FilmSimulations.preset(named: "Classic Chrome")?.params[.saturation].flatMap { if case .scalar(let v) = $0 { v } else { nil } })
+    }
+
     @Test func mapsCreativeStyleNames() {
         #expect(SonyLooks.code(forCreativeStyle: "Standard") == "ST")
         #expect(SonyLooks.code(forCreativeStyle: "Vivid") == "VV")

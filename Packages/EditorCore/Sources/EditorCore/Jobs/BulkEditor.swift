@@ -6,16 +6,22 @@ public enum BulkChange: Sendable, Codable {
     case paste(RecipeClip, groups: Set<PasteGroup>, mode: PasteMode)
     case values([ParamKey: Double], mode: PasteMode)
     case preset(Preset, amount: Double)
+    /// Each photo's own camera look, read from its file (`SourceInfo.cameraLook`);
+    /// photos without one are left as they are.
+    case cameraLook(amount: Double)
     case reset
 
-    func apply(to recipe: Recipe, defaults: PhotoDefaults, stamp: HLCStamp) -> Recipe {
-        switch self {
+    func apply(to recipe: Recipe, info: SourceInfo, stamp: HLCStamp) -> Recipe {
+        let defaults = info.defaults
+        return switch self {
         case .paste(let clip, let groups, let mode):
             recipe.pasting(clip, groups: groups, mode: mode, targetDefaults: defaults, stamp: stamp)
         case .values(let values, let mode):
             recipe.applying(values, mode: mode, defaults: defaults, stamp: stamp)
         case .preset(let preset, let amount):
             recipe.applying(preset, amount: amount, defaults: defaults, stamp: stamp)
+        case .cameraLook(let amount):
+            info.cameraLook.map { recipe.applying($0, amount: amount, defaults: defaults, stamp: stamp) } ?? recipe
         case .reset:
             {
                 var copy = recipe
@@ -79,7 +85,7 @@ public enum BulkEditor {
             } else {
                 base = Recipe(decoder: DecoderPin(version: info.decoderVersion))
             }
-            var recipe = change.apply(to: base, defaults: info.defaults, stamp: clock.now())
+            var recipe = change.apply(to: base, info: info, stamp: clock.now())
             // Pasted auto straighten finds each photo's own level.
             if case .crop(let geometry)? = recipe[.crop], geometry.auto?.isResolved == false,
                let decoded = try? await decoder.decode(session.original, rawStage: recipe.analysisStage, longEdge: 1024),

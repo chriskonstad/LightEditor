@@ -244,7 +244,7 @@ final class AppModel {
         switch change {
         case .paste(let clip, _, _): clip.recipe.lutFiles(from: lutStore)
         case .preset(let preset, _): Recipe().applying(preset, amount: 1, defaults: .generic, stamp: clock.now()).lutFiles(from: lutStore)
-        case .values, .reset: []
+        case .values, .cameraLook, .reset: []
         }
     }
 

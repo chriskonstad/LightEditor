@@ -35,7 +35,7 @@ public enum SonyLooks {
 
     /// In the order the camera lists them, named by the camera's codes.
     public static let presets: [Preset] = [
-        preset(1, "ST", [.contrast: .scalar(6)]),
+        preset(1, "ST", [.contrast: .scalar(6), .saturation: .scalar(-10)]),
         preset(2, "PT", [
             .contrast: .scalar(-8), .saturation: .scalar(-6),
             .hsl(.orange, .luminance): .scalar(6), .hsl(.orange, .saturation): .scalar(-5), .hsl(.red, .saturation): .scalar(-4),

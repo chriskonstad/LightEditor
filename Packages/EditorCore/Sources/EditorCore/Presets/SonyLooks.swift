@@ -46,14 +46,16 @@ public enum SonyLooks {
             .contrast: .scalar(12), .saturation: .scalar(10), .vibrance: .scalar(16),
             .hsl(.blue, .saturation): .scalar(8), .hsl(.green, .saturation): .scalar(6),
         ]),
-        // Moody, contrasty and calm: muted color, teal shadows, a slightly lifted floor,
-        // and skies and greens that still carry.
+        // Fitted to an A7R V's own FL JPEG (Fixtures/DSC06383.ARW, block ΔE2000 7.5 → 1.5):
+        // brighter midtones and more contrast than our neutral render, highlights held
+        // back, and calmer color mostly through lower vibrance.
         preset(6, "FL", [
-            .contrast: .scalar(16), .saturation: .scalar(-18), .highlights: .scalar(-12), .blacks: .scalar(6),
+            .contrast: .scalar(23), .highlights: .scalar(19), .shadows: .scalar(16), .whites: .scalar(-8), .blacks: .scalar(-1),
+            .saturation: .scalar(-14), .vibrance: .scalar(-33),
             .hsl(.green, .hue): .scalar(10), .hsl(.green, .saturation): .scalar(-6), .hsl(.blue, .saturation): .scalar(8),
             .hsl(.orange, .saturation): .scalar(-8),
-            .gradeWheel(.shadows): wheel(200, 0.14), .gradeWheel(.highlights): wheel(40, 0.08),
-            .toneCurve: FilmSimulations.gentleS,
+            .gradeWheel(.midtones): .point(x: 0.02, y: -0.04),
+            .toneCurve: .curve([CurvePoint(x: 0, y: 0), CurvePoint(x: 0.25, y: 0.26), CurvePoint(x: 0.5, y: 0.605), CurvePoint(x: 0.75, y: 0.83), CurvePoint(x: 1, y: 0.985)]),
         ]),
         // Matte: low contrast and saturation, lifted blacks, a little warmth.
         preset(7, "IN", [

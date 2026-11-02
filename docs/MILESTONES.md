@@ -144,4 +144,4 @@ See "Remote editing" in DESIGN.md. Edit the iPhone's photos from the iPad over p
 - [ ] **M4.5 Real devices.** iPhone 16 Pro sharing, M1 iPad Pro editing, no Wi-Fi network.
   - Accept: connects without a router; opening a 61 MP ARW takes under about 5 s; sliders are as fast as local; saves land in the phone's Photos; locking the phone or switching apps mid-edit loses nothing, and the iPad reconnects within a few seconds of unlocking.
 
-- [ ] **Spike: Sony WB shift.** With an ARW shot at WB A+1.5 (or any shift), compare the as-shot white balance the decoder reports with the same scene shot without a shift. Confirms whether the shift is already in the as-shot WB (current assumption) or `SonyLooks.cameraPreset` must add it.
+- [x] **Spike: Sony WB shift.** Done 2026-11-01 with `Fixtures/DSC06383.ARW` (FL, A+1.5): the shift is already in the as-shot white balance, so `SonyLooks.cameraPreset` doesn't add it (see the DESIGN decision).

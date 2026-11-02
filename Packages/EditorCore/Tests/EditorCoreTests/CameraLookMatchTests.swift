@@ -48,6 +48,128 @@ import UniformTypeIdentifiers
         }
     }
 
+    /// Fits a Sony look's preset to the camera's JPEG of a fixture shot in that look, by
+    /// coordinate descent on block ΔE2000, and prints the fitted parameters. Set
+    /// CAMERA_LOOK_TUNE to the look's code (e.g. FL) and EDITORCORE_RAW_FIXTURES to a
+    /// folder holding a RAW shot in it.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["CAMERA_LOOK_TUNE"] != nil && !DecodeTests.fixtureFiles.isEmpty))
+    func tuneLookToEmbeddedJPEG() async throws {
+        let code = ProcessInfo.processInfo.environment["CAMERA_LOOK_TUNE"]!
+        let decoder = RawDecoder(cache: DecodeCache(directory: nil))
+        var found: (URL, SourceInfo)?
+        for url in DecodeTests.fixtureFiles {
+            let info = try await decoder.info(for: PhotoSource(url: url))
+            if info.sonyLook?.look == code { found = (url, info); break }
+        }
+        let (url, info) = try #require(found, "no fixture shot in \(code)")
+        let settings = try #require(info.sonyLook)
+        let camera = try #require(Self.embeddedPreview(url))
+        let reference = LabImage(camera)
+        let base = try await decoder.decode(PhotoSource(url: url), rawStage: RawStageParams(), longEdge: 808).image
+        let inputs = GradeInputs(defaults: info.defaults)
+        let start = try #require(SonyLooks.cameraPreset(for: settings))
+
+        func score(_ params: [ParamKey: ParamValue]) -> Double {
+            var preset = start
+            preset.params = params
+            let recipe = Recipe().applying(preset, amount: 1, defaults: info.defaults, stamp: testClock.now())
+            guard let image = ThumbnailRenderer.render(recipe, base: base, inputs: inputs, longEdge: 808) else { return .infinity }
+            return reference.compare(with: LabImage(image)).blockDE
+        }
+
+        // Each knob: how to read and write it, its bounds and its coarsest step.
+        struct Knob { var name: String; var get: ([ParamKey: ParamValue]) -> Double; var set: (inout [ParamKey: ParamValue], Double) -> Void; var range: ClosedRange<Double>; var step: Double; var cost = 0.05 }
+        func scalar(_ key: ParamKey, _ range: ClosedRange<Double>, _ step: Double = 8) -> Knob {
+            Knob(name: key.rawValue,
+                 get: { if case .scalar(let v)? = $0[key] { v } else { 0 } },
+                 set: { $0[key] = abs($1) < 0.01 ? nil : .scalar($1) }, range: range, step: step)
+        }
+        func wheel(_ range: ToneRange, axis: Int) -> Knob {
+            Knob(name: "\(range.rawValue).\(axis == 0 ? "x" : "y")",
+                 get: { if case .point(let x, let y)? = $0[.gradeWheel(range)] { axis == 0 ? x : y } else { 0 } },
+                 set: { params, value in
+                     var (x, y) = (0.0, 0.0)
+                     if case .point(let px, let py)? = params[.gradeWheel(range)] { (x, y) = (px, py) }
+                     if axis == 0 { x = value } else { y = value }
+                     params[.gradeWheel(range)] = abs(x) < 0.001 && abs(y) < 0.001 ? nil : .point(x: x, y: y)
+                 }, range: -0.4...0.4, step: 0.08)
+        }
+        let curveXs = [0.0, 0.25, 0.5, 0.75, 1.0]
+        func curvePoints(_ params: [ParamKey: ParamValue]) -> [Double] {
+            guard case .curve(let points)? = params[.toneCurve] else { return curveXs }
+            return curveXs.map { x in
+                // Sample the stored curve at our knots (linear between its points).
+                let sorted = points.sorted { $0.x < $1.x }
+                guard let upper = sorted.firstIndex(where: { $0.x >= x }) else { return sorted.last!.y }
+                if upper == 0 { return sorted[0].y }
+                let a = sorted[upper - 1], b = sorted[upper]
+                return a.y + (b.y - a.y) * (x - a.x) / max(b.x - a.x, 1e-9)
+            }
+        }
+        func curve(_ index: Int, _ range: ClosedRange<Double>) -> Knob {
+            Knob(name: "curve@\(curveXs[index])",
+                 get: { curvePoints($0)[index] },
+                 set: { params, value in
+                     var ys = curvePoints(params)
+                     ys[index] = value
+                     params[.toneCurve] = .curve(zip(curveXs, ys).map { CurvePoint(x: $0, y: $1) })
+                 }, range: range, step: 0.04)
+        }
+
+        var knobs = [
+            scalar(.contrast, -50...60), scalar(.highlights, -70...40), scalar(.shadows, -50...60),
+            scalar(.whites, -50...50), scalar(.blacks, -50...40), scalar(.saturation, -60...40), scalar(.vibrance, -50...50),
+            curve(0, 0...0.12), curve(1, 0.1...0.4), curve(2, 0.35...0.65), curve(3, 0.6...0.9), curve(4, 0.88...1),
+        ]
+        // Per-hue knobs only fit the colors this one photo has, so they cost more to move
+        // and stay within a narrower range; CAMERA_LOOK_TUNE_HSL=0 leaves them out.
+        if ProcessInfo.processInfo.environment["CAMERA_LOOK_TUNE_HSL"] != "0" {
+            for band in HueBand.allCases {
+                for (component, range) in [(HSLComponent.hue, -15.0...15.0), (.saturation, -25.0...25.0), (.luminance, -15.0...15.0)] {
+                    var knob = scalar(.hsl(band, component), range, 5)
+                    knob.cost = Double(ProcessInfo.processInfo.environment["CAMERA_LOOK_TUNE_HSL_COST"] ?? "") ?? 0.6
+                    knobs.append(knob)
+                }
+            }
+        }
+        for range in [ToneRange.shadows, .midtones, .highlights] { knobs += [wheel(range, axis: 0), wheel(range, axis: 1)] }
+
+        var params = start.params
+        let startParams = params
+        // Moving a knob across its whole range costs `cost` ΔE, so changes must earn their keep.
+        func penalty(_ params: [ParamKey: ParamValue]) -> Double {
+            knobs.reduce(0) { total, knob in
+                total + knob.cost * abs(knob.get(params) - knob.get(startParams)) / (knob.range.upperBound - knob.range.lowerBound)
+            }
+        }
+        func objective(_ params: [ParamKey: ParamValue]) -> Double { score(params) + penalty(params) }
+        var best = objective(params)
+        print(String(format: "LOOKTUNE %@ start block ΔE2000 %.3f", code, best))
+        for scale in [1.0, 0.5, 0.25, 0.125] {
+            var improved = true
+            var passes = 0
+            while improved && passes < 6 {
+                improved = false
+                passes += 1
+                for knob in knobs {
+                    let current = knob.get(params)
+                    for direction in [1.0, -1.0] {
+                        let value = min(max(current + direction * knob.step * scale, knob.range.lowerBound), knob.range.upperBound)
+                        guard value != current else { continue }
+                        var trial = params
+                        knob.set(&trial, value)
+                        let s = objective(trial)
+                        if s < best - 1e-4 { best = s; params = trial; improved = true; break }
+                    }
+                }
+            }
+            print(String(format: "LOOKTUNE %@ step ×%.3f block ΔE2000 %.3f (objective %.3f)", code, scale, score(params), best))
+        }
+        for key in params.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            print("LOOKTUNE \(code) param \(key.rawValue) = \(params[key]!)")
+        }
+    }
+
     /// The largest preview the camera embedded in the RAW.
     static func embeddedPreview(_ url: URL) -> CGImage? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
@@ -85,7 +207,7 @@ import UniformTypeIdentifiers
 
 /// An image resampled to a fixed grid and converted to CIELAB (D65), so two renders of
 /// the same frame can be compared pixel by pixel.
-private struct LabImage {
+struct LabImage {
     static let width = 404, height = 270, block = 8
     var pixels: [(L: Double, a: Double, b: Double)] = []
 

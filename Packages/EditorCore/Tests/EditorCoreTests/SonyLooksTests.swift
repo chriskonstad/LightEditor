@@ -66,9 +66,9 @@ import Testing
         settings.amberBlue = 1.5
         let fl = try #require(SonyLooks.preset(code: "FL"))
         let preset = try #require(SonyLooks.cameraPreset(for: settings))
-        // FL's contrast 16, +2 steps × 5, −3 fade × 2.
-        #expect(preset.params[.contrast] == .scalar(16 + 10 - 6))
-        #expect(preset.params[.blacks] == .scalar(6 + 9))
+        // FL's contrast 23, +2 steps × 5, −3 fade × 2.
+        #expect(preset.params[.contrast] == .scalar(23 + 10 - 6))
+        #expect(preset.params[.blacks] == .scalar(-1 + 9))
         #expect(preset.params[.toneCurve] == fl.params[.toneCurve])
         #expect(preset.params[.temperature] == nil, "the shift is already in the as-shot white balance")
         #expect(preset.name == "FL · Contrast +2 · Fade 3 · WB A+1.5")

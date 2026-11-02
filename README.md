@@ -66,10 +66,10 @@ The script downloads the published weights, converts them to Core ML in a throwa
 
 ### Testing without your own photos
 
-Use a simulator's Photos library or a folder of sample RAWs, never your real library. [docs/spikes/simulator-tooling.md](docs/spikes/simulator-tooling.md) covers importing RAWs into a simulator, running the Mac app against a folder, and testing remote editing with two simulators. Set `EDITORCORE_RAW_FIXTURES` to a folder of ARW, RAF or DNG files to include the real-RAW decode and performance tests:
+Use a simulator's Photos library or a folder of sample RAWs, never your real library. [docs/spikes/simulator-tooling.md](docs/spikes/simulator-tooling.md) covers importing RAWs into a simulator, running the Mac app against a folder, and testing remote editing with two simulators. Sample RAWs from Sony and Fujifilm cameras are in [Fixtures/](Fixtures/). To include the real-RAW tests (decoding, Vision, camera looks against each camera's own JPEG, performance):
 
 ```sh
-EDITORCORE_RAW_FIXTURES=~/raws scripts/test.sh
+scripts/test.sh --raw
 ```
 
 ## How it works

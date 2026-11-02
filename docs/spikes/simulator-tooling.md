@@ -7,7 +7,7 @@ Notes from testing the app in the iOS 27 simulators. This keeps testing in a sim
 `xcrun simctl addmedia` rejects ARW and RAF ("File type unsupported"). Instead, launch a Debug build with a folder to import:
 
 ```sh
-xcrun simctl launch <udid> com.chriskonstad.lighteditor -ImportFolder /path/to/raws
+xcrun simctl launch <udid> com.chriskonstad.lighteditor -ImportFolder "$PWD/Fixtures"
 ```
 
 It imports through the app's own `PhotoImporter`, the same path as the Import button. Grant Photos access first with `xcrun simctl privacy <udid> grant photos com.chriskonstad.lighteditor`.
@@ -29,10 +29,11 @@ Taps on buttons inside a `ScrollView` need the element's hit area to match its f
 Use a folder library so the real Photos library is never touched:
 
 ```sh
+cp -R Fixtures ~/Library/Containers/com.chriskonstad.lighteditor/Data/
 open "LightEditor.app" --args -FixtureLibrary ~/Library/Containers/com.chriskonstad.lighteditor/Data/Fixtures
 ```
 
-The folder has to be inside the app's sandbox container. Debug builds also accept:
+The folder has to be inside the app's sandbox container, hence the copy of the repo's `Fixtures/`. Debug builds also accept:
 
 - `-OpenFirstAsset YES`;
 - `-SnapshotTo <dir>`, which writes window snapshots, the renderer's frame count and the canvas image every 2 s. Metal content doesn't appear in `cacheDisplay` snapshots, hence the separate `canvas.png`.

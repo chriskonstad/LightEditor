@@ -2,7 +2,7 @@
 
 A free, open-source RAW photo editor for iPhone, iPad and Mac, built for quick, color-focused edits while traveling. Apple Photos is the library: your originals stay untouched, edits are saved non-destructively, and iCloud Photos syncs them. Everything runs on your device. There are no accounts, servers, ads or analytics, and it will always be free of subscriptions.
 
-Coming to the App Store for iPhone and iPad, with the Mac version to follow.
+[Download LightEditor RAW on the App Store](https://apps.apple.com/app/lighteditor-raw/id6824085422) for iPhone and iPad; the Mac version will follow.
 
 <p align="center">
   <img src="docs/images/iphone.jpg" width="24%" alt="Editing a RAW sunset on iPhone">

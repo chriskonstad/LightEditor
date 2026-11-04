@@ -68,18 +68,14 @@ public enum ExportSizing {
     }
 }
 
-/// How urgently a full-size render is wanted.
+/// How urgently a full-size render is wanted: its place in `RenderGate`'s queue.
 public enum RenderPriority: Sendable {
-    /// Someone is waiting on this photo ("Save edit now", sharing): it goes ahead of
-    /// queued background renders and uses the GPU at normal priority.
+    /// Someone is waiting on this photo ("Save edit now", sharing).
     case now
-    /// A single photo's save on leaving the editor: ahead of bulk edits, but at low
-    /// GPU priority so the next photo's preview never waits behind it.
+    /// A single photo's save on leaving the editor.
     case soon
     /// Bulk edits.
     case background
-
-    var context: CIContext { self == .now ? RenderContext.urgent : RenderContext.background }
 }
 
 /// Runs full-size renders one at a time: by priority, then in order. A 61 MP RAW can
@@ -140,14 +136,14 @@ public enum Exporter {
     ) async throws -> Data {
         try await RenderGate.fullSize.run(priority: priority, queued: queued) {
             do {
-                return try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, context: priority.context, progress: progress)
+                return try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, progress: progress)
             } catch DecodeError.renderFailed {
                 // Core Image fails a render outright (in the RAW decoder, "Failed to
                 // submit async execution") when other GPU work leaves too little
                 // memory, as while the editor shows a big photo. It's usually gone a
                 // moment later.
                 try await Task.sleep(for: .seconds(1))
-                return try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, context: priority.context, progress: progress)
+                return try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, progress: progress)
             }
         }
     }
@@ -158,7 +154,6 @@ public enum Exporter {
         luts: (any LUTProvider)?,
         options: ExportOptions,
         decoder: RawDecoder,
-        context: CIContext,
         progress: @Sendable (Double) -> Void
     ) async throws -> Data {
         let signpostID = Signposts.export.makeSignpostID()
@@ -200,6 +195,7 @@ public enum Exporter {
         try Task.checkCancellation()
         progress(0.4)
 
+        let context = RenderContext.fullSize
         let quality = [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: options.quality]
         let data: Data?
         switch options.format {

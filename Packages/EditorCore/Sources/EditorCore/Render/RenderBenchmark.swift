@@ -154,9 +154,9 @@ public enum RenderBenchmark {
         log("done")
     }
 
-    /// Times full-size HEIC saves at low and normal GPU priority, alone and while a
-    /// stand-in for the editor grades the 2560 px decode back to back, and how long
-    /// those preview frames take meanwhile.
+    /// Times full-size HEIC saves through `RenderContext.fullSize` and the low-priority
+    /// `background` context, alone and while a stand-in for the editor grades the
+    /// 2560 px decode back to back, and how long those preview frames take meanwhile.
     public static func runSaves(url: URL, screen: CGSize = CGSize(width: 1206, height: 804), log: @escaping @Sendable (String) -> Void) async {
         let source = PhotoSource(url: url, key: "bench-\(UUID().uuidString)")
         let decoder = RawDecoder(cache: DecodeCache(directory: nil))
@@ -168,7 +168,7 @@ public enum RenderBenchmark {
                 .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
             let screenRect = CGRect(origin: .zero, size: screen)
             for previewing in [false, true] {
-                for (name, priority) in [("low", RenderPriority.soon), ("normal", .now)] {
+                for (name, context) in [("low", RenderContext.background), ("normal", RenderContext.fullSize)] {
                     let stop = Mutex(false)
                     let frames = Mutex<[Double]>([])
                     let editor = Task.detached {
@@ -177,7 +177,12 @@ public enum RenderBenchmark {
                         }
                     }
                     let start = ContinuousClock.now
-                    let data = try await Exporter.render(source: source, recipe: recipe, luts: nil, options: ExportOptions(format: .heic), decoder: decoder, priority: priority)
+                    let (base, info) = try await decoder.lazyImage(source, rawStage: recipe.rawStage, longEdge: nil)
+                    var inputs = GradeInputs(defaults: info.defaults)
+                    inputs.presenceGuide = preview.image
+                    let image = GradeGraph.apply(recipe, to: base, inputs: inputs)
+                    guard let data = context.heifRepresentation(of: image, format: .RGBA8, colorSpace: RenderContext.displayP3, options: [:])
+                    else { throw DecodeError.renderFailed }
                     let elapsed = start.duration(to: .now)
                     stop.withLock { $0 = true }
                     await editor.value

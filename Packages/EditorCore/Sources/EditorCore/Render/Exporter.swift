@@ -178,7 +178,7 @@ public enum Exporter {
         let aiMasks = try await prepareAIMasks(recipe, source: source, decoder: decoder)
         var inputs = GradeInputs(defaults: info.defaults, luts: luts, aiMasks: aiMasks)
         inputs.inpaints = try await prepareInpaints(recipe, source: source, decoder: decoder)
-        if recipe.scalar(.clarity) != nil || recipe.scalar(.dehaze) != nil {
+        if usesPresenceGuide(recipe) {
             // Clarity's and dehaze's wide blurs at full size more than double peak
             // memory (1.3 → 3.1 GB for a 61 MP dehaze), enough to fail on an iPhone.
             // Blurring the 2560 px decode looks the same, as in the preview.
@@ -207,6 +207,12 @@ public enum Exporter {
         guard let data else { throw DecodeError.renderFailed }
         progress(1)
         return data
+    }
+
+    /// Whether a full-size render of the recipe blurs the 2560 px decode for clarity
+    /// and dehaze, so callers that render many photos can decode it ahead of time.
+    public static func usesPresenceGuide(_ recipe: Recipe) -> Bool {
+        recipe.scalar(.clarity) != nil || recipe.scalar(.dehaze) != nil
     }
 
     /// Makes sure every AI mask in the recipe is computed (they're cached per photo),

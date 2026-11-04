@@ -102,6 +102,59 @@ func makeFolderLibrary(count: Int) throws -> (FolderLibrary, URL) {
         task.cancel()
         await #expect(throws: CancellationError.self) { try await task.value }
     }
+
+    /// A folder library whose batch saves are slow, or fail, to check that saves
+    /// overlapping the next renders still all land, in order, and report errors.
+    final class SlowLibrary: PhotoLibrary, @unchecked Sendable {
+        let folder: FolderLibrary
+        let failOnBatch: Int?
+        let batches = Mutex<[[String]]>([])
+        init(_ folder: FolderLibrary, failOnBatch: Int? = nil) { self.folder = folder; self.failOnBatch = failOnBatch }
+        var displayName: String { folder.displayName }
+        func authorizationStatus() -> LibraryAuthorization { .authorized }
+        func requestAuthorization() async -> LibraryAuthorization { .authorized }
+        func albums() async -> [LibraryAlbum] { await folder.albums() }
+        func assets(in album: LibraryAlbum) async -> AssetList { await folder.assets(in: album) }
+        func thumbnail(for asset: PhotoAsset, pixelSize: CGSize) async -> CGImage? { nil }
+        func quickPreview(for asset: PhotoAsset, maxPixelSize: Int) async -> CGImage? { nil }
+        func beginEditing(_ asset: PhotoAsset, progress: @escaping @Sendable (Double) -> Void) async throws -> EditingSession {
+            try await folder.beginEditing(asset, progress: progress)
+        }
+        func storedEdit(for asset: PhotoAsset) async -> StoredEdit { await folder.storedEdit(for: asset) }
+        func save(_ session: EditingSession, recipe: Recipe, rendered: Data, format: ExportFormat) async throws {}
+        func saveBatch(_ edits: [PendingEdit]) async throws {
+            let number = batches.withLock { $0.count }
+            try await Task.sleep(for: .milliseconds(50))
+            if number == failOnBatch { throw LibraryError.saveFailed("test") }
+            batches.withLock { $0.append(edits.map(\.session.asset.id)) }
+        }
+        func revert(_ asset: PhotoAsset) async throws {}
+        func addPhoto(fileAt url: URL, rawAlternate: URL?) async throws {}
+        func changes() -> AsyncStream<Void> { AsyncStream { _ in } }
+    }
+
+    @Test func batchSavesOverlapRendersAndAllLand() async throws {
+        let (folder, _) = try makeFolderLibrary(count: 23)
+        let library = SlowLibrary(folder)
+        let assets = await folder.assets(in: .recents)
+        let ids = (0..<assets.count).map { assets[$0] }
+        let saved = try await BulkEditor.apply(.values([.exposure: 0.25], mode: .set), to: ids, library: library, luts: nil,
+                                               clock: testClock, format: .jpeg, progress: { _ in }, thumbnail: { _, _ in })
+        #expect(saved == 23)
+        let batches = library.batches.withLock { $0 }
+        #expect(batches.map(\.count) == [10, 10, 3])
+        #expect(batches.flatMap { $0 } == ids.map(\.id), "every photo once, in order")
+    }
+
+    @Test func failedBatchSaveFailsTheBulkEdit() async throws {
+        let (folder, _) = try makeFolderLibrary(count: 23)
+        let library = SlowLibrary(folder, failOnBatch: 0)
+        let assets = await folder.assets(in: .recents)
+        await #expect(throws: LibraryError.self) {
+            try await BulkEditor.apply(.values([.exposure: 0.25], mode: .set), to: (0..<assets.count).map { assets[$0] }, library: library,
+                                       luts: nil, clock: testClock, format: .jpeg, progress: { _ in }, thumbnail: { _, _ in })
+        }
+    }
 }
 
 final class Counter: @unchecked Sendable {

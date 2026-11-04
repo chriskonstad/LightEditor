@@ -1,5 +1,7 @@
 import CoreImage
 import CoreVideo
+import ImageIO
+import os
 import Foundation
 import Synchronization
 
@@ -191,6 +193,59 @@ public enum RenderBenchmark {
                                                                  sorted[sorted.count / 2], sorted[sorted.count * 95 / 100], sorted.count)
                     log("save \(name) priority\(previewing ? " while previewing" : ""): \(elapsed), \(data.count / 1_000_000) MB\(frameText)")
                 }
+            }
+        } catch {
+            log("failed: \(error)")
+        }
+        log("done")
+    }
+
+    /// Memory left before the system ends the app (iOS only).
+    static var availableMB: Int {
+        #if os(iOS)
+        Int(os_proc_available_memory() / 1_048_576)
+        #else
+        -1
+        #endif
+    }
+
+    /// Runs a real bulk edit (a busy look, with clarity and dehaze) over copies of
+    /// `urls` in a folder library, reporting each stage's time and peak memory. The
+    /// rendered files land in `output` for comparing builds.
+    public static func runBulk(urls: [URL], output: URL, log: @escaping @Sendable (String) -> Void) async {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "bulk-bench-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            for url in urls { try FileManager.default.copyItem(at: url, to: folder.appending(path: url.lastPathComponent)) }
+            let library = FolderLibrary(directory: folder)
+            let assets = await library.assets(in: .recents)
+            let clip = RecipeClip(recipe: typicalRecipe(), sourceName: "bench", sourceDefaults: .generic)
+            // A disk tier like the app's, so decodes from the first pass can be reused.
+            let decoder = RawDecoder(cache: DecodeCache(directory: folder.appending(path: ".cache")))
+            let start = ContinuousClock.now
+            let marks = Mutex<[String]>([])
+            let saved = try await BulkEditor.apply(
+                .paste(clip, groups: PasteGroup.defaultSelection, mode: .set), to: (0..<assets.count).map { assets[$0] },
+                library: library, luts: nil, clock: HybridLogicalClock(node: "bench"), decoder: decoder,
+                progress: { progress in
+                    let mark = progress.preparing ? "prepared" : progress.rendering.map { "rendering \($0)" } ?? "saved \(progress.completed)"
+                    marks.withLock { marks in
+                        guard marks.last?.hasPrefix(mark) != true else { return }
+                        let elapsed = start.duration(to: .now)
+                        marks.append(mark)
+                        log(String(format: "%@ at %.1f s", mark, Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18))
+                    }
+                },
+                thumbnail: { _, _ in }
+            )
+            log("bulk edit of \(saved) photos: \(start.duration(to: .now))")
+            try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            for asset in (0..<assets.count).map({ assets[$0] }) {
+                let rendered = folder.appending(path: ".raweditor/\(asset.id).rendered")
+                let target = output.appending(path: "\(asset.id).heic")
+                try? FileManager.default.removeItem(at: target)
+                try FileManager.default.copyItem(at: rendered, to: target)
             }
         } catch {
             log("failed: \(error)")

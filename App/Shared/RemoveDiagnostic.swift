@@ -22,6 +22,10 @@ enum RemoveDiagnostic {
             Task.detached(priority: .userInitiated) { await runBenchmark(saves: true) }
             return
         }
+        if UserDefaults.standard.bool(forKey: "BulkBenchmark") {
+            Task.detached(priority: .userInitiated) { await runBenchmark(saves: true, bulk: true) }
+            return
+        }
         guard UserDefaults.standard.bool(forKey: "DiagnoseRemove") else { return }
         Task.detached(priority: .userInitiated) { await run() }
     }
@@ -29,13 +33,15 @@ enum RemoveDiagnostic {
     /// `-RenderBenchmark YES`: times the preview pipeline on the first RAW in
     /// Documents/Diagnostics/in, writing Documents/Diagnostics/out/bench.txt.
     /// `-SaveBenchmark YES` times full-size saves instead.
-    static func runBenchmark(saves: Bool) async {
+    /// `-BulkBenchmark YES` times a bulk edit's stages on every RAW there.
+    static func runBenchmark(saves: Bool, bulk: Bool = false) async {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "Diagnostics")
         let output = documents.appending(path: "out")
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         let files = ((try? FileManager.default.contentsOfDirectory(at: documents.appending(path: "in"), includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.pathExtension.lowercased() == "arw" }
-        guard let url = files.first else { print("BENCH no ARW"); return }
+        let raws = files.filter { ["arw", "raf", "dng"].contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        guard let url = raws.first(where: { $0.pathExtension.lowercased() == "arw" }) else { print("BENCH no ARW"); return }
         let lines = Mutex<[String]>([])
         let log: @Sendable (String) -> Void = { line in
             let line = "\(line) [peak \(peakFootprintMB) MB]"
@@ -43,7 +49,9 @@ enum RemoveDiagnostic {
             let all = lines.withLock { $0.append(line); return $0 }
             try? all.joined(separator: "\n").write(to: output.appending(path: "bench.txt"), atomically: true, encoding: .utf8)
         }
-        if saves {
+        if bulk {
+            await RenderBenchmark.runBulk(urls: raws, output: output.appending(path: "bulk"), log: log)
+        } else if saves {
             await RenderBenchmark.runSaves(url: url, log: log)
         } else {
             await RenderBenchmark.run(url: url, log: log)

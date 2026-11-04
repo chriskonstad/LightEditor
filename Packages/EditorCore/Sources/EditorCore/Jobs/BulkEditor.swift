@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreImage
 import Foundation
 
 /// A change applied to many photos at once.
@@ -37,6 +38,13 @@ public enum BulkChange: Sendable, Codable {
 /// Thumbnails come first, so the grid shows the new look within moments; full
 /// renders follow and are committed to the library in batches, so Photos asks for
 /// permission once per batch rather than once per photo.
+///
+/// Each photo is decoded once before its full render: a RAW 9 decode takes about as
+/// long at 512 px as at 2560 px, so when the full render will want the 2560 px decode
+/// (clarity, dehaze, AI masks, Remove fills) the thumbnail comes from that, and the
+/// full render finds it in the decode cache. Full renders don't overlap each other or
+/// those decodes, which all share the GPU (overlapping them was slower), but a batch's
+/// save to the library runs while the next photos render.
 public enum BulkEditor {
     public static let batchSize = 10
 
@@ -94,8 +102,10 @@ public enum BulkEditor {
             }
             prepared.append((session, recipe))
             let aiMasks = try? await Exporter.prepareAIMasks(recipe, source: session.original, decoder: decoder)
-            if let decoded = try? await decoder.decode(session.original, rawStage: recipe.rawStage, longEdge: 512),
-               let image = ThumbnailRenderer.render(recipe, base: decoded.image, inputs: {
+            let needsLarge = Exporter.usesPresenceGuide(recipe) || recipe.masks.contains(where: \.usesAI)
+                || recipe.retouches.contains { $0.kind == .remove }
+            if let decoded = try? await decoder.decode(session.original, rawStage: recipe.rawStage, longEdge: needsLarge ? 2560 : 512),
+               let image = ThumbnailRenderer.render(recipe, base: thumbnailBase(decoded.image), inputs: {
                    var inputs = GradeInputs(defaults: info.defaults, luts: luts, aiMasks: aiMasks)
                    inputs.inpaints = InpaintStore.store(for: recipe.analysisKey(for: session.original.key))
                    return inputs
@@ -105,9 +115,11 @@ public enum BulkEditor {
             progress(Progress(fraction: Double(index + 1) / Double(total) * 0.25, completed: 0, total: total, preparing: true))
         }
 
-        // Pass 2: full renders, committed in batches.
+        // Pass 2: full renders, committed in batches. One batch saves while the next
+        // renders; they finish in order.
         var pending: [PendingEdit] = []
         var saved = 0
+        var saving: Task<Int, any Error>?
         for (index, (session, recipe)) in prepared.enumerated() {
             try Task.checkCancellation()
             // A full-size render takes seconds, so progress moves within each photo too;
@@ -116,17 +128,30 @@ public enum BulkEditor {
             let start = 0.25 + Double(index) / Double(total) * 0.75
             let span = 0.75 / Double(total)
             progress(Progress(fraction: start, completed: index, total: total, rendering: index + 1))
-            let data = try await Exporter.render(source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: format), progress: { fraction in
+            let data = try await Exporter.render(source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: format), decoder: decoder, progress: { fraction in
                 progress(Progress(fraction: start + fraction * span, completed: index, total: total, rendering: index + 1))
             })
             pending.append(PendingEdit(session: session, recipe: recipe, rendered: data, format: format))
             if pending.count == batchSize || index == prepared.count - 1 {
-                try await library.saveBatch(pending)
-                saved += pending.count
+                saved += try await saving?.value ?? 0
+                let batch = pending
                 pending.removeAll()
+                saving = Task {
+                    try await library.saveBatch(batch)
+                    return batch.count
+                }
             }
             progress(Progress(fraction: 0.25 + Double(index + 1) / Double(total) * 0.75, completed: index + 1, total: total))
         }
+        saved += try await saving?.value ?? 0
         return saved
+    }
+
+    /// A 2560 px decode shrunk smoothly to 512 px first: the thumbnail's own
+    /// downscale is a plain resample, which aliases from that far.
+    private static func thumbnailBase(_ image: CIImage) -> CIImage {
+        let scale = 512 / max(image.extent.width, image.extent.height)
+        guard scale < 1 else { return image }
+        return image.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: scale, kCIInputAspectRatioKey: 1])
     }
 }

@@ -32,3 +32,4 @@ Checked against the build settings in `project.yml` and the code as of October 2
 - [x] Screenshots per `screenshots.md` (iPhone 6.9", iPad 13", iPhone Duo).
 - [x] Build 2610291908 (iOS 27.1 SDK, adds background bulk edits) submitted for review on 2026-10-29, replacing 2610291034 before review began. Upload with plain `scripts/testflight.sh`: `--internal-only` builds can't be attached to an App Store version.
 - [x] Approved and released 2026-11-01: https://apps.apple.com/app/lighteditor-raw/id6824085422
+- [x] 1.0.1 (build 2611041042) submitted 2026-11-04, released automatically on approval

@@ -94,6 +94,18 @@ About 2,300/4,000. Check before publishing:
 First release. Thanks for trying LightEditor!
 ```
 
+## What's New (1.0.1)
+
+No camera-brand names here either, as for the keywords.
+
+```
+• Camera looks: start an ARW or RAF edit from the look the camera shot it with, including the camera's own look adjustments. Ten new built-in looks for ARW cameras, one fitted to the camera's own JPEG.
+• Apply each photo's own camera look to many photos at once, or copy and paste it.
+• Fixed: saving an edit with Dehaze or Clarity could fail on iPhone with "The image couldn't be decoded". These saves now use less than half the memory.
+• "Save edit now" goes ahead of any bulk edit that's running.
+• Faster saves, and bulk edits about 17% faster on iPhone.
+```
+
 ## URLs
 
 | Field | Required | Draft |

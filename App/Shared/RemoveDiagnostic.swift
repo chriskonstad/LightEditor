@@ -15,7 +15,11 @@ import UniformTypeIdentifiers
 enum RemoveDiagnostic {
     static func runIfRequested() {
         if UserDefaults.standard.bool(forKey: "RenderBenchmark") {
-            Task.detached(priority: .userInitiated) { await runBenchmark() }
+            Task.detached(priority: .userInitiated) { await runBenchmark(saves: false) }
+            return
+        }
+        if UserDefaults.standard.bool(forKey: "SaveBenchmark") {
+            Task.detached(priority: .userInitiated) { await runBenchmark(saves: true) }
             return
         }
         guard UserDefaults.standard.bool(forKey: "DiagnoseRemove") else { return }
@@ -24,7 +28,8 @@ enum RemoveDiagnostic {
 
     /// `-RenderBenchmark YES`: times the preview pipeline on the first RAW in
     /// Documents/Diagnostics/in, writing Documents/Diagnostics/out/bench.txt.
-    static func runBenchmark() async {
+    /// `-SaveBenchmark YES` times full-size saves instead.
+    static func runBenchmark(saves: Bool) async {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "Diagnostics")
         let output = documents.appending(path: "out")
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
@@ -32,11 +37,26 @@ enum RemoveDiagnostic {
             .filter { $0.pathExtension.lowercased() == "arw" }
         guard let url = files.first else { print("BENCH no ARW"); return }
         let lines = Mutex<[String]>([])
-        await RenderBenchmark.run(url: url) { line in
+        let log: @Sendable (String) -> Void = { line in
+            let line = "\(line) [peak \(peakFootprintMB) MB]"
             print("BENCH \(line)")
             let all = lines.withLock { $0.append(line); return $0 }
             try? all.joined(separator: "\n").write(to: output.appending(path: "bench.txt"), atomically: true, encoding: .utf8)
         }
+        if saves {
+            await RenderBenchmark.runSaves(url: url, log: log)
+        } else {
+            await RenderBenchmark.run(url: url, log: log)
+        }
+    }
+
+    private static var peakFootprintMB: Int {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        return result == KERN_SUCCESS ? Int(info.ledger_phys_footprint_peak / 1_048_576) : -1
     }
 
     private static var footprintMB: Int {

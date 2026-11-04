@@ -1023,7 +1023,8 @@ final class EditorModel: Identifiable {
     // MARK: Saving and export
 
     /// Saves to the library if anything changed. Runs as a job; safe to call when leaving.
-    func saveIfNeeded() {
+    /// "Save edit now" passes `.now`, to go ahead of bulk edits at full GPU priority.
+    func saveIfNeeded(priority: RenderPriority = .soon) {
         guard let session, isDirty else { return }
         let recipe = self.recipe
         let library = app.library
@@ -1045,7 +1046,7 @@ final class EditorModel: Identifiable {
                 return
             }
             let data = try await Exporter.render(
-                source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: .heic),
+                source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: .heic), priority: priority,
                 queued: { reporter.progress(nil, detail: "\(filename) · waiting for earlier saves") }
             ) {
                 reporter.progress($0 * 0.9, detail: filename)
@@ -1077,7 +1078,7 @@ final class EditorModel: Identifiable {
             if let remote {
                 return try await remote.export(session, recipe: recipe, options: options, luts: lutFiles) { fraction, _ in reporter.progress(fraction) }
             }
-            return try await Exporter.renderToFile(source: session.original, recipe: recipe, luts: luts, options: options, baseName: baseName) {
+            return try await Exporter.renderToFile(source: session.original, recipe: recipe, luts: luts, options: options, baseName: baseName, priority: .now) {
                 reporter.progress($0)
             }
         }
@@ -1098,7 +1099,7 @@ final class EditorModel: Identifiable {
                 try await remote.exportToLibrary(session, recipe: recipe, options: options, luts: lutFiles) { fraction, _ in reporter.progress(fraction) }
                 return
             }
-            let url = try await Exporter.renderToFile(source: session.original, recipe: recipe, luts: luts, options: options, baseName: baseName) {
+            let url = try await Exporter.renderToFile(source: session.original, recipe: recipe, luts: luts, options: options, baseName: baseName, priority: .soon) {
                 reporter.progress($0 * 0.9)
             }
             try await library.addPhoto(fileAt: url)

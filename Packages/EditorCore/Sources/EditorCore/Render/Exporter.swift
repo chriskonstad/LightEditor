@@ -68,27 +68,59 @@ public enum ExportSizing {
     }
 }
 
-/// Runs full-size renders one at a time, in order. A 61 MP RAW can need over a
-/// gigabyte while it renders, and two at once can exceed an iPhone's memory limit.
+/// How urgently a full-size render is wanted.
+public enum RenderPriority: Sendable {
+    /// Someone is waiting on this photo ("Save edit now", sharing): it goes ahead of
+    /// queued background renders and uses the GPU at normal priority.
+    case now
+    /// A single photo's save on leaving the editor: ahead of bulk edits, but at low
+    /// GPU priority so the next photo's preview never waits behind it.
+    case soon
+    /// Bulk edits.
+    case background
+
+    var context: CIContext { self == .now ? RenderContext.urgent : RenderContext.background }
+}
+
+/// Runs full-size renders one at a time: by priority, then in order. A 61 MP RAW can
+/// need over a gigabyte while it renders, and two at once can exceed an iPhone's
+/// memory limit. A bulk edit takes the gate once per photo, so a photo saved during
+/// one waits for at most the render in progress.
 public actor RenderGate {
     public static let fullSize = RenderGate()
 
     private var busy = false
-    private var waiting: [CheckedContinuation<Void, Never>] = []
+    private var waiting: [(priority: RenderPriority, resume: CheckedContinuation<Void, Never>)] = []
 
-    /// Runs `work` once the renders queued before it finish. `queued` is called
-    /// first if it has to wait.
-    public func run<T: Sendable>(queued: @Sendable () -> Void = {}, _ work: @Sendable () async throws -> T) async throws -> T {
+    /// Runs `work` once the renders ahead of it finish. `queued` is called first if
+    /// it has to wait.
+    public func run<T: Sendable>(
+        priority: RenderPriority = .background,
+        queued: @Sendable () -> Void = {},
+        _ work: @Sendable () async throws -> T
+    ) async throws -> T {
         if busy {
             queued()
-            await withCheckedContinuation { waiting.append($0) }
+            await withCheckedContinuation { continuation in
+                let rank = Self.rank(priority)
+                let index = waiting.firstIndex { Self.rank($0.priority) > rank } ?? waiting.endIndex
+                waiting.insert((priority, continuation), at: index)
+            }
         }
         busy = true
         defer {
-            if waiting.isEmpty { busy = false } else { waiting.removeFirst().resume() }
+            if waiting.isEmpty { busy = false } else { waiting.removeFirst().resume.resume() }
         }
         try Task.checkCancellation()
         return try await work()
+    }
+
+    private static func rank(_ priority: RenderPriority) -> Int {
+        switch priority {
+        case .now: 0
+        case .soon: 1
+        case .background: 2
+        }
     }
 }
 
@@ -102,11 +134,21 @@ public enum Exporter {
         luts: (any LUTProvider)?,
         options: ExportOptions,
         decoder: RawDecoder = .shared,
+        priority: RenderPriority = .background,
         queued: @Sendable () -> Void = {},
         progress: @Sendable (Double) -> Void = { _ in }
     ) async throws -> Data {
-        try await RenderGate.fullSize.run(queued: queued) {
-            try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, progress: progress)
+        try await RenderGate.fullSize.run(priority: priority, queued: queued) {
+            do {
+                return try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, context: priority.context, progress: progress)
+            } catch DecodeError.renderFailed {
+                // Core Image fails a render outright (in the RAW decoder, "Failed to
+                // submit async execution") when other GPU work leaves too little
+                // memory, as while the editor shows a big photo. It's usually gone a
+                // moment later.
+                try await Task.sleep(for: .seconds(1))
+                return try await renderNow(source: source, recipe: recipe, luts: luts, options: options, decoder: decoder, context: priority.context, progress: progress)
+            }
         }
     }
 
@@ -116,6 +158,7 @@ public enum Exporter {
         luts: (any LUTProvider)?,
         options: ExportOptions,
         decoder: RawDecoder,
+        context: CIContext,
         progress: @Sendable (Double) -> Void
     ) async throws -> Data {
         let signpostID = Signposts.export.makeSignpostID()
@@ -140,6 +183,12 @@ public enum Exporter {
         let aiMasks = try await prepareAIMasks(recipe, source: source, decoder: decoder)
         var inputs = GradeInputs(defaults: info.defaults, luts: luts, aiMasks: aiMasks)
         inputs.inpaints = try await prepareInpaints(recipe, source: source, decoder: decoder)
+        if recipe.scalar(.clarity) != nil || recipe.scalar(.dehaze) != nil {
+            // Clarity's and dehaze's wide blurs at full size more than double peak
+            // memory (1.3 → 3.1 GB for a 61 MP dehaze), enough to fail on an iPhone.
+            // Blurring the 2560 px decode looks the same, as in the preview.
+            inputs.presenceGuide = try await decoder.decode(source, rawStage: recipe.rawStage, longEdge: 2560).image
+        }
         var image = GradeGraph.apply(recipe, to: base, inputs: inputs)
         image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
         if let longEdge = options.longEdge {
@@ -151,7 +200,6 @@ public enum Exporter {
         try Task.checkCancellation()
         progress(0.4)
 
-        let context = RenderContext.background
         let quality = [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: options.quality]
         let data: Data?
         switch options.format {
@@ -194,9 +242,10 @@ public enum Exporter {
         luts: (any LUTProvider)?,
         options: ExportOptions,
         baseName: String,
+        priority: RenderPriority = .background,
         progress: @Sendable (Double) -> Void = { _ in }
     ) async throws -> URL {
-        let data = try await render(source: source, recipe: recipe, luts: luts, options: options, progress: progress)
+        let data = try await render(source: source, recipe: recipe, luts: luts, options: options, priority: priority, progress: progress)
         let directory = FileManager.default.temporaryDirectory.appending(path: "Exports", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appending(path: "\(baseName).\(options.format.fileExtension)")

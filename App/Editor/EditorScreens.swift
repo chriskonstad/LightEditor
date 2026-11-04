@@ -254,7 +254,7 @@ struct EditorMoreMenu: View {
                 }
             }
             Divider()
-            Button("Save edit now", systemImage: "square.and.arrow.down") { model.saveIfNeeded() }
+            Button("Save edit now", systemImage: "square.and.arrow.down") { model.saveIfNeeded(priority: .now) }
                 .disabled(!model.isDirty)
             Button("Back to when opened", systemImage: "clock.arrow.circlepath") { model.returnToOpened() }
                 .disabled(!model.canReturnToOpened)

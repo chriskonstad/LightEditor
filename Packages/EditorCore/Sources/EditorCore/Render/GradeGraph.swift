@@ -1,7 +1,8 @@
 import CoreImage
 import Metal
 
-/// The one Metal-backed `CIContext` the app uses, plus shared color spaces.
+/// The Metal-backed `CIContext`s: `shared` for everything interactive, and two for
+/// full-size renders. Plus shared color spaces.
 public enum RenderContext {
     public static let device: MTLDevice? = MTLCreateSystemDefaultDevice()
 
@@ -23,6 +24,18 @@ public enum RenderContext {
             .cacheIntermediates: false,
             .priorityRequestLow: true,
             .name: "LightEditor background",
+        ]
+        if let device { return CIContext(mtlDevice: device, options: options) }
+        return CIContext(options: options)
+    }()
+
+    /// Full-size renders someone is waiting on ("Save edit now", sharing), at normal
+    /// GPU priority: preview frames may wait a little behind them.
+    public static let urgent: CIContext = {
+        let options: [CIContextOption: Any] = [
+            .workingFormat: CIFormat.RGBAh,
+            .cacheIntermediates: false,
+            .name: "LightEditor urgent",
         ]
         if let device { return CIContext(mtlDevice: device, options: options) }
         return CIContext(options: options)
@@ -57,8 +70,8 @@ public struct GradeInputs: Sendable {
     /// A smaller copy of the base image (same framing) for the wide blurs behind
     /// clarity and dehaze. They only carry broad brightness, so blurring a small
     /// copy and enlarging it looks the same and is far cheaper than blurring
-    /// hundreds of full-resolution pixels around everything on screen. Previews
-    /// only; exports leave it nil.
+    /// hundreds of full-resolution pixels around everything on screen. Full-size
+    /// exports use one too, which also keeps their memory down.
     public nonisolated(unsafe) var presenceGuide: CIImage?
 
     public init(defaults: PhotoDefaults, luts: (any LUTProvider)? = nil, applyGeometry: Bool = true, showClipping: Bool = false,

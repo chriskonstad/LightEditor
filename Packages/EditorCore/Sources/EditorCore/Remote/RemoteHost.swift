@@ -157,7 +157,7 @@ public final class RemoteHost: @unchecked Sendable {
         case .save(let id, let recipe, let files):
             let session = try await session(id)
             let data = try await Exporter.render(
-                source: session.original, recipe: recipe, luts: merged(files), options: ExportOptions(format: .heic),
+                source: session.original, recipe: recipe, luts: merged(files), options: ExportOptions(format: .heic), priority: .soon,
                 queued: { progress(nil, "Waiting for earlier saves") },
                 progress: { progress($0 * 0.9, nil) }
             )
@@ -167,14 +167,14 @@ public final class RemoteHost: @unchecked Sendable {
         case .export(let id, let recipe, let options, let files):
             let session = try await session(id)
             let url = try await Exporter.renderToFile(source: session.original, recipe: recipe, luts: merged(files), options: options,
-                                                      baseName: (session.filename as NSString).deletingPathExtension) { progress($0, nil) }
+                                                      baseName: (session.filename as NSString).deletingPathExtension, priority: .now) { progress($0, nil) }
             defer { try? FileManager.default.removeItem(at: url) }
             return .file(name: url.lastPathComponent, data: try Data(contentsOf: url))
 
         case .exportToLibrary(let id, let recipe, let options, let files):
             let session = try await session(id)
             let url = try await Exporter.renderToFile(source: session.original, recipe: recipe, luts: merged(files), options: options,
-                                                      baseName: (session.filename as NSString).deletingPathExtension) { progress($0 * 0.9, nil) }
+                                                      baseName: (session.filename as NSString).deletingPathExtension, priority: .soon) { progress($0 * 0.9, nil) }
             defer { try? FileManager.default.removeItem(at: url) }
             try await library.addPhoto(fileAt: url)
             return .done(count: 1)

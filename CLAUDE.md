@@ -70,7 +70,7 @@ Test in a simulator's local Photos library or a folder library, never a real one
 
 - Never decode a RAW on the main thread.
 - Decode once into a cached scene-linear RGBA16F intermediate. Only RAW-stage parameters (noise reduction, detail, sharpening) trigger a re-decode; grading changes never do.
-- Use one Metal-backed `CIContext` for everything interactive (`RenderContext.shared`). Full-size saves and exports use the low-priority `RenderContext.background` and run one at a time through `RenderGate`.
+- Use one Metal-backed `CIContext` for everything interactive (`RenderContext.shared`). Full-size saves and exports run one at a time through `RenderGate`, by `RenderPriority`: on the low-priority `RenderContext.background`, except renders someone is waiting on ("Save edit now", sharing), which use `RenderContext.urgent`.
 - Coalesce slider input to the display refresh rate, and cancel stale renders instead of queueing them.
 - Wrap every pipeline stage (decode, grade, display, export) in `os_signpost`.
 - Keep `XCTest` performance tests with device baselines for decode, grade and export.

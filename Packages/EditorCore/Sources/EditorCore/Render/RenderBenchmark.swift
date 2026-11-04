@@ -1,6 +1,7 @@
 import CoreImage
 import CoreVideo
 import Foundation
+import Synchronization
 
 /// Times the preview pipeline's stages on a real photo, for tuning on devices.
 /// Debug builds run it with `-RenderBenchmark YES` (see the app's diagnostics).
@@ -146,6 +147,45 @@ public enum RenderBenchmark {
                 _ = Histogram.compute(GradeGraph.apply(recipe, to: tiny.image, inputs: inputs))
                 let d = start.duration(to: .now)
                 return Double(d.components.attoseconds) / 1e15 + Double(d.components.seconds) * 1000
+            }
+        } catch {
+            log("failed: \(error)")
+        }
+        log("done")
+    }
+
+    /// Times full-size HEIC saves at low and normal GPU priority, alone and while a
+    /// stand-in for the editor grades the 2560 px decode back to back, and how long
+    /// those preview frames take meanwhile.
+    public static func runSaves(url: URL, screen: CGSize = CGSize(width: 1206, height: 804), log: @escaping @Sendable (String) -> Void) async {
+        let source = PhotoSource(url: url, key: "bench-\(UUID().uuidString)")
+        let decoder = RawDecoder(cache: DecodeCache(directory: nil))
+        let recipe = typicalRecipe()
+        do {
+            let preview = try await decoder.decode(source, rawStage: recipe.rawStage, longEdge: 2560)
+            let scale = min(screen.width / preview.size.width, screen.height / preview.size.height)
+            let frame = GradeGraph.apply(recipe, to: preview.image, inputs: GradeInputs(defaults: .generic))
+                .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            let screenRect = CGRect(origin: .zero, size: screen)
+            for previewing in [false, true] {
+                for (name, priority) in [("low", RenderPriority.soon), ("normal", .now)] {
+                    let stop = Mutex(false)
+                    let frames = Mutex<[Double]>([])
+                    let editor = Task.detached {
+                        while previewing, !stop.withLock({ $0 }) {
+                            if let ms = try? time(frame, rect: screenRect) { frames.withLock { $0.append(ms) } }
+                        }
+                    }
+                    let start = ContinuousClock.now
+                    let data = try await Exporter.render(source: source, recipe: recipe, luts: nil, options: ExportOptions(format: .heic), decoder: decoder, priority: priority)
+                    let elapsed = start.duration(to: .now)
+                    stop.withLock { $0 = true }
+                    await editor.value
+                    let sorted = frames.withLock { $0 }.sorted()
+                    let frameText = sorted.isEmpty ? "" : String(format: ", preview frames median %.0f ms, p95 %.0f ms (%d)",
+                                                                 sorted[sorted.count / 2], sorted[sorted.count * 95 / 100], sorted.count)
+                    log("save \(name) priority\(previewing ? " while previewing" : ""): \(elapsed), \(data.count / 1_000_000) MB\(frameText)")
+                }
             }
         } catch {
             log("failed: \(error)")

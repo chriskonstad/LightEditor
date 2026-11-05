@@ -14,9 +14,11 @@ struct LightEditorApp: App {
         // "LaMa + diffusion" when the build bundled Stable Diffusion inpainting.
         DiffusionInpainter.shared.configure(.inBundle())
         #if os(iOS)
-        // The diffusion models take about 1 GB; let them go under memory pressure.
+        // The diffusion models take about 1 GB, and the kept RAW filter and cached
+        // decodes a few hundred MB; let them go under memory pressure.
         NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: nil) { _ in
             DiffusionInpainter.shared.release()
+            Task { await RawDecoder.shared.trimMemory() }
         }
         #endif
         #if DEBUG

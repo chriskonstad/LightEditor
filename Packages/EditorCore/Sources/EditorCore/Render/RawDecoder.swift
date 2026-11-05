@@ -94,6 +94,66 @@ public actor RawDecoder {
         self.cache = cache
     }
 
+    /// A `CIRAWFilter` kept for reuse, with what it read from the file.
+    private struct OpenRAW {
+        let key: String
+        /// The RAW-stage settings it's set up for, for good: other settings get a
+        /// fresh filter, exactly as before reuse.
+        let stage: RawStageParams
+        let filter: CIRAWFilter
+        let info: SourceInfo
+        /// The full-size long edge. `nativeSize` itself shrinks once a small
+        /// `scaleFactor` has been set, so it's read before any.
+        let nativeLongEdge: Double
+        var resourcesReady = false
+    }
+
+    /// The last RAW decoded, for reuse. A `CIRAWFilter` keeps what it renders: RAW 9
+    /// decodes every size up to half resolution from one half-resolution pass (about
+    /// 1 s on an M4 Pro), and full size from its own pass (about 3 s), so a second
+    /// decode of the same photo and settings, at any size in the same half, takes tens
+    /// of milliseconds instead. A Detail change needs a new decode anyway, and changing
+    /// one filter's settings made it slower each time, so each settings gets its own.
+    /// Only one is kept: after a full-size render it holds about 300 MB.
+    private var open: OpenRAW?
+
+    private var inFlight: [DecodeCache.Key: Task<DecodedImage, any Error>] = [:]
+
+    /// Drops the kept filter and cached decodes in memory, e.g. on a memory warning.
+    public func trimMemory() async {
+        open = nil
+        await cache.trimMemory()
+    }
+
+    /// The filter for `source` set up for `stage`, reused if it's the last one.
+    /// `stage` nil (for `info`) takes any kept filter of the source.
+    private func openRAW(_ source: PhotoSource, stage: RawStageParams?) throws -> OpenRAW? {
+        if let open, open.key == source.key, stage == nil || open.stage == stage { return open }
+        let known = open?.key == source.key ? open?.info : nil
+        // Let the old one go first, so two filters' renders are never held at once.
+        open = nil
+        guard let raw = CIRAWFilter(imageURL: source.url) else { return nil }
+        let info: SourceInfo
+        if let known { info = known } else { info = makeInfo(raw: raw, source: source) }
+        let nativeLongEdge = max(raw.nativeSize.width, raw.nativeSize.height)
+        let stage = stage ?? RawStageParams(decoderVersion: info.decoderVersion)
+        let wanted = CIRAWDecoderVersion(rawValue: stage.decoderVersion)
+        if raw.supportedDecoderVersions.contains(wanted) {
+            raw.decoderVersion = wanted
+        } else if let newest = raw.supportedDecoderVersions.last {
+            raw.decoderVersion = newest
+        }
+        if let value = stage.noiseReduction, raw.isLuminanceNoiseReductionSupported { raw.luminanceNoiseReductionAmount = Float(value / 100) }
+        if let value = stage.colorNoise, raw.isColorNoiseReductionSupported { raw.colorNoiseReductionAmount = Float(value / 100) }
+        if let value = stage.sharpness, raw.isSharpnessSupported { raw.sharpnessAmount = Float(value / 100) }
+        if let value = stage.detail, raw.isDetailSupported { raw.detailAmount = Float(value / 100) }
+        if let value = stage.lensCorrection, raw.isLensCorrectionSupported { raw.isLensCorrectionEnabled = value >= 0.5 }
+        if let value = stage.moire, raw.isMoireReductionSupported { raw.moireReductionAmount = Float(value / 100) }
+        let entry = OpenRAW(key: source.key, stage: stage, filter: raw, info: info, nativeLongEdge: nativeLongEdge)
+        open = entry
+        return entry
+    }
+
     private static func remoteDecoder() throws -> any RemoteDecoding {
         guard let remote = remote.withLock({ $0 }) else { throw DecodeError.notConnected }
         return remote
@@ -102,9 +162,7 @@ public actor RawDecoder {
     /// Inspects a source without decoding pixels.
     public func info(for source: PhotoSource) async throws -> SourceInfo {
         if source.isRemote { return try await Self.remoteDecoder().info(for: source) }
-        if source.isRAW, let raw = CIRAWFilter(imageURL: source.url) {
-            return makeInfo(raw: raw, source: source)
-        }
+        if source.isRAW, let entry = try openRAW(source, stage: nil) { return entry.info }
         return try bitmapInfo(source)
     }
 
@@ -123,11 +181,24 @@ public actor RawDecoder {
             await cache.insert(decoded, for: key)
             return decoded
         }
+        // The same decode asked for twice at once (the editor and its AI masks, say)
+        // is done once.
+        if let running = inFlight[key] { return try await running.value }
         let (image, info) = try await lazyImage(source, rawStage: rawStage, longEdge: longEdge)
         try Task.checkCancellation()
-        let decoded = try render(image, info: info)
-        await cache.insert(decoded, for: key)
-        return decoded
+        if let running = inFlight[key] { return try await running.value }
+        // Off the actor: a decode takes a second or more, and other photos' decodes
+        // (and the editor's calls) shouldn't wait behind it.
+        let box = UncheckedBox(image)
+        let cache = self.cache
+        let task = Task.detached(priority: Task.currentPriority) {
+            let decoded = try Self.render(box.value, info: info)
+            await cache.insert(decoded, for: key)
+            return decoded
+        }
+        inFlight[key] = task
+        defer { inFlight[key] = nil }
+        return try await task.value
     }
 
     /// An unrendered Core Image graph for the source, used for exports and 100% views
@@ -139,29 +210,19 @@ public actor RawDecoder {
             let decoded = try await decode(source, rawStage: rawStage, longEdge: longEdge.map { min($0, 2560) } ?? 2560)
             return (decoded.image, decoded.info)
         }
-        if source.isRAW, let raw = CIRAWFilter(imageURL: source.url) {
-            let info = makeInfo(raw: raw, source: source)
-            let wanted = CIRAWDecoderVersion(rawValue: rawStage.decoderVersion)
-            if raw.supportedDecoderVersions.contains(wanted) {
-                raw.decoderVersion = wanted
-            } else if let newest = raw.supportedDecoderVersions.last {
-                raw.decoderVersion = newest
-            }
-            if raw.decoderVersion == .version9 || raw.decoderVersion == .version9DNG {
+        if source.isRAW, var entry = try openRAW(source, stage: rawStage) {
+            let raw = entry.filter
+            if (raw.decoderVersion == .version9 || raw.decoderVersion == .version9DNG) && !entry.resourcesReady {
                 try await downloadResources(raw)
+                entry.resourcesReady = true
+                if open?.filter === raw { open?.resourcesReady = true }
             }
-            if let value = rawStage.noiseReduction, raw.isLuminanceNoiseReductionSupported { raw.luminanceNoiseReductionAmount = Float(value / 100) }
-            if let value = rawStage.colorNoise, raw.isColorNoiseReductionSupported { raw.colorNoiseReductionAmount = Float(value / 100) }
-            if let value = rawStage.sharpness, raw.isSharpnessSupported { raw.sharpnessAmount = Float(value / 100) }
-            if let value = rawStage.detail, raw.isDetailSupported { raw.detailAmount = Float(value / 100) }
-            if let value = rawStage.lensCorrection, raw.isLensCorrectionSupported { raw.isLensCorrectionEnabled = value >= 0.5 }
-            if let value = rawStage.moire, raw.isMoireReductionSupported { raw.moireReductionAmount = Float(value / 100) }
-            let native = max(raw.nativeSize.width, raw.nativeSize.height)
-            let scale = longEdge.map { min(1, Double($0) / native) } ?? 1
+            let scale = longEdge.map { min(1, Double($0) / entry.nativeLongEdge) } ?? 1
             #if targetEnvironment(simulator)
             // The iOS 27 simulator ignores scaleFactor: the output reports the scaled
             // extent but holds the top-left corner of the full-size image. Decode at full
             // size and downscale instead. Devices and the Mac honor scaleFactor.
+            raw.scaleFactor = 1
             guard var output = raw.outputImage else { throw DecodeError.renderFailed }
             if scale < 1 {
                 output = output.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: scale, kCIInputAspectRatioKey: 1])
@@ -170,6 +231,7 @@ public actor RawDecoder {
             raw.scaleFactor = Float(scale)
             guard let output = raw.outputImage else { throw DecodeError.renderFailed }
             #endif
+            let info = entry.info
             var resolved = info
             resolved.decoderVersion = raw.decoderVersion.rawValue
             return (output, resolved)
@@ -195,7 +257,7 @@ public actor RawDecoder {
         return (image, info)
     }
 
-    private func render(_ image: CIImage, info: SourceInfo) throws -> DecodedImage {
+    private static func render(_ image: CIImage, info: SourceInfo) throws -> DecodedImage {
         let extent = image.extent.integral
         let origin = image.transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
         guard let buffer = PixelBuffers.make(width: Int(extent.width), height: Int(extent.height)) else {

@@ -252,4 +252,79 @@ public enum RenderBenchmark {
         }
         log("done")
     }
+
+    /// An editing session on each RAW, timed step by step: open (info and the
+    /// 2560 px decode), a Detail change (re-decode), the first 100% tile, slider frames
+    /// at Fit, and the full-size save. Each photo gets a fresh cache key, as a photo
+    /// opened for the first time would.
+    public static func runSession(urls: [URL], screen: CGSize = CGSize(width: 1206, height: 804), log: @escaping @Sendable (String) -> Void) async {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "session-bench-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let decoder = RawDecoder(cache: DecodeCache(directory: directory))
+        func ms(_ start: ContinuousClock.Instant) -> Double {
+            let d = start.duration(to: .now)
+            return Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15
+        }
+        var totals: [String: Double] = [:]
+        let recipe = typicalRecipe()
+        for url in urls {
+            let source = PhotoSource(url: url, key: "bench-\(UUID().uuidString)")
+            do {
+                var start = ContinuousClock.now
+                let info = try await decoder.info(for: source)
+                let decoded = try await decoder.decode(source, rawStage: recipe.rawStage, longEdge: 2560)
+                let open = ms(start)
+
+                var detail = recipe.rawStage
+                detail.noiseReduction = 40
+                start = .now
+                _ = try await decoder.decode(source, rawStage: detail, longEdge: 2560)
+                let redecode = ms(start)
+
+                start = .now
+                let (full, _) = try await decoder.lazyImage(source, rawStage: recipe.rawStage, longEdge: nil)
+                var inputs = GradeInputs(defaults: info.defaults)
+                inputs.presenceGuide = decoded.image
+                let tileRect = CGRect(x: full.extent.midX - 512, y: full.extent.midY - 512, width: 1024, height: 1024).integral
+                _ = try time(GradeGraph.apply(recipe, to: full, inputs: inputs), rect: tileRect)
+                let tile = ms(start)
+
+                let scale = min(screen.width / decoded.size.width, screen.height / decoded.size.height)
+                var frames: [Double] = []
+                for index in 0..<12 {
+                    var edited = recipe
+                    edited.setScalar(.exposure, Double(index) / 20, at: HLCStamp(millis: Int64(index + 2), node: "bench"))
+                    let frame = GradeGraph.apply(edited, to: decoded.image, inputs: GradeInputs(defaults: info.defaults))
+                        .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                    frames.append(try time(frame, rect: CGRect(origin: .zero, size: screen)))
+                }
+                let frame = frames.dropFirst(2).sorted()[5]
+
+                start = .now
+                _ = try await Exporter.render(source: source, recipe: recipe, luts: nil, options: ExportOptions(format: .heic), decoder: decoder, priority: .now)
+                let save = ms(start)
+                // Again: the kept filter has the full-size decode, so this is grading and encoding.
+                start = .now
+                _ = try await Exporter.render(source: source, recipe: recipe, luts: nil, options: ExportOptions(format: .heic), decoder: decoder, priority: .now)
+                let again = ms(start)
+                var plain = Recipe()
+                plain.setScalar(.exposure, 0.3, at: HLCStamp(millis: 1, node: "bench"))
+                start = .now
+                _ = try await Exporter.render(source: source, recipe: plain, luts: nil, options: ExportOptions(format: .heic), decoder: decoder, priority: .now)
+                let plainAgain = ms(start)
+                log(String(format: "  save again %.0f ms (exposure only %.0f ms)", again, plainAgain))
+
+                for (name, value) in [("open", open), ("redecode", redecode), ("tile", tile), ("frame", frame), ("save", save)] {
+                    totals[name, default: 0] += value
+                }
+                log(String(format: "%@: open %.0f, detail re-decode %.0f, first 100%% tile %.0f, frame %.1f, save %.0f ms",
+                           url.lastPathComponent, open, redecode, tile, frame, save))
+            } catch {
+                log("\(url.lastPathComponent) failed: \(error)")
+            }
+        }
+        log(String(format: "session totals: open %.0f, detail re-decode %.0f, first tile %.0f, frame %.1f (sum of medians), save %.0f ms",
+                   totals["open"] ?? 0, totals["redecode"] ?? 0, totals["tile"] ?? 0, totals["frame"] ?? 0, totals["save"] ?? 0))
+        log("done")
+    }
 }

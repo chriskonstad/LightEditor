@@ -22,6 +22,10 @@ enum RemoveDiagnostic {
             Task.detached(priority: .userInitiated) { await runBenchmark(saves: true) }
             return
         }
+        if UserDefaults.standard.bool(forKey: "SessionBenchmark") {
+            Task.detached(priority: .userInitiated) { await runBenchmark(saves: true, session: true) }
+            return
+        }
         if UserDefaults.standard.bool(forKey: "BulkBenchmark") {
             Task.detached(priority: .userInitiated) { await runBenchmark(saves: true, bulk: true) }
             return
@@ -34,7 +38,8 @@ enum RemoveDiagnostic {
     /// Documents/Diagnostics/in, writing Documents/Diagnostics/out/bench.txt.
     /// `-SaveBenchmark YES` times full-size saves instead.
     /// `-BulkBenchmark YES` times a bulk edit's stages on every RAW there.
-    static func runBenchmark(saves: Bool, bulk: Bool = false) async {
+    /// `-SessionBenchmark YES` times an editing session (open, Detail, zoom, frames, save) on each.
+    static func runBenchmark(saves: Bool, bulk: Bool = false, session: Bool = false) async {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "Diagnostics")
         let output = documents.appending(path: "out")
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
@@ -49,7 +54,9 @@ enum RemoveDiagnostic {
             let all = lines.withLock { $0.append(line); return $0 }
             try? all.joined(separator: "\n").write(to: output.appending(path: "bench.txt"), atomically: true, encoding: .utf8)
         }
-        if bulk {
+        if session {
+            await RenderBenchmark.runSession(urls: raws, log: log)
+        } else if bulk {
             await RenderBenchmark.runBulk(urls: raws, output: output.appending(path: "bulk"), log: log)
         } else if saves {
             await RenderBenchmark.runSaves(url: url, log: log)

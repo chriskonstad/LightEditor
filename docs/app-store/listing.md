@@ -177,3 +177,54 @@ The app makes no internet connections and collects no data. It's free and open s
 ## Screenshots
 
 See [screenshots.md](screenshots.md).
+
+## Mac listing (1.0.2, the first Mac version)
+
+Same app record (universal purchase). The description swaps the iPhone Duo and iPad sections for a "Made for the Mac" one; keywords swap "duo" for "desktop". Review notes point to LightEditor › Settings for licenses.
+
+```
+LightEditor is a free, open-source RAW photo editor for the Mac, iPhone and iPad, made for quick, color-focused edits. It will always be free of subscriptions: no subscription, no in-app purchases, no account, no ads, no tracking. Your photos never leave your devices.
+
+YOUR PHOTOS LIBRARY IS THE LIBRARY
+LightEditor edits the photos already in Apple Photos. Originals stay untouched: every edit is saved non-destructively, syncs through iCloud Photos, and can be reverted at any time, in LightEditor or in Photos.
+
+PRECISE, FAST TOOLS
+• RAW decoding with Apple's latest RAW engine, for supported cameras and iPhone ProRAW. JPEG and HEIC work too.
+• Light: exposure, contrast, highlights, shadows, whites and blacks, with Auto, Clarity, Texture and Dehaze.
+• Color: white balance, vibrance, saturation, and an 8-band HSL mixer.
+• Grade: color wheels for shadows, midtones and highlights, film looks, vignette and grain.
+• Detail: noise reduction and sharpening applied to the RAW itself.
+• Tone curve, crop, straighten, perspective and auto-straighten.
+• Sliders stay smooth while you drag, even on large RAW files.
+
+LOCAL ADJUSTMENTS AND AI, ON YOUR MAC
+• Masks: linear and radial gradients, brush, luminance and color ranges.
+• One-click AI masks for the subject, people and the sky, or click any object to select it.
+• Remove distractions with heal, clone and AI removal. The most realistic mode fills the area with an on-device diffusion model.
+All AI runs on your Mac. Nothing is uploaded.
+
+EDIT MANY PHOTOS AT ONCE
+• Copy and paste edits, choosing exactly which settings to paste.
+• Bulk edit a selection: set values, or adjust each photo by an amount.
+• Presets with an Amount slider, film-inspired looks, .cube LUTs, and import of XMP presets.
+
+MADE FOR THE MAC
+A sidebar for your library, albums and edit history, a filmstrip under the photo, and keyboard shortcuts for undo, copy and paste edits, before/after and moving between photos. Every slow task shows its progress in a job tray and can be cancelled.
+
+PRIVATE BY DESIGN
+LightEditor collects no data at all: no analytics, no crash reporting, no accounts, no servers.
+
+FREE AND OPEN SOURCE, FOREVER
+LightEditor is free, and it will always be subscription-free. The full source code is on GitHub under the MIT license, so anyone can read it, check what it does, report issues or contribute:
+https://github.com/chriskonstad/LightEditor
+
+Requires macOS 27.
+```
+
+## What's New (1.0.2)
+
+```
+• Now on the Mac too, free like the iPhone and iPad version.
+• Faster: photos open about a quarter faster, and saving or sharing a photo again right after saving it is about 6× faster.
+```
+

@@ -33,3 +33,5 @@ Release Mac builds sign with the team (Debug stays ad-hoc so anyone can build it
 - [x] Build 2610291908 (iOS 27.1 SDK, adds background bulk edits) submitted for review on 2026-10-29, replacing 2610291034 before review began. Upload with plain `scripts/testflight.sh`: `--internal-only` builds can't be attached to an App Store version.
 - [x] Approved and released 2026-11-01: https://apps.apple.com/app/lighteditor-raw/id6824085422
 - [x] 1.0.1 (build 2611041042) submitted 2026-11-04, released automatically on approval
+- [x] 1.0.1 approved and released by 2026-11-07
+- [x] 1.0.2 submitted 2026-11-07 for iOS (build 2611070958) and, for the first time, the Mac (build 2611071007), both released automatically on approval. The first Mac export needed the Apple ID (Mac App Store profile and Mac Installer Distribution certificate), like the first export after a new entitlement.

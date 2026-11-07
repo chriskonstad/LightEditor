@@ -18,9 +18,9 @@ Checked against the build settings in `project.yml` and the code as of October 2
 3. **Export compliance.** `ITSAppUsesNonExemptEncryption = NO`. The only encryption is CryptoKit (Curve25519, ChaCha20-Poly1305) for the device-to-device link, i.e. Apple OS encryption.
 4. **Name.** "LightEditor" was taken on the App Store when the record was created; the record is "LightEditor RAW". The home-screen name is LightEditor either way.
 
-## Mac (later)
+## Mac
 
-`project.yml` ad-hoc signs macOS builds (`CODE_SIGN_IDENTITY[sdk=macosx*]: "-"`), and `scripts/testflight.sh` archives iOS only. The Mac release needs Apple Distribution signing, a Mac archive and upload path, a Settings entry point in `MacRootView`, and Mac screenshots.
+Release Mac builds sign with the team (Debug stays ad-hoc so anyone can build it), and `scripts/testflight.sh --mac` archives and uploads them. LightEditor › Settings… (⌘,) opens the about, privacy and licenses window. The remote-editing identity key uses the data protection keychain on the Mac too: the legacy login keychain blocked launch on a password prompt whenever the app's signature changed. Screenshots come from a Debug build (see `docs/app-store/screenshots.md`).
 
 ## Release checklist
 

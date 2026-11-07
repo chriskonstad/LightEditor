@@ -77,6 +77,11 @@ public final class PeerIdentity: @unchecked Sendable {
 }
 
 /// The identity key in the Keychain.
+///
+/// On the Mac it lives in the data protection keychain, as on iOS. The legacy login
+/// keychain asks for the user's password whenever the app's signature changes, and
+/// SecItemCopyMatching blocks on that prompt during launch. Builds without a team
+/// (ad-hoc Debug builds) can't use it, so they get a new identity each launch.
 enum Keychain {
     static let account = "remote-identity"
     static let service = "com.chriskonstad.lighteditor.remote"
@@ -84,6 +89,7 @@ enum Keychain {
     static func signingKey() -> Curve25519.Signing.PrivateKey {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: account,
+            kSecUseDataProtectionKeychain: true,
             kSecReturnData: true, kSecMatchLimit: kSecMatchLimitOne,
         ]
         var result: CFTypeRef?
@@ -94,6 +100,7 @@ enum Keychain {
         let key = Curve25519.Signing.PrivateKey()
         let add: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: account,
+            kSecUseDataProtectionKeychain: true,
             kSecValueData: key.rawRepresentation,
             kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]

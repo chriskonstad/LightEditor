@@ -60,3 +60,16 @@ From an iPhone 18 Pro Max simulator (1320 × 2868) and an iPad Pro 13-inch (M5) 
 - iPhone Duo (unfolded, iOS 27.1 simulator): editor sideways with the inspector beside the photo, editor upright, Grade sideways.
 
 Not capturable in the Simulator: AI masks (Vision segmentation fails there) and a clean removal (LaMa fills look smeared on the Simulator's CPU path). Add those from a real device in a later update.
+
+## Captured for the Mac (2026-11-07)
+
+From a Debug Mac build on a folder of two fixtures with no people in them (DSCF2030.raf and DSC04921.ARW), copied into the app's container. A window snapshot leaves Metal content blank and can't draw the translucent sidebar, so `-SnapshotTo` paints the editor's last frame into the snapshot and `-HideSidebar YES` collapses the sidebar. Each shot is one launch:
+
+```sh
+C=~/Library/Containers/com.chriskonstad.lighteditor/Data
+open -n LightEditor.app --args -FixtureLibrary $C/Shots -SnapshotTo $C/tmp/snaps -HideSidebar YES \
+    -OpenAsset DSCF2030.raf -ApplyPreset Velvia -AutoTone YES -EditorTab presets
+```
+
+The snapshots are 2880 × 1800 (a 1440 × 900 window on a Retina display). Saved in `build/screenshots/mac/`: Light (sunset, Auto), Presets (Velvia + Auto), Grade wheels, Color/HSL on the cat.
+

@@ -36,6 +36,9 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
     public var onFrame: ((Duration) -> Void)?
     /// Frames presented so far, and the size of the last one in pixels.
     public private(set) var framesDrawn = 0
+    /// The last frame drawn, as Core Image built it, for debug snapshots: window
+    /// snapshots leave Metal content out.
+    public private(set) var lastFrame: CIImage?
     public private(set) var lastDrawableSize: CGSize = .zero
 
     private weak var view: MTKView?
@@ -133,6 +136,7 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
         // milliseconds for a big graph; do that off the main thread so gestures
         // and controls stay smooth.
         inFlight = true
+        lastFrame = output
         let frame = Frame(output: output, bounds: bounds, drawable: drawable, commandBuffer: commandBuffer,
                           pixelFormat: view.colorPixelFormat, colorSpace: colorSpace)
         renderQueue.async { [weak self] in

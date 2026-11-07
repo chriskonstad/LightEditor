@@ -42,6 +42,16 @@ struct LightEditorApp: App {
         #if os(macOS)
         .defaultSize(width: 1440, height: 900)
         #endif
+
+        #if os(macOS)
+        // LightEditor › Settings… (⌘,): about, privacy and licenses.
+        Settings {
+            SettingsSheet(inWindow: true)
+                .preferredColorScheme(.dark)
+                .tint(Theme.accent)
+                .frame(width: 520, height: 620)
+        }
+        #endif
     }
 }
 

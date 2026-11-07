@@ -51,7 +51,7 @@ targets:
         PRODUCT_NAME: LightEditor
         # PRODUCT_BUNDLE_IDENTIFIER comes from Config/Base.xcconfig, so a local
         # Signing.local.xcconfig can override it.
-        MARKETING_VERSION: "1.0.1"
+        MARKETING_VERSION: "1.0.2"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         # Merged with the generated keys: the Bonjour service list, which needs an array.
@@ -62,7 +62,9 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
-        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+        # Debug Mac builds are ad-hoc signed, so anyone can build and run them;
+        # Release (archives for the Mac App Store) signs with the team, like iOS.
+        "CODE_SIGN_IDENTITY[config=Debug][sdk=macosx*]": "-"
         "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Resources/LightEditor-macOS.entitlements
         "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": App/Resources/LightEditor-iOS.entitlements
         "CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]": App/Resources/LightEditor-iOS.entitlements

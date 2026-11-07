@@ -51,8 +51,10 @@ struct Acknowledgement: Identifiable {
     }
 }
 
-/// About, privacy and licenses.
+/// About, privacy and licenses: a sheet on iPhone and iPad, the Settings window on the Mac.
 struct SettingsSheet: View {
+    /// In the Mac's Settings window, which closes on its own, so there's no Done button.
+    var inWindow = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -106,7 +108,9 @@ struct SettingsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                if !inWindow {
+                    ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                }
             }
         }
     }

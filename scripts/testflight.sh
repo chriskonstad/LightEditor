@@ -1,11 +1,13 @@
 #!/bin/zsh
-# Builds LightEditor for iOS and uploads it to TestFlight.
+# Builds LightEditor and uploads it to App Store Connect (TestFlight and the App Store).
 #
-#   scripts/testflight.sh                  archive, upload, and send to the external
-#                                          "Friends" group (waits for processing)
+#   scripts/testflight.sh                  archive the iOS app, upload, and send to the
+#                                          external "Friends" group (waits for processing)
 #   scripts/testflight.sh --internal-only  archive and upload for internal testers only
 #                                          (marked TestFlight-internal, so it can't go to the App Store)
 #   scripts/testflight.sh --no-upload      archive and export an .ipa only
+#   scripts/testflight.sh --mac            the Mac app instead: archive and upload (not
+#                                          sent to external testers); combines with --no-upload
 #
 # Internal testers ("Me") get every build automatically. The external group needs
 # Beta App Review, which scripts/testflight-external.py submits for.
@@ -22,10 +24,15 @@ cd "$(dirname "$0")/.."
 
 upload=true
 external=true
-case "${1:-}" in
-    --no-upload) upload=false ;;
-    --internal-only) external=false ;;
-esac
+internal_only=false
+platform=iOS
+for arg in "$@"; do
+    case "$arg" in
+        --no-upload) upload=false ;;
+        --internal-only) external=false; internal_only=true ;;
+        --mac) platform=macOS; external=false ;;
+    esac
+done
 
 team=$(sed -n 's/^DEVELOPMENT_TEAM *= *//p' Config/Signing.local.xcconfig 2>/dev/null | tr -d ' ')
 [[ -n "$team" ]] || { echo "Set DEVELOPMENT_TEAM in Config/Signing.local.xcconfig"; exit 1; }
@@ -38,7 +45,7 @@ fi
 
 # Build numbers only need to increase; a timestamp always does.
 build=$(date +%y%m%d%H%M)
-archive=build/release/LightEditor.xcarchive
+archive=build/release/LightEditor-$platform.xcarchive
 export_dir=build/release/export
 rm -rf build/release
 mkdir -p build/release
@@ -46,10 +53,10 @@ mkdir -p build/release
 [[ -d Models/LaMa.mlpackage ]] || echo "warning: Models/LaMa.mlpackage is missing, so AI removal will be off (run scripts/fetch-models.sh)"
 
 xcodegen generate --quiet
-echo "Archiving build $build…"
+echo "Archiving $platform build $build…"
 xcodebuild archive -quiet \
     -scheme LightEditor -configuration Release \
-    -destination 'generic/platform=iOS' \
+    -destination "generic/platform=$platform" \
     -archivePath "$archive" \
     -allowProvisioningUpdates "${auth[@]}" \
     CURRENT_PROJECT_VERSION="$build"
@@ -66,7 +73,7 @@ cat > build/release/ExportOptions.plist <<PLIST
     <key>teamID</key><string>$team</string>
     <key>signingStyle</key><string>automatic</string>
     <key>uploadSymbols</key><true/>
-    <key>testFlightInternalTestingOnly</key><$($external && echo false || echo true)/>
+    <key>testFlightInternalTestingOnly</key><$($internal_only && echo true || echo false)/>
     <key>manageAppVersionAndBuildNumber</key><false/>
 </dict>
 </plist>

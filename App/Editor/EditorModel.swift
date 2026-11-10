@@ -142,9 +142,17 @@ final class EditorModel: Identifiable {
     var tab: Tab = .light {
         didSet {
             guard (oldValue == .masks) != (tab == .masks) else { return }
-            if tab == .masks, case .actual = zoom { zoom = .fit }
+            // Masks show the uncropped photo. Without a crop or perspective that's
+            // the same frame, so the zoom carries over; otherwise it starts at Fit.
+            if hasFrameGeometry, case .actual = zoom { zoom = .fit }
             render()
         }
+    }
+
+    /// Whether crop, straighten or perspective make the edited frame differ from the original's.
+    private var hasFrameGeometry: Bool {
+        if case .crop(let geometry)? = recipe[.crop], !geometry.isIdentity { return true }
+        return (recipe.scalar(.perspectiveVertical) ?? 0) != 0 || (recipe.scalar(.perspectiveHorizontal) ?? 0) != 0
     }
     var showExport = false
     var showPaste = false
@@ -416,6 +424,29 @@ final class EditorModel: Identifiable {
         noteInteraction()
         zoom = .actual(scale: clamped)
     }
+
+    /// Where a two-finger zoom on a painting canvas started.
+    @ObservationIgnored private var canvasZoomStart: (rect: CGRect, scale: Double, center: CGPoint)?
+
+    /// Two fingers came down on a painting canvas (`CanvasInput`), at `center` in view points.
+    func beginCanvasZoom(at center: CGPoint, displayScale: CGFloat) {
+        let drawable = renderer.lastDrawableSize
+        canvasZoomStart = (renderer.imageRect(in: drawable), zoomScale(drawableSize: drawable),
+                           CGPoint(x: center.x * displayScale, y: center.y * displayScale))
+    }
+
+    /// Moves the photo with the fingers, then scales it around them: a pinch zooms,
+    /// a two-finger drag (scale 1) pans.
+    func changeCanvasZoom(scale: CGFloat, center: CGPoint, displayScale: CGFloat) {
+        guard let start = canvasZoomStart else { return }
+        let drawable = renderer.lastDrawableSize
+        let now = CGPoint(x: center.x * displayScale, y: center.y * displayScale)
+        let moved = CGRect(x: start.rect.minX + now.x - start.center.x, y: start.rect.minY + now.y - start.center.y,
+                           width: start.rect.width, height: start.rect.height)
+        zoom(to: start.scale * scale, anchor: now, from: moved, startScale: start.scale, drawableSize: drawable)
+    }
+
+    func endCanvasZoom() { canvasZoomStart = nil }
 
     func zoomScale(forFitIn drawableSize: CGSize) -> Double {
         guard let source = renderer.image?.extent.size, source.width > 0, drawableSize.width > 0 else { return 0.05 }

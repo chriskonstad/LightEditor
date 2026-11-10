@@ -11,6 +11,23 @@ extension EditorModel {
         return masks.first { $0.id == selectedMaskID }
     }
 
+    /// Whether the selected mask tool is the brush, whose canvas zooms and pans
+    /// with two fingers itself, like Retouch's.
+    var maskToolPaints: Bool {
+        guard isEditingMasks, case .brush? = selectedComponent?.shape else { return false }
+        return true
+    }
+
+    /// Whether the selected mask tool uses one-finger touches on the photo itself
+    /// (painting, or tapping to select), so a single finger can't pan.
+    var maskToolTakesTouches: Bool {
+        guard isEditingMasks else { return false }
+        switch selectedComponent?.shape {
+        case .brush, .object, .color: return true
+        default: return false
+        }
+    }
+
     var selectedComponent: MaskComponent? {
         guard let mask = selectedMask else { return nil }
         return mask.components.first { $0.id == selectedComponentID } ?? mask.components.last
@@ -130,8 +147,10 @@ extension EditorModel {
 
     // MARK: Painting and tapping (normalized points on the original image)
 
-    func beginStroke(at point: NormalizedPoint) {
-        paintingStroke = BrushStroke(points: [point], radius: brushSize, feather: brushFeather, flow: brushFlow, erase: brushErase)
+    /// `zoomFactor` is how much bigger the photo is on screen than at Fit: the brush
+    /// keeps its size on screen, so zooming in paints finer detail.
+    func beginStroke(at point: NormalizedPoint, zoomFactor: CGFloat = 1) {
+        paintingStroke = BrushStroke(points: [point], radius: brushSize / max(zoomFactor, 1), feather: brushFeather, flow: brushFlow, erase: brushErase)
         applyPaintingStroke()
     }
 
@@ -152,6 +171,19 @@ extension EditorModel {
             // Replace the live stroke (last) with its simplified version.
             if !strokes.isEmpty { strokes.removeLast() }
             strokes.append(simplified)
+            shape = .brush(strokes: strokes)
+        }
+    }
+
+    /// Drops a stroke in progress, e.g. when a second finger starts a pinch. The
+    /// live copy comes back out of the recipe, with no history step.
+    func cancelStroke() {
+        guard let stroke = paintingStroke else { return }
+        paintingStroke = nil
+        editSelectedShape { shape in
+            guard case .brush(var strokes) = shape, let last = strokes.last,
+                  last.points.first == stroke.points.first, last.erase == stroke.erase, last.radius == stroke.radius else { return }
+            strokes.removeLast()
             shape = .brush(strokes: strokes)
         }
     }

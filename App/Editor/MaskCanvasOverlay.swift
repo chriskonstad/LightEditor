@@ -3,20 +3,22 @@ import SwiftUI
 
 /// On-photo tools for the selected mask part: gradient handles, the radial ellipse,
 /// brush painting and tap-to-select. Coordinates are normalized to the original,
-/// uncropped image, which is what the canvas shows while editing masks.
+/// uncropped image, which is what the canvas shows while editing masks. The photo
+/// can be zoomed and panned under them: pinch, or drag the photo away from the
+/// handles; while painting, two fingers zoom and pan.
 struct MaskCanvasOverlay: View {
     let model: EditorModel
     let viewSize: CGSize
     @State private var dragStart: MaskShape?
     @State private var brushCursor: CGPoint?
+    @State private var zoomStart: (rect: CGRect, scale: Double, center: CGPoint)?
+    @Environment(\.displayScale) private var displayScale
 
-    private var frame: CGRect {
-        let size = model.displayedImageSize
-        guard size.width > 0, size.height > 0 else { return CGRect(origin: .zero, size: viewSize) }
-        let scale = min(viewSize.width / size.width, viewSize.height / size.height)
-        return CGRect(x: (viewSize.width - size.width * scale) / 2, y: (viewSize.height - size.height * scale) / 2,
-                      width: size.width * scale, height: size.height * scale)
-    }
+    /// The photo on screen, following zoom and pan.
+    private var frame: CGRect { model.photoFrame(in: viewSize) }
+
+    /// How much bigger than Fit the photo is on screen.
+    private var zoomFactor: CGFloat { max(frame.width, frame.height) / max(model.fitLongEdge(in: viewSize), 1) }
 
     private func normalized(_ point: CGPoint) -> NormalizedPoint {
         NormalizedPoint(x: min(max((point.x - frame.minX) / frame.width, 0), 1), y: min(max((point.y - frame.minY) / frame.height, 0), 1))
@@ -115,25 +117,11 @@ struct MaskCanvasOverlay: View {
     // MARK: Brush
 
     private var brushTool: some View {
-        let radius = model.brushSize * max(frame.width, frame.height)
+        // The same size on screen at any zoom; zoomed in, it paints finer.
+        let radius = model.brushSize * model.fitLongEdge(in: viewSize)
         return ZStack {
-            Color.clear
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { drag in
-                            brushCursor = drag.location
-                            if model.paintingStroke == nil {
-                                model.beginStroke(at: normalized(drag.startLocation))
-                            }
-                            model.extendStroke(to: normalized(drag.location))
-                        }
-                        .onEnded { _ in
-                            model.endStroke()
-                            brushCursor = nil
-                        }
-                )
-                .accessibilityLabel("Paint mask")
+            brushInput
+                .accessibilityLabel("Paint mask. Pinch or drag with two fingers to zoom and move.")
                 .accessibilityIdentifier("mask.brushCanvas")
             if let brushCursor {
                 Circle()
@@ -143,6 +131,70 @@ struct MaskCanvasOverlay: View {
                     .allowsHitTesting(false)
             }
         }
+    }
+
+    /// One finger paints; two fingers zoom and pan, and cancel a stroke just begun.
+    @ViewBuilder
+    private var brushInput: some View {
+        #if os(iOS)
+        CanvasInput(handlers: CanvasInputHandlers(
+            paintBegan: { point in
+                brushCursor = point
+                model.beginStroke(at: normalized(point), zoomFactor: zoomFactor)
+            },
+            paintMoved: { point in
+                brushCursor = point
+                model.extendStroke(to: normalized(point))
+            },
+            paintEnded: { _ in
+                brushCursor = nil
+                model.endStroke()
+            },
+            paintCancelled: {
+                brushCursor = nil
+                model.cancelStroke()
+            },
+            tapped: { point in
+                model.beginStroke(at: normalized(point), zoomFactor: zoomFactor)
+                model.endStroke()
+            },
+            zoomBegan: { model.beginCanvasZoom(at: $0, displayScale: displayScale) },
+            zoomChanged: { model.changeCanvasZoom(scale: $0, center: $1, displayScale: displayScale) },
+            zoomEnded: { model.endCanvasZoom() }
+        ))
+        #else
+        Color.clear
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { drag in
+                        brushCursor = drag.location
+                        if model.paintingStroke == nil {
+                            model.beginStroke(at: normalized(drag.startLocation), zoomFactor: zoomFactor)
+                        }
+                        model.extendStroke(to: normalized(drag.location))
+                    }
+                    .onEnded { _ in
+                        model.endStroke()
+                        brushCursor = nil
+                    }
+            )
+            .simultaneousGesture(
+                // Trackpad pinch zooms around the pointer.
+                MagnifyGesture()
+                    .onChanged { value in
+                        model.cancelStroke()
+                        let drawable = model.renderer.lastDrawableSize
+                        if zoomStart == nil {
+                            zoomStart = (model.renderer.imageRect(in: drawable), model.zoomScale(drawableSize: drawable),
+                                         CGPoint(x: value.startLocation.x * displayScale, y: value.startLocation.y * displayScale))
+                        }
+                        guard let start = zoomStart else { return }
+                        model.zoom(to: start.scale * value.magnification, anchor: start.center, from: start.rect, startScale: start.scale, drawableSize: drawable)
+                    }
+                    .onEnded { _ in zoomStart = nil }
+            )
+        #endif
     }
 
     // MARK: Tap

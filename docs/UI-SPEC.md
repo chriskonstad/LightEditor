@@ -76,11 +76,11 @@ From top to bottom:
          - Luminance: a gradient bar plus Dark end, Bright end, Smoothness.
          - Color: a picked-color swatch plus Range.
        - A "Show overlay" toggle, Amount, and the local sliders: Temperature, Tint, Exposure, Contrast, Highlights, Shadows, Whites, Blacks, Clarity, Texture, Dehaze, Saturation, Vibrance.
-     - On the photo, which shows uncropped while this tab is open:
-       - Linear gradient: lines at the start (solid), middle (dashed) and end (dotted), with handles to move either end or both.
-       - Radial gradient: the ellipse and its feather ring, with center and edge handles.
-       - Brush: drag to paint, with a size cursor (red while erasing).
-       - Object and color: tap to add to the selection or pick the color.
+     - On the photo, which shows uncropped while this tab is open. It zooms and pans as in the other tabs, for detailed masks and to judge local adjustments up close; the zoom carries over between tabs unless a crop or perspective changes the frame:
+       - Linear gradient: lines at the start (solid), middle (dashed) and end (dotted), with handles to move either end or both. Drag the photo away from the handles to pan; pinch or double-tap to zoom.
+       - Radial gradient: the ellipse and its feather ring, with center and edge handles. Panning and zooming as for the linear gradient.
+       - Brush: one finger paints, with a size cursor (red while erasing); two fingers pinch to zoom and drag to pan, and a second finger cancels a stroke in progress. As in Retouch, the brush stays the same size on screen, so zooming in paints finer.
+       - Object and color: tap to add to the selection or pick the color; drag to pan and pinch to zoom.
        - The selected mask is tinted red when the overlay is on.
    - **Presets:** 3-column grids of tiles rendered live from the current photo, in three sections:
      - Presets: Original and the built-ins.

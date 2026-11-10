@@ -105,8 +105,11 @@ struct PhotoCanvas: View {
                 }
             }
             .contentShape(Rectangle())
-            .gesture(panGesture(size: proxy.size), including: model.isCropping || model.showsOriginalFrame ? .subviews : .all)
-            .simultaneousGesture(pinchGesture, including: model.isCropping || model.showsOriginalFrame ? .subviews : .all)
+            // Cropping, retouching and the mask brush handle the photo's touches
+            // themselves; other mask tools' handles take theirs, and the rest of the
+            // photo pans and pinches.
+            .gesture(panGesture(size: proxy.size), including: ownsTouches ? .subviews : .all)
+            .simultaneousGesture(pinchGesture, including: ownsTouches ? .subviews : .all)
             .onTapGesture(count: 2) { toggleZoom() }
             .overlay(alignment: .center) {
                 if let zoomLabel {
@@ -192,8 +195,11 @@ struct PhotoCanvas: View {
             }
     }
 
+    private var ownsTouches: Bool { model.isCropping || model.isRetouching || model.maskToolPaints }
+
     private func toggleZoom() {
-        guard !model.isCropping, !model.showsOriginalFrame else { return }
+        // Tapping and painting masks use taps themselves.
+        guard !model.isCropping, !model.isRetouching, !model.maskToolTakesTouches else { return }
         if case .fit = model.zoom { model.zoom = .actual(scale: 1) } else { model.zoom = .fit }
         showZoomLabel()
     }
@@ -214,7 +220,7 @@ struct PhotoCanvas: View {
     private var pinchGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                guard !model.isCropping, !model.showsOriginalFrame else { return }
+                guard !ownsTouches else { return }
                 let drawable = model.renderer.lastDrawableSize
                 if pinchStart == nil {
                     pinchStart = (model.renderer.imageRect(in: drawable), model.zoomScale(drawableSize: drawable))

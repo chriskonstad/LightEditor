@@ -254,22 +254,9 @@ struct RetouchCanvasOverlay: View {
                     model.endRetouchStroke()
                 }
             },
-            zoomBegan: { center in
-                let drawable = model.renderer.lastDrawableSize
-                zoomStart = (model.renderer.imageRect(in: drawable), model.zoomScale(drawableSize: drawable),
-                             CGPoint(x: center.x * displayScale, y: center.y * displayScale))
-            },
-            zoomChanged: { scale, center in
-                guard let start = zoomStart else { return }
-                let drawable = model.renderer.lastDrawableSize
-                let now = CGPoint(x: center.x * displayScale, y: center.y * displayScale)
-                // Move the photo with the fingers, then scale it around them: a pinch
-                // zooms, a two-finger drag (scale 1) pans.
-                let moved = CGRect(x: start.rect.minX + now.x - start.center.x, y: start.rect.minY + now.y - start.center.y,
-                                   width: start.rect.width, height: start.rect.height)
-                model.zoom(to: start.scale * scale, anchor: now, from: moved, startScale: start.scale, drawableSize: drawable)
-            },
-            zoomEnded: { zoomStart = nil }
+            zoomBegan: { model.beginCanvasZoom(at: $0, displayScale: displayScale) },
+            zoomChanged: { model.changeCanvasZoom(scale: $0, center: $1, displayScale: displayScale) },
+            zoomEnded: { model.endCanvasZoom() }
         ))
         #else
         Color.clear

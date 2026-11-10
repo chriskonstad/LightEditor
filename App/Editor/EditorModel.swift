@@ -104,7 +104,7 @@ final class EditorModel: Identifiable {
 
     // Retouch
     /// Retouch starts at Fit; pinch with two fingers to zoom in while painting.
-    var isRetouching = false { didSet { if isRetouching != oldValue { zoom = .fit }; render() } }
+    var isRetouching = false { didSet { if isRetouching != oldValue { keepZoomIfSameFrame() }; render() } }
     var retouchKind: RetouchSpot.Kind = Inpainter.shared.isAvailable ? .remove : .heal
     var retouchBrushSize = 0.03
     /// The engine new Remove spots use: the last one picked, else LaMa + diffusion when this
@@ -129,7 +129,7 @@ final class EditorModel: Identifiable {
     var isEditingMasks: Bool { tab == .masks && !isCropping && !isRetouching }
     /// Masks and retouch work on the uncropped original.
     var showsOriginalFrame: Bool { isEditingMasks || isRetouching }
-    var isCropping = false { didSet { render() } }
+    var isCropping = false { didSet { if isCropping != oldValue { keepZoomIfSameFrame() }; render() } }
     /// `.actual(scale:)` is relative to the original's full resolution: 1 is 100%,
     /// one original pixel per screen pixel.
     var zoom: PreviewZoom = .fit {
@@ -142,11 +142,16 @@ final class EditorModel: Identifiable {
     var tab: Tab = .light {
         didSet {
             guard (oldValue == .masks) != (tab == .masks) else { return }
-            // Masks show the uncropped photo. Without a crop or perspective that's
-            // the same frame, so the zoom carries over; otherwise it starts at Fit.
-            if hasFrameGeometry, case .actual = zoom { zoom = .fit }
+            keepZoomIfSameFrame()
             render()
         }
+    }
+
+    /// Masks, retouch and crop show the uncropped photo. Without a crop, straighten
+    /// or perspective that's the same frame, so the zoom carries over between them
+    /// and the other tabs; otherwise it goes back to Fit.
+    private func keepZoomIfSameFrame() {
+        if hasFrameGeometry, case .actual = zoom { zoom = .fit }
     }
 
     /// Whether crop, straighten or perspective make the edited frame differ from the original's.

@@ -162,7 +162,6 @@ struct CompactEditorView: View {
                 .disabled(model.recipe.isIdentity)
             Spacer()
             bottomButton("Crop", systemImage: "crop.rotate", id: "crop") {
-                model.zoom = .fit
                 model.isCropping = true
             }
             .disabled(model.phase != .ready)
@@ -401,7 +400,6 @@ struct WorkspaceEditorView: View {
                 .help("Split before/after")
                 .accessibilityIdentifier("view.split")
             Button("Crop", systemImage: "crop.rotate") {
-                model.zoom = .fit
                 model.isCropping = true
             }
             .fixedSize()

@@ -39,8 +39,12 @@ Every editing slider and color wheel behaves the same way:
 
 ## Zoom
 
-- **Pinch** to any zoom between Fit and 800%, anchored under the fingers. A "NN%" label shows while zooming (and on double-tap). 100% means one original pixel per screen pixel.
-- **Double-tap** toggles Fit and 100%. Drag pans when zoomed in.
+- Zoom and pan work in every mode: the tabs, Masks, Retouch and Crop.
+- **Two fingers** pinch to any zoom between Fit and 800%, and move together to pan; the photo follows the fingers. A "NN%" label shows while zooming (and on double-tap). 100% means one original pixel per screen pixel.
+- **Double-tap** toggles Fit and 100%, except where taps are a tool's (Retouch, and the brush, object and color masks).
+- **One finger** pans when zoomed in, wherever no tool takes it: in Crop it moves the crop box, and in Retouch and the mask brush it paints.
+- On the Mac, a trackpad pinch zooms and two-finger scrolling (or a scroll wheel) pans.
+- The zoom carries over between tabs and modes. Masks, Retouch and Crop show the uncropped photo, so when a crop, straighten or perspective makes that a different frame, the zoom goes back to Fit on the way in or out.
 - Past what the 2560 px preview can show, the canvas renders the full-size RAW (only the visible area).
 - The iPad/Mac view bar has Fit and 100% plus the current percentage.
 
@@ -90,7 +94,7 @@ From top to bottom:
      There is also an Amount slider. When a Fuji photo records the film simulation it was shot with, a "Shot as Classic Chrome · Apply" banner tops the tab, and that tile carries a camera badge.
 6. **Bottom bar:** Copy edits · Crop · Undo · Export (accent).
 
-**Retouch mode** (the Retouch button in the bottom bar or view bar) starts at Fit. One finger paints (a tap on a spot selects it); two fingers pinch to zoom and drag to pan, and a second finger cancels a stroke in progress. The brush stays the same size on screen, so zooming in paints finer. It replaces the tabs with:
+**Retouch mode** (the Retouch button in the bottom bar or view bar) keeps the zoom (see "Zoom"). One finger paints (a tap on a spot selects it); two fingers pinch to zoom and drag to pan, and a second finger cancels a stroke in progress. The brush stays the same size on screen, so zooming in paints finer. It replaces the tabs with:
 - a Remove · Heal · Clone picker and a hint;
 - Brush size;
 - for Remove, the engine for new removals: "LaMa + diffusion" (the default when the build includes it), "LaMa · full resolution" or "LaMa · fast";
@@ -103,7 +107,7 @@ On the photo (uncropped):
 - spots show as ovals, with amber for the selected one;
 - heal and clone spots show a dashed source circle you can drag.
 
-**Crop mode** replaces the tabs with the crop tools:
+**Crop mode** replaces the tabs with the crop tools. One finger moves the crop box or drags a corner; two fingers zoom and pan, and zoomed in, drags move the box by finer steps:
 - aspect chips: Free, Original, 1:1, 4:5, 3:2, 4:3, 16:9, 65:24 XPan, Custom… (enter any width and height) and swap orientation;
 - Straighten (±45°) with an **Auto** button and, once used, an "Auto · Camera level" or "Auto · Horizon" badge. The slider then fine-tunes the found angle. Double-tap resets to 0 and turns Auto off;
 - Vertical perspective and Horizontal perspective;

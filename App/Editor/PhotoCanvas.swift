@@ -37,13 +37,20 @@ extension MetalPreview: UIViewRepresentable {
 #endif
 
 /// The photo with its overlays: histogram, camera badge, compare toggle and the
-/// crop overlay. Pinch or double-tap to zoom to 100%.
+/// crop overlay. In every mode the photo zooms and pans: two fingers (pinch, or
+/// drag together), double-tap for 100%, one finger to pan where no tool takes it,
+/// and on the Mac a trackpad pinch and two-finger scroll.
 struct PhotoCanvas: View {
     @Bindable var model: EditorModel
     var showOverlays = true
     @Environment(\.displayScale) private var displayScale
     @State private var panStart: CGPoint?
     @State private var pinchStart: (rect: CGRect, scale: Double)?
+    @State private var twoFingers = false
+    #if os(macOS)
+    @State private var hovering = false
+    @State private var scrollMonitor: Any?
+    #endif
     @State private var zoomLabel: String?
     @State private var zoomLabelTask: Task<Void, Never>?
     @State private var compareHold: Task<Void, Never>?
@@ -105,11 +112,20 @@ struct PhotoCanvas: View {
                 }
             }
             .contentShape(Rectangle())
-            // Cropping, retouching and the mask brush handle the photo's touches
-            // themselves; other mask tools' handles take theirs, and the rest of the
-            // photo pans and pinches.
-            .gesture(panGesture(size: proxy.size), including: ownsTouches ? .subviews : .all)
-            .simultaneousGesture(pinchGesture, including: ownsTouches ? .subviews : .all)
+            // Retouching and the mask brush paint with one finger and zoom with two
+            // in their own canvas; elsewhere crop and mask handles take their
+            // touches, and the rest of the photo pans and zooms.
+            .gesture(panGesture(size: proxy.size), including: paintsOnCanvas ? .subviews : .all)
+            #if os(iOS)
+            .gesture(twoFingerZoom)
+            #else
+            .simultaneousGesture(pinchGesture, including: paintsOnCanvas ? .subviews : .all)
+            .onContinuousHover { phase in
+                if case .active = phase { hovering = true } else { hovering = false }
+            }
+            .onAppear(perform: startScrollPanning)
+            .onDisappear(perform: stopScrollPanning)
+            #endif
             .onTapGesture(count: 2) { toggleZoom() }
             .overlay(alignment: .center) {
                 if let zoomLabel {
@@ -195,11 +211,13 @@ struct PhotoCanvas: View {
             }
     }
 
-    private var ownsTouches: Bool { model.isCropping || model.isRetouching || model.maskToolPaints }
+    /// Retouch and the mask brush: their canvas takes every touch, painting with
+    /// one finger and zooming with two itself (`CanvasInput`).
+    private var paintsOnCanvas: Bool { model.isRetouching || model.maskToolPaints }
 
     private func toggleZoom() {
-        // Tapping and painting masks use taps themselves.
-        guard !model.isCropping, !model.isRetouching, !model.maskToolTakesTouches else { return }
+        // Retouching and the brush, object and color masks use taps themselves.
+        guard !model.isRetouching, !model.maskToolTakesTouches else { return }
         if case .fit = model.zoom { model.zoom = .actual(scale: 1) } else { model.zoom = .fit }
         showZoomLabel()
     }
@@ -220,7 +238,7 @@ struct PhotoCanvas: View {
     private var pinchGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                guard !ownsTouches else { return }
+                guard !paintsOnCanvas else { return }
                 let drawable = model.renderer.lastDrawableSize
                 if pinchStart == nil {
                     pinchStart = (model.renderer.imageRect(in: drawable), model.zoomScale(drawableSize: drawable))
@@ -233,10 +251,54 @@ struct PhotoCanvas: View {
             .onEnded { _ in pinchStart = nil }
     }
 
+    #if os(iOS)
+    private var twoFingerZoom: TwoFingerZoom {
+        TwoFingerZoom(
+            began: { center in
+                guard !paintsOnCanvas else { return }
+                twoFingers = true
+                panStart = nil
+                model.beginCanvasZoom(at: center, displayScale: displayScale)
+            },
+            changed: { scale, center in
+                guard twoFingers else { return }
+                model.changeCanvasZoom(scale: scale, center: center, displayScale: displayScale)
+                showZoomLabel()
+            },
+            ended: {
+                guard twoFingers else { return }
+                twoFingers = false
+                model.endCanvasZoom()
+            }
+        )
+    }
+    #else
+    /// Two-finger scrolling on a trackpad (or a scroll wheel) pans a zoomed photo.
+    private func startScrollPanning() {
+        guard scrollMonitor == nil else { return }
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+            // Precise deltas are points; a wheel's are lines.
+            let step: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 12
+            let delta = CGSize(width: event.scrollingDeltaX * step, height: event.scrollingDeltaY * step)
+            let handled = MainActor.assumeIsolated { () -> Bool in
+                guard hovering, case .actual = model.zoom else { return false }
+                model.pan = CGPoint(x: model.pan.x + delta.width * displayScale, y: model.pan.y + delta.height * displayScale)
+                return true
+            }
+            return handled ? nil : event
+        }
+    }
+
+    private func stopScrollPanning() {
+        if let scrollMonitor { NSEvent.removeMonitor(scrollMonitor) }
+        scrollMonitor = nil
+    }
+    #endif
+
     private func panGesture(size: CGSize) -> some Gesture {
         DragGesture()
             .onChanged { drag in
-                guard case .actual = model.zoom, pinchStart == nil else { return }
+                guard case .actual = model.zoom, pinchStart == nil, !twoFingers else { return }
                 let start = panStart ?? model.pan
                 if panStart == nil { panStart = start }
                 model.pan = CGPoint(x: start.x + drag.translation.width * displayScale, y: start.y + drag.translation.height * displayScale)
@@ -246,18 +308,14 @@ struct PhotoCanvas: View {
 }
 
 /// Crop rectangle with corner handles over the straightened, uncropped frame.
+/// Zoomed in, it follows the photo, and drags move it by finer steps.
 struct CropOverlay: View {
     let model: EditorModel
     let viewSize: CGSize
     @State private var startRect: NormalizedRect?
 
-    /// The image's rect in view points (aspect-fit, like the renderer).
-    private var frame: CGRect {
-        let aspect = model.frameAspect
-        var width = viewSize.width, height = width / aspect
-        if height > viewSize.height { height = viewSize.height; width = height * aspect }
-        return CGRect(x: (viewSize.width - width) / 2, y: (viewSize.height - height) / 2, width: width, height: height)
-    }
+    /// The image's rect in view points, following zoom and pan.
+    private var frame: CGRect { model.photoFrame(in: viewSize) }
 
     var body: some View {
         let frame = self.frame

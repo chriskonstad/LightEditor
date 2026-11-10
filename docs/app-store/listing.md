@@ -228,3 +228,10 @@ Requires macOS 27.
 • Faster: photos open about a quarter faster, and saving or sharing a photo again right after saving it is about 6× faster.
 ```
 
+
+## What's New (1.0.3)
+
+```
+• Zoom and pan everywhere: pinch and move two fingers to zoom in and look around while you crop, retouch or remove objects, and while you draw, move and resize masks or adjust them.
+• Crop while zoomed in for precise corners.
+```

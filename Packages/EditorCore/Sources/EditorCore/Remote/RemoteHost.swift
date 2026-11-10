@@ -157,7 +157,7 @@ public final class RemoteHost: @unchecked Sendable {
         case .save(let id, let recipe, let files):
             let session = try await session(id)
             let data = try await Exporter.render(
-                source: session.original, recipe: recipe, luts: merged(files), options: ExportOptions(format: .heic), priority: .soon,
+                source: session.original, recipe: recipe, luts: merged(files), options: recipe.photosCopy().exportOptions(), priority: .soon,
                 queued: { progress(nil, "Waiting for earlier saves") },
                 progress: { progress($0 * 0.9, nil) }
             )

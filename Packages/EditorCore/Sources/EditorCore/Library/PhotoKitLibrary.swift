@@ -274,6 +274,24 @@ public final class PhotoKitLibrary: PhotoLibrary, @unchecked Sendable {
         }
     }
 
+    public func savedImageBytes(for asset: PhotoAsset) async -> Int? {
+        guard let phAsset = phAsset(asset),
+              let resource = PHAssetResource.assetResources(for: phAsset).first(where: { $0.type == .fullSizePhoto })
+        else { return nil }
+        // PHAssetResource has no public file size, so count the bytes as they stream
+        // in, only from this device.
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = false
+        let count = ByteCount()
+        return await withCheckedContinuation { continuation in
+            PHAssetResourceManager.default().requestData(for: resource, options: options) { data in
+                count.add(data.count)
+            } completionHandler: { error in
+                continuation.resume(returning: error == nil ? count.total : nil)
+            }
+        }
+    }
+
     public func revert(_ asset: PhotoAsset) async throws {
         guard let phAsset = phAsset(asset) else { throw LibraryError.noOriginal }
         let box = UncheckedBox(phAsset)
@@ -309,4 +327,10 @@ public final class PhotoKitLibrary: PhotoLibrary, @unchecked Sendable {
         init(_ handler: @escaping @Sendable () -> Void) { self.handler = handler }
         func photoLibraryDidChange(_ changeInstance: PHChange) { handler() }
     }
+}
+
+/// Bytes received so far; Photos calls back on one queue at a time.
+private final class ByteCount: @unchecked Sendable {
+    private(set) var total = 0
+    func add(_ bytes: Int) { total += bytes }
 }

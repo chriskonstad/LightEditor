@@ -76,6 +76,7 @@ struct SettingsSheet: View {
                         Label("Report a Problem", systemImage: "exclamationmark.bubble")
                     }
                 }
+                PhotosCopyDefaultSection()
                 Section {
                     Link(destination: AppInfo.privacyPolicy) {
                         Label("Privacy Policy", systemImage: "hand.raised")

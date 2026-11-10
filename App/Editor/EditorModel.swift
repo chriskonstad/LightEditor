@@ -160,6 +160,9 @@ final class EditorModel: Identifiable {
         return (recipe.scalar(.perspectiveVertical) ?? 0) != 0 || (recipe.scalar(.perspectiveHorizontal) ?? 0) != 0
     }
     var showExport = false
+    var showSavedImage = false
+    /// Goes up each time a save of this photo lands, so views can re-read the saved image.
+    var savedRevision = 0
     var showPaste = false
     var selectedBand: HueBand = .red
     private(set) var histogram = Histogram.empty
@@ -1071,7 +1074,7 @@ final class EditorModel: Identifiable {
         let background = BackgroundActivity.begin("Saving edit")
         let filename = self.filename
         let remote = app.remoteLibrary, lutFiles = recipe.lutFiles(from: luts)
-        app.jobs.run("Saving edit to \(library.displayName)", detail: filename, photos: 1) { reporter in
+        app.jobs.run("Saving edit to \(library.displayName)", detail: filename, photos: 1) { [weak self] reporter in
             defer { background.end() }
             if let remote {
                 // The device with the original renders the full-size image and saves it.
@@ -1082,14 +1085,17 @@ final class EditorModel: Identifiable {
                 return
             }
             let data = try await Exporter.render(
-                source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: .heic), priority: priority,
+                source: session.original, recipe: recipe, luts: luts, options: recipe.photosCopy().exportOptions(), priority: priority,
                 queued: { reporter.progress(nil, detail: "\(filename) · waiting for earlier saves") }
             ) {
                 reporter.progress($0 * 0.9, detail: filename)
             }
             try await library.save(session, recipe: recipe, rendered: data, format: .heic)
             RecipeDrafts.shared.clear(for: session.asset.id, ifMatching: recipe)
-            await MainActor.run { app.pendingThumbnails[session.asset.id] = nil }
+            await MainActor.run {
+                app.pendingThumbnails[session.asset.id] = nil
+                self?.savedRevision += 1
+            }
         }
     }
 

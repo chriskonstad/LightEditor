@@ -5,11 +5,13 @@ import Foundation
 public enum PipelineStage: Sendable, Hashable {
     case rawDecode
     case grade
+    /// Changes only how the saved image is encoded, not how it looks.
+    case output
 }
 
 /// The groups offered in the paste sheet.
 public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
-    case whiteBalance, light, color, grade, filmLUT, effects, detail, crop, masks, retouch
+    case whiteBalance, light, color, grade, filmLUT, effects, detail, crop, masks, retouch, photosCopy
 
     public var id: String { rawValue }
 
@@ -25,6 +27,7 @@ public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
         case .crop: "Crop"
         case .masks: "Masks"
         case .retouch: "Retouch"
+        case .photosCopy: "Saved image size"
         }
     }
 
@@ -34,13 +37,15 @@ public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
         case .crop: "Per photo"
         case .masks: "AI masks re-detect on each photo"
         case .retouch: "Per photo"
+        case .photosCopy: "Resolution and quality of the image saved to Photos"
         default: nil
         }
     }
 
     /// Whether the group is ticked by default in the paste sheet. Everything but
-    /// Crop and Retouch, which are specific to one photo.
-    public var isOnByDefault: Bool { self != .crop && self != .retouch }
+    /// Crop and Retouch, which are specific to one photo, and the saved image's size,
+    /// which isn't part of the look.
+    public var isOnByDefault: Bool { self != .crop && self != .retouch && self != .photosCopy }
 
     public static var defaultSelection: Set<PasteGroup> {
         Set(allCases.filter(\.isOnByDefault))
@@ -146,6 +151,9 @@ public enum ParamCatalog {
             ParamSpec(key: .crop, label: "Crop", kind: .crop, group: .crop, stage: .grade),
             scalar(.perspectiveVertical, "Vertical", .crop),
             scalar(.perspectiveHorizontal, "Horizontal", .crop),
+            // Absent means this device's default from Settings (`PhotosCopy.deviceDefault`).
+            scalar(.photosMaxMegapixels, "Maximum size", .photosCopy, range: 0...1000, defaultValue: nil, stage: .output),
+            scalar(.photosQuality, "Quality", .photosCopy, range: PhotosCopy.qualityRange, defaultValue: nil, stage: .output),
         ]
         return specs
     }()

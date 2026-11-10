@@ -353,7 +353,7 @@ struct PresetsPanel: View {
             TextField("Name", text: $newName)
             Button("Save") {
                 let name = newName.trimmingCharacters(in: .whitespaces)
-                model.app.savePreset(named: name.isEmpty ? "My preset" : name, from: model.recipe, groups: Set(PasteGroup.allCases).subtracting([.crop, .detail]))
+                model.app.savePreset(named: name.isEmpty ? "My preset" : name, from: model.recipe, groups: Set(PasteGroup.allCases).subtracting([.crop, .detail, .photosCopy]))
             }
             Button("Cancel", role: .cancel) {}
         } message: {

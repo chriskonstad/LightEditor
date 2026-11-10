@@ -54,6 +54,9 @@ extension Recipe {
                 result.set(key, source, at: stamp)
             case .adjust:
                 switch spec.kind {
+                case .scalar where spec.stage == .output:
+                    // A saved image size has no meaningful delta either.
+                    if let source { result.set(key, source, at: stamp) }
                 case .scalar:
                     guard let sourceValue = source?.scalarValue else { continue }
                     let delta = sourceValue - clip.sourceDefaults.value(for: key)

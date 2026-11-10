@@ -118,7 +118,7 @@ let testClock = HybridLogicalClock(node: "test")
     }
 
     @Test func defaultSelectionIsEverythingButPerPhotoGroups() {
-        #expect(PasteGroup.defaultSelection == Set(PasteGroup.allCases).subtracting([.crop, .retouch]))
+        #expect(PasteGroup.defaultSelection == Set(PasteGroup.allCases).subtracting([.crop, .retouch, .photosCopy]))
     }
 
     @Test func setModeCopiesOnlySelectedGroups() {

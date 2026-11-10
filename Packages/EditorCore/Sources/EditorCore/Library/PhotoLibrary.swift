@@ -160,12 +160,17 @@ public protocol PhotoLibrary: AnyObject, Sendable {
     func addPhoto(fileAt url: URL, rawAlternate: URL?) async throws
     /// Yields whenever the library changes.
     func changes() -> AsyncStream<Void>
+    /// The size in bytes of the image saved with the asset's edit, when it's on this
+    /// device; nil when there's no edit or it isn't known.
+    func savedImageBytes(for asset: PhotoAsset) async -> Int?
 }
 
 extension PhotoLibrary {
     public func addPhoto(fileAt url: URL) async throws {
         try await addPhoto(fileAt: url, rawAlternate: nil)
     }
+
+    public func savedImageBytes(for asset: PhotoAsset) async -> Int? { nil }
 }
 
 /// Imports camera files, pairing RAW+JPEG shots that share a base name.

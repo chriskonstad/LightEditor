@@ -125,4 +125,10 @@ extension ParamKey {
     public static let crop = ParamKey("crop.geometry")
     public static let perspectiveVertical = ParamKey("crop.perspective.vertical")
     public static let perspectiveHorizontal = ParamKey("crop.perspective.horizontal")
+
+    // The image saved to Photos with the edit (see `PhotosCopy`)
+    /// The largest size in megapixels; 0 is full size.
+    public static let photosMaxMegapixels = ParamKey("photos.maxMegapixels")
+    /// HEIC quality, 0.4...1.
+    public static let photosQuality = ParamKey("photos.quality")
 }

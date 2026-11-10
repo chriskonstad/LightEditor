@@ -98,6 +98,7 @@ struct CompactEditorView: View {
         .overlay(alignment: .bottom) { ToastView(message: model.app.toast).padding(.bottom, 70) }
         .animation(.default, value: model.app.toast)
         .sheet(isPresented: $model.showExport) { ExportSheet(model: model) }
+        .sheet(isPresented: $model.showSavedImage) { SavedImageSheet(model: model) }
         .sheet(isPresented: $model.showPaste) {
             if let clip = model.app.clipboard {
                 PasteSheet(clip: clip, count: 1) { groups, mode in model.paste(clip, groups: groups, mode: mode) }
@@ -255,6 +256,8 @@ struct EditorMoreMenu: View {
             Divider()
             Button("Save edit now", systemImage: "square.and.arrow.down") { model.saveIfNeeded(priority: .now) }
                 .disabled(!model.isDirty)
+            Button("Saved image size…", systemImage: "arrow.down.right.and.arrow.up.left") { model.showSavedImage = true }
+                .accessibilityIdentifier("editor.savedImage")
             Button("Back to when opened", systemImage: "clock.arrow.circlepath") { model.returnToOpened() }
                 .disabled(!model.canReturnToOpened)
             Button("Reset all edits", systemImage: "arrow.counterclockwise", role: .destructive) { model.resetAll() }
@@ -323,6 +326,7 @@ struct WorkspaceEditorView: View {
         .overlay(alignment: .bottom) { ToastView(message: model.app.toast).padding(.bottom, 60) }
         .animation(.default, value: model.app.toast)
         .sheet(isPresented: $model.showExport) { ExportSheet(model: model).frame(minWidth: 420, minHeight: 360) }
+        .sheet(isPresented: $model.showSavedImage) { SavedImageSheet(model: model).frame(minWidth: 420, minHeight: 460) }
         .sheet(isPresented: $model.showPaste) {
             if let clip = model.app.clipboard {
                 PasteSheet(clip: clip, count: 1) { groups, mode in model.paste(clip, groups: groups, mode: mode) }

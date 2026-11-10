@@ -91,6 +91,10 @@ public final class FolderLibrary: PhotoLibrary, @unchecked Sendable {
         notify()
     }
 
+    public func savedImageBytes(for asset: PhotoAsset) async -> Int? {
+        (try? FileManager.default.attributesOfItem(atPath: renderedURL(asset.id).path))?[.size] as? Int
+    }
+
     public func revert(_ asset: PhotoAsset) async throws {
         try? FileManager.default.removeItem(at: recipeURL(asset.id))
         try? FileManager.default.removeItem(at: renderedURL(asset.id))

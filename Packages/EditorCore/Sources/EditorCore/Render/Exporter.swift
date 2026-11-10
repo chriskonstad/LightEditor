@@ -16,11 +16,15 @@ public struct ExportOptions: Sendable, Hashable, Codable {
     public var format: ExportFormat
     /// Long edge in pixels; nil exports at full resolution.
     public var longEdge: Int?
+    /// A cap on the output's megapixels, for when the cropped size isn't known yet
+    /// (bulk edits, the other device). Applied with `longEdge`; the smaller wins.
+    public var maxMegapixels: Double?
     public var quality: Double
 
-    public init(format: ExportFormat = .heic, longEdge: Int? = nil, quality: Double = 0.9) {
+    public init(format: ExportFormat = .heic, longEdge: Int? = nil, maxMegapixels: Double? = nil, quality: Double = 0.9) {
         self.format = format
         self.longEdge = longEdge
+        self.maxMegapixels = maxMegapixels
         self.quality = quality
     }
 
@@ -161,9 +165,19 @@ public enum Exporter {
         defer { Signposts.export.endInterval("Export", state) }
 
         progress(0.05)
+        var options = options
+        var cropRect = NormalizedRect.full
+        if case .crop(let geometry)? = recipe[.crop] { cropRect = geometry.rect }
+        if let megapixels = options.maxMegapixels, megapixels > 0 {
+            let native = try await decoder.info(for: source).nativeSize
+            let output = CGSize(width: native.width * cropRect.width, height: native.height * cropRect.height)
+            if output.width * output.height > megapixels * 1_000_000 {
+                let edge = ExportSizing.longEdge(megapixels: megapixels, for: output)
+                options.longEdge = min(options.longEdge ?? edge, edge)
+            }
+        }
         // Decode enough pixels that the crop still fills the requested size.
-        var cropFraction = 1.0
-        if case .crop(let geometry)? = recipe[.crop] { cropFraction = max(geometry.rect.width, geometry.rect.height, 0.05) }
+        let cropFraction = max(cropRect.width, cropRect.height, 0.05)
         let decodeEdge = options.longEdge.map { Int((Double($0) / cropFraction).rounded(.up)) }
         let (base, info) = try await decoder.lazyImage(source, rawStage: recipe.rawStage, longEdge: decodeEdge)
         try Task.checkCancellation()

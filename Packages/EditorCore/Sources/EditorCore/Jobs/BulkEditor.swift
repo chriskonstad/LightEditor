@@ -128,7 +128,7 @@ public enum BulkEditor {
             let start = 0.25 + Double(index) / Double(total) * 0.75
             let span = 0.75 / Double(total)
             progress(Progress(fraction: start, completed: index, total: total, rendering: index + 1))
-            let data = try await Exporter.render(source: session.original, recipe: recipe, luts: luts, options: ExportOptions(format: format), decoder: decoder, progress: { fraction in
+            let data = try await Exporter.render(source: session.original, recipe: recipe, luts: luts, options: recipe.photosCopy().exportOptions(format: format), decoder: decoder, progress: { fraction in
                 progress(Progress(fraction: start + fraction * span, completed: index, total: total, rendering: index + 1))
             })
             pending.append(PendingEdit(session: session, recipe: recipe, rendered: data, format: format))

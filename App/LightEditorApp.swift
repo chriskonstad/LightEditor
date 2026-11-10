@@ -23,6 +23,7 @@ struct LightEditorApp: App {
         #endif
         #if DEBUG
         RemoveDiagnostic.runIfRequested()
+        PhotosCopySpike.runIfRequested()
         #endif
     }
 

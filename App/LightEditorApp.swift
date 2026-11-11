@@ -24,6 +24,7 @@ struct LightEditorApp: App {
         #if DEBUG
         RemoveDiagnostic.runIfRequested()
         PhotosCopySpike.runIfRequested()
+        DiffusionDiagnostic.runIfRequested()
         #endif
     }
 

@@ -31,4 +31,12 @@
 
 ## Open questions
 
-- Device timing and memory on the iPhone 16 Pro and the M1 iPad Pro, and whether the Neural Engine gives correct output (it returned noise for LaMa at 1024; the diffusion models run on CPU+GPU for now).
+- Device timing on the M1 iPad Pro.
+- Whether the Neural Engine is faster and gives correct output. On the iPhone 16 Pro its first compile ran for more than ten minutes before the process was killed, so the diffusion models stay on CPU+GPU.
+
+## On the iPhone (2026-11-11)
+
+`-DiagnoseDiffusion gpu|ane|cpu|all` (debug builds) runs one fill on a made-up 512 px image and logs timings and memory.
+
+- Without more address space, the GPU fails on the first UNet step: Core ML returns `E5RT: std::bad_alloc`, or MPSGraph aborts the app while it lowers the 6-bit palettized weights. The app used only about 1.3 GB of the 3.4 GB it could have. The process runs out of virtual address space, not memory.
+- With `com.apple.developer.kernel.extended-virtual-addressing` it works. Cold, the first step takes 45 s (Core ML compiles the UNet for the GPU), then 1.3 s per step: 75 s for the 18 steps at strength 0.6. Warm, the first step takes 20 s and the whole fill 45 s. Peak footprint about 2.1 GB.

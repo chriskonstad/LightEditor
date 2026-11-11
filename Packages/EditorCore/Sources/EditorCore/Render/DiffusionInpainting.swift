@@ -61,6 +61,7 @@ public final class DiffusionInpainter: Sendable {
         var models: Models?
         var loaded: Loaded?
         var settings = Settings()
+        var computeUnits = DiffusionInpainter.defaultComputeUnits
     }
 
     /// Held for a whole fill: one at a time, since the UNet alone needs ~1 GB.
@@ -77,21 +78,29 @@ public final class DiffusionInpainter: Sendable {
         set { state.withLock { $0.settings = newValue } }
     }
 
+    #if targetEnvironment(simulator)
+    public static let defaultComputeUnits = MLComputeUnits.cpuOnly
+    #else
+    public static let defaultComputeUnits = MLComputeUnits.cpuAndGPU
+    #endif
+
+    /// Where the models run. Changing it unloads them.
+    public var computeUnits: MLComputeUnits {
+        get { state.withLock { $0.computeUnits } }
+        set { state.withLock { $0.computeUnits = newValue; $0.loaded = nil } }
+    }
+
     /// Frees the models (~1 GB) when nothing is being removed.
     public func release() {
         state.withLock { $0.loaded = nil }
     }
 
-    private static func load(_ models: Models) throws -> Loaded {
+    private static func load(_ models: Models, computeUnits: MLComputeUnits) throws -> Loaded {
         func compiled(_ url: URL) throws -> URL {
             url.pathExtension == "mlpackage" ? try MLModel.compileModel(at: url) : url
         }
         let configuration = MLModelConfiguration()
-        #if targetEnvironment(simulator)
-        configuration.computeUnits = .cpuOnly
-        #else
-        configuration.computeUnits = .cpuAndGPU
-        #endif
+        configuration.computeUnits = computeUnits
         let unet = try MLModel(contentsOf: compiled(models.unet), configuration: configuration)
         let encoder = try MLModel(contentsOf: compiled(models.encoder), configuration: configuration)
         let decoder = try MLModel(contentsOf: compiled(models.decoder), configuration: configuration)
@@ -128,7 +137,7 @@ public final class DiffusionInpainter: Sendable {
         let (loaded, settings) = try state.withLock { state -> (Loaded, Settings) in
             if state.loaded == nil {
                 guard let models = state.models else { throw InpaintError.failed("diffusion isn't in this build") }
-                state.loaded = try Self.load(models)
+                state.loaded = try Self.load(models, computeUnits: state.computeUnits)
             }
             return (state.loaded!, state.settings)
         }

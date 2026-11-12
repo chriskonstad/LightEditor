@@ -20,7 +20,12 @@ enum DiffusionDiagnostic {
     }
 
     static func log(_ text: String) {
-        print("DIFF \(text) [now \(footprintMB) MB, peak \(peakFootprintMB) MB, available \(os_proc_available_memory() / 1_048_576) MB]")
+        #if os(iOS)
+        let available = "\(os_proc_available_memory() / 1_048_576) MB"
+        #else
+        let available = "n/a"
+        #endif
+        print("DIFF \(text) [now \(footprintMB) MB, peak \(peakFootprintMB) MB, available \(available)]")
     }
 
     static func run(mode: String) async {

@@ -68,7 +68,7 @@ From top to bottom:
      - **Press and hold** a swatch, or any HSL slider, to see which parts of the photo that band affects: its colors stay and the rest turns dim gray, with a "Showing blues" badge.
      - **Hue, Saturation or Luminance:** Lightroom's layout, with all 8 colors for that one property.
    - **Grade:** four color wheels in a 2×2 grid (Shadows, Midtones, Highlights, Global), each with a hue and strength readout. Then their luminance sliders, Blending and Balance; a Film LUT picker and Amount; and Effects (Vignette, Midpoint, Grain, Grain size).
-   - **Detail:** an info note ("Detail runs in the RAW 9 decoder…"), then Noise reduction, Color noise, Sharpness and Detail.
+   - **Detail:** an info note ("Detail runs in the RAW 9 decoder…"), then Noise reduction, Color noise, Sharpness and Detail, Moiré reduction and the Lens corrections switch (the camera's lens profile). Below, **Manual Lens Corrections**: Distortion (positive fixes barrel, negative pincushion; the frame stays filled), Red/cyan fringe, Blue/yellow fringe (lateral chromatic aberration) and Lens vignetting, with its Midpoint once it's set. These grade without a re-decode; distortion and fringing show outside Masks and Retouch, like perspective.
    - **Masks:**
      - With no masks yet, a grid to create one: Subject, Sky, People, Background, Object (tap to select), Brush, Linear gradient, Radial gradient, Luminance range, Color range. AI masks are amber.
      - Otherwise:

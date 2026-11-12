@@ -120,6 +120,14 @@ func makeCube(size: Int, title: String = "Test", transform: (Float, Float, Float
         #expect(result.preset.params[.lensCorrection] == .scalar(0))
     }
 
+    @Test func mapsManualLensCorrections() throws {
+        let xmp = #"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/" crs:LensManualDistortionAmount="12" crs:VignetteAmount="40" crs:VignetteMidpoint="30"/></rdf:RDF></x:xmpmeta>"#
+        let params = try XMPImporter.importPreset(from: Data(xmp.utf8), fallbackName: "x").preset.params
+        #expect(params[.lensDistortion] == .scalar(12))
+        #expect(params[.lensVignette] == .scalar(40))
+        #expect(params[.lensVignetteMidpoint] == .scalar(30))
+    }
+
     @Test func rejectsGarbage() {
         #expect(throws: (any Error).self) { try XMPImporter.importPreset(from: Data("not xml".utf8), fallbackName: "x") }
     }

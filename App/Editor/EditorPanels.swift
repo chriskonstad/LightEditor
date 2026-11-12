@@ -231,6 +231,20 @@ struct DetailPanel: View {
                 .padding(.top, 8)
                 .accessibilityIdentifier("toggle.lensCorrection")
             }
+
+            Text("Manual Lens Corrections")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .padding(.top, 12)
+            Text("For lenses without a profile, or on top of one. Distortion and fringing show outside Masks and Retouch, like perspective.")
+                .font(.caption).foregroundStyle(Theme.textSecondary)
+            ParamSlider(model: model, key: .lensDistortion)
+            ParamSlider(model: model, key: .lensFringeRed)
+            ParamSlider(model: model, key: .lensFringeBlue)
+            ParamSlider(model: model, key: .lensVignette)
+            if model.value(.lensVignette) != 0 {
+                ParamSlider(model: model, key: .lensVignetteMidpoint, label: "Midpoint")
+            }
         }
     }
 }

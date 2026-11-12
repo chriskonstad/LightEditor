@@ -147,6 +147,11 @@ public enum ParamCatalog {
             scalar(.detail, "Detail", .detail, range: 0...100, defaultValue: nil, stage: .rawDecode),
             scalar(.lensCorrection, "Lens corrections", .detail, range: 0...1, defaultValue: 1, stage: .rawDecode),
             scalar(.moire, "Moiré reduction", .detail, range: 0...100, defaultValue: 0, stage: .rawDecode),
+            scalar(.lensDistortion, "Distortion", .detail),
+            scalar(.lensFringeRed, "Red/cyan fringe", .detail),
+            scalar(.lensFringeBlue, "Blue/yellow fringe", .detail),
+            scalar(.lensVignette, "Lens vignetting", .detail),
+            scalar(.lensVignetteMidpoint, "Lens vignetting midpoint", .detail, range: 0...100, defaultValue: 50),
 
             ParamSpec(key: .crop, label: "Crop", kind: .crop, group: .crop, stage: .grade),
             scalar(.perspectiveVertical, "Vertical", .crop),

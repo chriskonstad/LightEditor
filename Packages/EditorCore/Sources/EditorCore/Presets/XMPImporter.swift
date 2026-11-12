@@ -43,6 +43,8 @@ public enum XMPImporter {
         "PostCropVignetteAmount": (.vignetteAmount, 1), "PostCropVignetteMidpoint": (.vignetteMidpoint, 1),
         "LuminanceSmoothing": (.noiseReduction, 1), "ColorNoiseReduction": (.colorNoise, 1),
         "LensProfileEnable": (.lensCorrection, 1),
+        "LensManualDistortionAmount": (.lensDistortion, 1),
+        "VignetteAmount": (.lensVignette, 1), "VignetteMidpoint": (.lensVignetteMidpoint, 1),
         "Sharpness": (.sharpness, 100.0 / 150.0), "SharpenDetail": (.detail, 1),
         "ColorGradeBlending": (.gradeBlending, 1), "ColorGradeBalance": (.gradeBalance, 1),
         "SplitToningBalance": (.gradeBalance, 1),

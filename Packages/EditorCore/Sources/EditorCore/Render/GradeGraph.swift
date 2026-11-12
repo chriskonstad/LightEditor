@@ -101,6 +101,7 @@ public enum GradeGraph {
             // Retouch only changes when spots do; cached, slider moves don't redo it.
             image = RetouchRenderer.apply(retouches, to: image, inpaints: inputs.inpaints).insertingIntermediate(cache: true)
         }
+        image = LensCorrection.vignette(image, recipe)
         image = whiteBalance(image, recipe, inputs.defaults)
         image = tone(image, recipe)
         var guide = inputs.presenceGuide
@@ -109,7 +110,7 @@ public enum GradeGraph {
             if !retouches.isEmpty {
                 small = RetouchRenderer.apply(retouches, to: small, inpaints: inputs.inpaints).insertingIntermediate(cache: true)
             }
-            guide = tone(whiteBalance(small, recipe, inputs.defaults), recipe)
+            guide = tone(whiteBalance(LensCorrection.vignette(small, recipe), recipe, inputs.defaults), recipe)
         }
         image = presence(image, recipe, guide: guide)
         image = toneCurve(image, recipe)
@@ -243,12 +244,12 @@ public enum GradeGraph {
         return graded.applyingFilter("CIMix", parameters: ["inputBackgroundImage": image, "inputAmount": amount])
     }
 
-    /// Perspective, straighten, then crop. The crop rect is normalized to the
-    /// corrected, straightened frame, which is scaled up just enough that no empty
-    /// corners show.
+    /// Lens distortion and fringing, perspective, straighten, then crop. The crop
+    /// rect is normalized to the corrected, straightened frame, which is scaled up
+    /// just enough that no empty corners show.
     static func geometry(_ image: CIImage, _ recipe: Recipe) -> CIImage {
         let corrected = perspective(
-            image,
+            LensCorrection.warp(image, recipe),
             vertical: (recipe.scalar(.perspectiveVertical) ?? 0) / 100,
             horizontal: (recipe.scalar(.perspectiveHorizontal) ?? 0) / 100
         )

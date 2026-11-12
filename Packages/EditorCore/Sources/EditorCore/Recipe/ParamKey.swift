@@ -121,6 +121,13 @@ extension ParamKey {
     public static let lensCorrection = ParamKey("detail.lensCorrection")
     public static let moire = ParamKey("detail.moire")
 
+    // Manual lens corrections (grade stage; see `LensCorrection`)
+    public static let lensDistortion = ParamKey("lens.distortion")
+    public static let lensFringeRed = ParamKey("lens.fringeRed")
+    public static let lensFringeBlue = ParamKey("lens.fringeBlue")
+    public static let lensVignette = ParamKey("lens.vignette")
+    public static let lensVignetteMidpoint = ParamKey("lens.vignetteMidpoint")
+
     // Crop and perspective
     public static let crop = ParamKey("crop.geometry")
     public static let perspectiveVertical = ParamKey("crop.perspective.vertical")

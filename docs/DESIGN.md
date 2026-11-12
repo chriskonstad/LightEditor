@@ -219,8 +219,10 @@ iOS freezes a backgrounded app's networking within seconds, and there's no backg
 | GrainAmount, GrainSize | effects.grain.* | 1:1 |
 | ColorGradeGlobalHue/Sat/Lum | grade.global | as for the other wheels |
 | PerspectiveVertical, PerspectiveHorizontal | crop.perspective.* | 1:1 |
+| LensProfileEnable | detail.lensCorrection | 0 or 1 |
+| LensManualDistortionAmount, VignetteAmount, VignetteMidpoint | lens.distortion, lens.vignette, lens.vignetteMidpoint | 1:1 (our falloff differs) |
 
-Not mapped: the camera profile and Look, per-channel curves, grain roughness and frequency, lens corrections and local adjustments.
+Not mapped: the camera profile and Look, per-channel curves, grain roughness and frequency, Defringe, and local adjustments.
 
 ## Decisions log
 
@@ -278,3 +280,4 @@ Add one line per decision: date, decision, reason.
 - 2026-11-10: Zoom and pan in every editing mode. On iPhone and iPad a `TwoFingerZoom` recognizer (a `UIGestureRecognizerRepresentable`, since SwiftUI's MagnifyGesture doesn't report where the fingers move) zooms and pans with the fingers over the tabs, mask handles and Crop, alongside their one-finger gestures; Retouch and the mask brush keep their own `CanvasInput`. The crop overlay follows the zoomed photo. Entering or leaving Retouch and Crop keeps the zoom unless the frame changes. On the Mac, two-finger scrolling pans a zoomed photo.
 - 2026-11-10: The image saved to Photos with an edit has a size and quality (`PhotosCopy`): this device's default in Settings, or the photo's own (`photos.maxMegapixels`, `photos.quality`, a pipeline stage of their own, `.output`, and the "Saved image size" paste group, off by default and kept out of presets). The default stays full size at 0.9, as before. Measured on our fixture RAWs, a 60 MP HEIC at 0.9 is 5.6–17.4 MB; 0.8 halves it, 24 MP at 0.8 is 0.7–3.4 MB, and grain and JPEG don't help. Photos accepts an edit whose image is smaller than the original (`docs/spikes/photos-render-size.md`), and a smaller save is also faster, since the RAW decodes at a smaller scale. The cap applies to the cropped size, so `ExportOptions.maxMegapixels` is resolved in the exporter, where the crop is known. An unset photo uses the default of the device that renders the save: for remote editing, the iPhone's.
 - 2026-11-11: The iOS app has the extended virtual addressing entitlement. Without it, compiling the Stable Diffusion UNet for the iPhone GPU runs out of address space and fails or aborts, with memory to spare (docs/spikes/diffusion-inpaint.md).
+- 2026-11-11: Manual lens corrections (`LensCorrection`): Distortion, red/cyan and blue/yellow fringing and lens vignetting, grade-stage keys in the Detail paste group. Vignetting is a falloff in linear light before white balance; distortion and fringing are one radial warp per color channel, run with perspective on the original frame, so masks and retouch spots keep their coordinates. Core Image (27) smears edge pixels outside the frame in a scaled, offset preview when a warp's input is clamped or its crop equals its extent, so the kernel clamps its sample points instead and the warp is a pixel larger than its crop; `LensCorrectionTests` covers it.

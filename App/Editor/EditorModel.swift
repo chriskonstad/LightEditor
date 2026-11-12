@@ -154,10 +154,10 @@ final class EditorModel: Identifiable {
         if hasFrameGeometry, case .actual = zoom { zoom = .fit }
     }
 
-    /// Whether crop, straighten or perspective make the edited frame differ from the original's.
+    /// Whether crop, straighten, perspective or lens distortion make the edited frame differ from the original's.
     private var hasFrameGeometry: Bool {
         if case .crop(let geometry)? = recipe[.crop], !geometry.isIdentity { return true }
-        return (recipe.scalar(.perspectiveVertical) ?? 0) != 0 || (recipe.scalar(.perspectiveHorizontal) ?? 0) != 0
+        return ([.perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys).contains { (recipe.scalar($0) ?? 0) != 0 }
     }
     var showExport = false
     var showSavedImage = false
@@ -501,7 +501,7 @@ final class EditorModel: Identifiable {
             // on-screen pixels map back to tiles.
             var geometryOnly = Recipe()
             let stamp = HLCStamp(millis: 0, node: "display")
-            for key in [ParamKey.crop, .perspectiveVertical, .perspectiveHorizontal] {
+            for key in [ParamKey.crop, .perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys {
                 if let value = displayRecipe[key] { geometryOnly.set(key, value, at: stamp) }
             }
             geometry = GradeGraph.apply(geometryOnly, to: source, inputs: GradeInputs(defaults: defaults, applyGeometry: !showsOriginalFrame))

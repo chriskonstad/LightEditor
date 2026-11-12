@@ -18,9 +18,9 @@ The first release is **iPhone and iPad only**; the Mac version follows later. Ch
 
 ## Subtitle (30)
 
-> Free RAW editor, open source
+> Open-source RAW photo editor
 
-28/30. Alternative: "RAW editing, no subscription" (28/30).
+28/30. No price words, "free" included: App Review rejected the first Mac submission for "Free RAW editor, open source" (guideline 2.3.7, 2026-11-11). The description is the place to say it's free.
 
 ## Promotional text (170)
 
@@ -34,7 +34,7 @@ The first release is **iPhone and iPad only**; the Mac version follows later. Ch
 camera,dng,arw,raf,proraw,lut,preset,color,grading,film,mask,retouch,hsl,duo,remove,subscription
 ```
 
-96/100. Words in the name and subtitle (light, editor, raw, free, open, source) already count, so they're left out. No competitor or camera-brand trademarks ("Lightroom", "Fujifilm", "Sony"): App Review rejects those in keywords (guideline 2.3.7).
+96/100. Words in the name and subtitle (light, editor, raw, open, source, photo) already count, and price words like "free" aren't allowed, so they're left out. No competitor or camera-brand trademarks ("Lightroom", "Fujifilm", "Sony"): App Review rejects those in keywords (guideline 2.3.7).
 
 ## Description (4000)
 

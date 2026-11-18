@@ -462,7 +462,7 @@ final class EditorModel: Identifiable {
         return fit * max(sourceLongEdge, 1) / nativeLongEdge
     }
 
-    private func render() {
+    func render() {
         scheduleRedecodeIfNeeded()
         guard let decoded = base else {
             renderer.image = placeholder

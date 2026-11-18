@@ -12,13 +12,13 @@ Nothing. LightEditor has no accounts, servers, analytics, crash reporting, adver
 
 LightEditor reads and edits photos in your Apple Photos library, with your permission. All decoding, editing and AI features (masks and object removal) run on your device. Edits are saved back to Photos non-destructively, so you can revert to the original at any time.
 
-If you use iCloud Photos, Apple syncs your photos and edits between your devices. That sync is Apple's service, covered by [Apple's privacy policy](https://www.apple.com/legal/privacy/), not by LightEditor.
+If you use iCloud Photos, Apple syncs your photos and edits between your devices. If you're signed in to iCloud, your presets and imported LUTs are also kept in the app's private iCloud Drive storage, so they're on all your devices. That sync is Apple's service, covered by [Apple's privacy policy](https://www.apple.com/legal/privacy/), not by LightEditor; the developer can't see your iCloud data.
 
 When you export or share a photo, it goes only where you send it, through the system share sheet or a file location you choose.
 
 ## Data stored on your device
 
-To stay fast, the app keeps some data in its own storage on your device: decoded image caches, AI masks, unsaved edit drafts, your presets and LUTs, and remote-editing pairing keys (in the Keychain). It never leaves the device, except as described below for remote editing. Deleting the app deletes it.
+To stay fast, the app keeps some data in its own storage on your device: decoded image caches, AI masks, unsaved edit drafts, and remote-editing pairing keys (in the Keychain). It never leaves the device, except as described below for remote editing. Deleting the app deletes it.
 
 ## Remote editing between your devices
 

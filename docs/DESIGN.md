@@ -133,6 +133,7 @@ enum ParamValue: Codable, Sendable, Equatable {
   - Native JSON: exact, our own format.
   - .cube 3D LUT: exact and standard; covers film-look LUTs.
   - Lightroom XMP (`crs:`): best-effort import only. Adobe's tone and color math is proprietary, so values won't map 1:1.
+  - Saved presets and imported LUTs live in the app's iCloud Drive container (`SyncedFolder`), always, so they're on every device with the same Apple ID. Without iCloud they stay in Application Support and move into iCloud Drive once it's available.
 - **Masks (V1).** Stored as recipes, not bitmaps: brush strokes as vector paths, AI masks as "model + target + refinement params". They are regenerated on each device to keep adjustment data small.
 
 ## Photos integration
@@ -282,4 +283,5 @@ Add one line per decision: date, decision, reason.
 - 2026-11-11: The iOS app has the extended virtual addressing entitlement. Without it, compiling the Stable Diffusion UNet for the iPhone GPU runs out of address space and fails or aborts, with memory to spare (docs/spikes/diffusion-inpaint.md).
 - 2026-11-11: Manual lens corrections (`LensCorrection`): Distortion, red/cyan and blue/yellow fringing and lens vignetting, grade-stage keys in the Detail paste group. Vignetting is a falloff in linear light before white balance; distortion and fringing are one radial warp per color channel, run with perspective on the original frame, so masks and retouch spots keep their coordinates. Core Image (27) smears edge pixels outside the frame in a scaled, offset preview when a warp's input is clamped or its crop equals its extent, so the kernel clamps its sample points instead and the warp is a pixel larger than its crop; `LensCorrectionTests` covers it.
 - 2026-11-18: For Apple ProRAW with the RAW 9 DNG decoder at half size and below, decode at full size and downscale with Lanczos to preserve the full frame. The smaller scene-linear intermediate still goes through the existing decode cache.
+- 2026-11-18: Presets and imported LUTs sync through iCloud Drive (requested in issue #4), built in with no setting: the app's ubiquity container holds `Presets/` (one JSON file per preset, named by ID) and `LUTs/` (named by content hash), outside `Documents` so they don't show in the Files app. Files are small and never edited in place, so conflicts are rare and there's no merge logic; reads skip files that aren't downloaded yet and an `NSMetadataQuery` reloads when they arrive. Apple's service, nothing hosted by us; this isn't recipe sync, which remote editing still replaces. Debug Mac builds are ad-hoc signed, which iCloud doesn't allow, so they keep presets locally.
 

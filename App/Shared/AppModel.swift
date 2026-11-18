@@ -42,6 +42,9 @@ final class AppModel {
 
     private(set) var userPresets: [Preset] = []
     private(set) var luts: [LUTRef] = []
+    /// Reloads presets and LUTs when another device changes them in iCloud Drive.
+    @ObservationIgnored private var cloudWatcher: UbiquitousFolderWatcher?
+    @ObservationIgnored private var identityObserver: Task<Void, Never>?
     var toast: String?
 
     var presets: [Preset] { BuiltInPresets.all + FilmSimulations.presets + SonyLooks.presets + AdaptivePresets.all + userPresets }
@@ -62,6 +65,12 @@ final class AppModel {
         }
         userPresets = presetStore.load()
         luts = lutStore.all()
+        Task { await syncPresetsWithICloud() }
+        identityObserver = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .NSUbiquityIdentityDidChange) {
+                await self?.syncPresetsWithICloud()
+            }
+        }
         Task.detached(priority: .utility) { Kernels.warmUp() }
         remote.attach(self)
     }
@@ -73,6 +82,35 @@ final class AppModel {
             return FolderLibrary(directory: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
         }
         return PhotoKitLibrary()
+    }
+
+    // MARK: Presets in iCloud Drive
+
+    /// Keeps presets and imported LUTs in the app's iCloud Drive container, so
+    /// they're on every device signed in to the same Apple ID. Always on; without
+    /// iCloud they stay on this device and move into iCloud Drive once it's there.
+    func syncPresetsWithICloud() async {
+        let presetStore = presetStore, lutStore = lutStore
+        let found = await Task.detached(priority: .utility) { () -> Bool in
+            guard let container = UbiquitousStorage.container() else { return false }
+            presetStore.folder.move(to: container.appending(path: "Presets", directoryHint: .isDirectory))
+            lutStore.folder.move(to: container.appending(path: "LUTs", directoryHint: .isDirectory))
+            return true
+        }.value
+        reloadPresets()
+        if found, cloudWatcher == nil {
+            cloudWatcher = UbiquitousFolderWatcher { [weak self] in self?.reloadPresets() }
+        }
+    }
+
+    private func reloadPresets() {
+        let presets = presetStore.load(), all = lutStore.all()
+        if presets != userPresets { userPresets = presets }
+        if all != luts {
+            luts = all
+            // A LUT the open photo uses may just have arrived.
+            activeEditor?.render()
+        }
     }
 
     // MARK: Library

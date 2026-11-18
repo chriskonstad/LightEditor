@@ -126,46 +126,46 @@ public enum AdaptivePresets {
     ]
 }
 
-/// Saved presets as JSON files in Application Support.
+/// Saved presets as JSON files, one per preset, in a `SyncedFolder`.
 public final class PresetStore: Sendable {
-    private let directory: URL
+    public let folder: SyncedFolder
 
     public init(directory: URL) {
-        self.directory = directory
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        folder = SyncedFolder(directory: directory)
     }
 
+    /// Before iCloud is known, or without it. `AppModel` moves the store into the
+    /// iCloud Drive container ("Presets") when there is one.
     public static func defaultDirectory() -> URL {
         URL.applicationSupportDirectory.appending(path: "Presets", directoryHint: .isDirectory)
     }
 
     public func load() -> [Preset] {
-        let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         let decoder = JSONDecoder()
-        return files.filter { $0.pathExtension == "json" }
-            .compactMap { try? decoder.decode(Preset.self, from: Data(contentsOf: $0)) }
+        return folder.files(withExtension: "json")
+            .compactMap { name in folder.read(name).flatMap { try? decoder.decode(Preset.self, from: $0) } }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     public func save(_ preset: Preset) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(preset).write(to: directory.appending(path: "\(preset.id.uuidString).json"), options: .atomic)
+        try folder.write(encoder.encode(preset), to: "\(preset.id.uuidString).json")
     }
 
     public func delete(_ preset: Preset) throws {
-        try FileManager.default.removeItem(at: directory.appending(path: "\(preset.id.uuidString).json"))
+        try folder.delete("\(preset.id.uuidString).json")
     }
 }
 
-/// Imported .cube files, stored by content hash so recipes can reference them.
+/// Imported .cube files, stored by content hash so recipes can reference them,
+/// in a `SyncedFolder`. The same LUT imported on two devices is the same file.
 public final class LUTStore: LUTProvider {
-    private let directory: URL
+    public let folder: SyncedFolder
     private let cache = Mutex<[String: CubeLUT]>([:])
 
     public init(directory: URL) {
-        self.directory = directory
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        folder = SyncedFolder(directory: directory)
     }
 
     public static func defaultDirectory() -> URL {
@@ -177,29 +177,29 @@ public final class LUTStore: LUTProvider {
     public func importCube(from url: URL) throws -> CubeLUT {
         let data = try Data(contentsOf: url)
         let lut = try CubeParser.parse(data, fallbackTitle: url.deletingPathExtension().lastPathComponent)
-        try data.write(to: directory.appending(path: "\(lut.hash).cube"), options: .atomic)
-        try Data(lut.title.utf8).write(to: directory.appending(path: "\(lut.hash).name"), options: .atomic)
+        try folder.write(data, to: "\(lut.hash).cube")
+        try folder.write(Data(lut.title.utf8), to: "\(lut.hash).name")
         cache.withLock { $0[lut.hash] = lut }
         return lut
     }
 
     public func all() -> [LUTRef] {
-        let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        return files.filter { $0.pathExtension == "cube" }.map { url in
-            let hash = url.deletingPathExtension().lastPathComponent
-            let name = (try? String(contentsOf: directory.appending(path: "\(hash).name"), encoding: .utf8)) ?? "LUT"
-            return LUTRef(hash: hash, name: name)
+        let names = Set(folder.files(withExtension: "name"))
+        return folder.files(withExtension: "cube").map { file in
+            let hash = (file as NSString).deletingPathExtension
+            let name = names.contains("\(hash).name") ? folder.read("\(hash).name").flatMap { String(data: $0, encoding: .utf8) } : nil
+            return LUTRef(hash: hash, name: name ?? "LUT")
         }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     /// The .cube file itself, e.g. to send with a render on another device.
     public func data(for ref: LUTRef) -> Data? {
-        try? Data(contentsOf: directory.appending(path: "\(ref.hash).cube"))
+        folder.read("\(ref.hash).cube")
     }
 
     public func lut(for ref: LUTRef) -> CubeLUT? {
         if let hit = cache.withLock({ $0[ref.hash] }) { return hit }
-        guard let data = try? Data(contentsOf: directory.appending(path: "\(ref.hash).cube")),
+        guard let data = folder.read("\(ref.hash).cube"),
               let lut = try? CubeParser.parse(data, fallbackTitle: ref.name)
         else { return nil }
         cache.withLock { $0[ref.hash] = lut }

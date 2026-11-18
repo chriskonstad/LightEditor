@@ -87,3 +87,7 @@ targets:
         # device-to-device link), which is exempt, so TestFlight needs no export questions.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: NO
+      configs:
+        Debug:
+          # Ad-hoc signed (above), which iCloud doesn't allow: presets stay on this Mac.
+          "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Resources/LightEditor-macOS-Debug.entitlements

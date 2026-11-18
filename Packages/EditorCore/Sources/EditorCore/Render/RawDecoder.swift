@@ -219,18 +219,17 @@ public actor RawDecoder {
             }
             let scale = longEdge.map { min(1, Double($0) / entry.nativeLongEdge) } ?? 1
             #if targetEnvironment(simulator)
-            // The iOS 27 simulator ignores scaleFactor: the output reports the scaled
-            // extent but holds the top-left corner of the full-size image. Decode at full
-            // size and downscale instead. Devices and the Mac honor scaleFactor.
-            raw.scaleFactor = 1
+            // Simulator RAW decodes can report the scaled extent with cropped pixels.
+            let downscaleAfterDecode = scale < 1
+            #else
+            // RAW 9's half-resolution pass can crop ProRAW at half size and below.
+            let downscaleAfterDecode = scale <= 0.5 && raw.decoderVersion == .version9DNG && Self.isProRAW(raw)
+            #endif
+            raw.scaleFactor = downscaleAfterDecode ? 1 : Float(scale)
             guard var output = raw.outputImage else { throw DecodeError.renderFailed }
-            if scale < 1 {
+            if downscaleAfterDecode {
                 output = output.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: scale, kCIInputAspectRatioKey: 1])
             }
-            #else
-            raw.scaleFactor = Float(scale)
-            guard let output = raw.outputImage else { throw DecodeError.renderFailed }
-            #endif
             let info = entry.info
             var resolved = info
             resolved.decoderVersion = raw.decoderVersion.rawValue
@@ -277,6 +276,11 @@ public actor RawDecoder {
                 if let error { continuation.resume(throwing: error) } else { continuation.resume() }
             }
         }
+    }
+
+    private static func isProRAW(_ raw: CIRAWFilter) -> Bool {
+        let dng = raw.properties[kCGImagePropertyDNGDictionary as String] as? [String: Any]
+        return dng?["ProfileName"] as? String == "Apple Embedded Color Profile"
     }
 
     private func makeInfo(raw: CIRAWFilter, source: PhotoSource) -> SourceInfo {

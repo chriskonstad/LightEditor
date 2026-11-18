@@ -12,18 +12,9 @@ import Testing
         return ["arw", "raf", "dng"].compactMap { kind in all.first { $0.pathExtension.lowercased() == kind } }
     }
 
-    /// How decodes were made before filters were reused.
-    static func freshDecode(_ url: URL, _ stage: RawStageParams, longEdge: Int) throws -> [UInt16] {
-        let raw = try #require(CIRAWFilter(imageURL: url))
-        let wanted = CIRAWDecoderVersion(rawValue: stage.decoderVersion)
-        raw.decoderVersion = raw.supportedDecoderVersions.contains(wanted) ? wanted : raw.supportedDecoderVersions.last!
-        if let v = stage.noiseReduction { raw.luminanceNoiseReductionAmount = Float(v / 100) }
-        if let v = stage.colorNoise { raw.colorNoiseReductionAmount = Float(v / 100) }
-        if let v = stage.sharpness { raw.sharpnessAmount = Float(v / 100) }
-        if let v = stage.detail { raw.detailAmount = Float(v / 100) }
-        if let v = stage.lensCorrection, raw.isLensCorrectionSupported { raw.isLensCorrectionEnabled = v >= 0.5 }
-        raw.scaleFactor = Float(min(1, Double(longEdge) / max(raw.nativeSize.width, raw.nativeSize.height)))
-        return try pixels(raw.outputImage!)
+    /// Set EDITORCORE_PRORAW_FIXTURE to an Apple ProRAW DNG that supports RAW 9.
+    static var proRAWFixture: URL? {
+        ProcessInfo.processInfo.environment["EDITORCORE_PRORAW_FIXTURE"].map { URL(fileURLWithPath: $0) }
     }
 
     static func pixels(_ image: CIImage) throws -> [UInt16] {
@@ -55,10 +46,29 @@ import Testing
                 let longEdge = index % 2 == 0 ? 640 : 1024
                 let (image, _) = try await decoder.lazyImage(source, rawStage: stage, longEdge: longEdge)
                 let reused = try Self.pixels(image)
-                let fresh = try Self.freshDecode(url, stage, longEdge: longEdge)
-                #expect(reused == fresh, "\(url.lastPathComponent) stage \(index)")
+                let fresh = RawDecoder(cache: DecodeCache(directory: nil))
+                let (expected, _) = try await fresh.lazyImage(source, rawStage: stage, longEdge: longEdge)
+                #expect(reused == (try Self.pixels(expected)), "\(url.lastPathComponent) stage \(index)")
             }
         }
+    }
+
+    @Test(.enabled(if: proRAWFixture != nil)) func proRAWPreviewMatchesFullFrame() async throws {
+        let source = PhotoSource(url: try #require(Self.proRAWFixture))
+        let decoder = RawDecoder(cache: DecodeCache(directory: nil))
+        let stage = RawStageParams(decoderVersion: CIRAWDecoderVersion.version9DNG.rawValue)
+        let (full, _) = try await decoder.lazyImage(source, rawStage: stage, longEdge: nil)
+        let nativeLongEdge = max(full.extent.width, full.extent.height)
+        let longEdge = min(2560, Int(nativeLongEdge / 2))
+        let (preview, info) = try await decoder.lazyImage(source, rawStage: stage, longEdge: longEdge)
+        let expected = full.applyingFilter("CILanczosScaleTransform", parameters: [
+            kCIInputScaleKey: Double(longEdge) / nativeLongEdge,
+            kCIInputAspectRatioKey: 1,
+        ])
+        #expect(info.decoderVersion == stage.decoderVersion)
+        #expect(preview.extent.integral.size == expected.extent.integral.size)
+        let pixelsMatch = try Self.pixels(preview) == Self.pixels(expected)
+        #expect(pixelsMatch, "The reduced decode should show the entire ProRAW frame")
     }
 
     /// Tiles rendering on other threads from an earlier output while the decoder

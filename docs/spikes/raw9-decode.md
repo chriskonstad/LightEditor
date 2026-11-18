@@ -37,4 +37,4 @@ From `PerformanceTests` on the same Mac:
 
 ## Simulator caveat
 
-In the iOS 27 simulator, `CIRAWFilter.scaleFactor` is **ignored**. The output reports the scaled extent but contains the top-left corner of the full-size image. The Mac honors `scaleFactor`. In the simulator only, `RawDecoder` decodes at full size and downscales with Lanczos (`#if targetEnvironment(simulator)`). Confirm on devices that `scaleFactor` works there; if it doesn't, remove the condition.
+In the iOS 27 simulator, `CIRAWFilter.scaleFactor` can report a reduced extent with cropped pixels. `RawDecoder` decodes at full size and downscales with Lanczos in simulator builds. RAW 9 also showed this behavior with Apple ProRAW at half size and below on macOS 27.2 and when the device decode path ran on the iOS 27.2 simulator. `RawDecoder` uses the same workaround for those ProRAW requests on device builds.

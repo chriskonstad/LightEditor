@@ -98,7 +98,7 @@ public actor DecodeCache {
         public var longEdge: Int
 
         /// Bump when decoding changes, so stale entries on disk are never reused.
-        static let formatVersion = 2
+        static let formatVersion = 3
 
         var fileName: String {
             let digest = SHA256.hash(data: Data("v\(Self.formatVersion)|\(photoKey)|\(rawStage.cacheKey)|\(longEdge)".utf8))

@@ -235,3 +235,14 @@ Requires macOS 27.
 • Zoom and pan everywhere: pinch and move two fingers to zoom in and look around while you crop, retouch or remove objects, and while you draw, move and resize masks or adjust them.
 • Crop while zoomed in for precise corners.
 ```
+
+## What's New (1.0.4)
+
+```
+• Presets and imported LUTs sync automatically through iCloud to your iPhone, iPad and Mac.
+• Manual lens corrections: distortion, color fringing and lens vignetting, on top of the lens's built-in profile.
+• Choose the size and quality of the image each photo saves to your library.
+• AI object removal with diffusion now works on iPhone.
+• Fixed: a TIFF could fail to reopen with "Couldn't read".
+• Fixed: ProRAW previews could be cropped.
+```

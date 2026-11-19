@@ -4,6 +4,7 @@ import AppKit
 #endif
 import Foundation
 import Photos
+import Synchronization
 import UniformTypeIdentifiers
 
 /// Apple Photos as the library.
@@ -14,29 +15,14 @@ import UniformTypeIdentifiers
 public final class PhotoKitLibrary: PhotoLibrary, @unchecked Sendable {
     public let displayName = "Photos"
     private let imageManager = PHCachingImageManager()
-    private let originals: URL
+    /// One cache for every instance, so an original is never downloaded twice at once.
+    private static let originals = OriginalsCache(directory: URL.cachesDirectory.appending(path: "Originals", directoryHint: .isDirectory))
+    private static let trimmed = Mutex(false)
 
     public init() {
-        originals = URL.cachesDirectory.appending(path: "Originals", directoryHint: .isDirectory)
-        try? FileManager.default.createDirectory(at: originals, withIntermediateDirectories: true)
-        trimOriginals(limit: 3 << 30)
-    }
-
-    /// Originals downloaded for editing are a cache; Photos keeps the real copy.
-    /// Keeps the most recently used ones under `limit` bytes.
-    private func trimOriginals(limit: Int) {
-        let keys: Set<URLResourceKey> = [.fileSizeKey, .contentAccessDateKey]
-        guard let files = try? FileManager.default.contentsOfDirectory(at: originals, includingPropertiesForKeys: Array(keys)) else { return }
-        var entries = files.compactMap { url -> (URL, Int, Date)? in
-            guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
-            return (url, values.fileSize ?? 0, values.contentAccessDate ?? .distantPast)
-        }
-        var total = entries.reduce(0) { $0 + $1.1 }
-        entries.sort { $0.2 < $1.2 }
-        for (url, size, _) in entries where total > limit {
-            try? FileManager.default.removeItem(at: url)
-            total -= size
-        }
+        // Once per launch, before any download starts.
+        let first = Self.trimmed.withLock { done in defer { done = true }; return !done }
+        if first { Self.originals.trim(limit: 3 << 30) }
     }
 
     public func authorizationStatus() -> LibraryAuthorization {
@@ -216,16 +202,13 @@ public final class PhotoKitLibrary: PhotoLibrary, @unchecked Sendable {
 
     private func download(_ resource: PHAssetResource, asset: PHAsset, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         let safeID = asset.localIdentifier.replacingOccurrences(of: "/", with: "_")
-        let url = originals.appending(path: "\(safeID)-\(resource.filename ?? "original")")
-        if FileManager.default.fileExists(atPath: url.path) { return url }
-        let partial = url.appendingPathExtension("partial")
-        try? FileManager.default.removeItem(at: partial)
-        let options = PHAssetResourceRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.progressHandler = { value in progress(value) }
-        try await PHAssetResourceManager.default().writeData(for: resource, toFile: partial, options: options)
-        try FileManager.default.moveItem(at: partial, to: url)
-        return url
+        let box = UncheckedBox(resource)
+        return try await Self.originals.file(named: "\(safeID)-\(resource.filename ?? "original")") { destination in
+            let options = PHAssetResourceRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.progressHandler = { value in progress(value) }
+            try await PHAssetResourceManager.default().writeData(for: box.value, toFile: destination, options: options)
+        }
     }
 
     private func contentEditingInput(_ asset: PHAsset) async throws -> PHContentEditingInput? {

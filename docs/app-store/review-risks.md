@@ -22,6 +22,13 @@ Checked against the build settings in `project.yml` and the code as of October 2
 
 Release Mac builds sign with the team (Debug stays ad-hoc so anyone can build it), and `scripts/testflight.sh --mac` archives and uploads them. LightEditor › Settings… (⌘,) opens the about, privacy and licenses window. The remote-editing identity key uses the data protection keychain on the Mac too: the legacy login keychain blocked launch on a password prompt whenever the app's signature changed. Screenshots come from a Debug build (see `docs/app-store/screenshots.md`).
 
+## Every release
+
+1. Bump `MARKETING_VERSION` in `project.yml` and add the version's "What's New" to `listing.md` (no price words, no camera brands).
+2. `scripts/test.sh`, then `scripts/testflight.sh` and `scripts/testflight.sh --mac`. After a new capability or entitlement, the first export of each needs the Apple ID (see the 1.0.2 and 1.0.4 notes below).
+3. In App Store Connect, create the version for each platform, attach its build, and submit.
+4. `scripts/tag-release.sh <version> <commit>`: tags the commit the builds came from as `v<version>` and creates a GitHub release with the same notes.
+
 ## Release checklist
 
 - [x] In-app licenses and the diffusion agreement.
@@ -35,3 +42,6 @@ Release Mac builds sign with the team (Debug stays ad-hoc so anyone can build it
 - [x] 1.0.1 (build 2611041042) submitted 2026-11-04, released automatically on approval
 - [x] 1.0.1 approved and released by 2026-11-07
 - [x] 1.0.2 submitted 2026-11-07 for iOS (build 2611070958) and, for the first time, the Mac (build 2611071007), both released automatically on approval. The first Mac export needed the Apple ID (Mac App Store profile and Mac Installer Distribution certificate), like the first export after a new entitlement.
+- [x] The Mac's 1.0.2 was rejected for "Free" in the subtitle (guideline 2.3.7). It shipped as 1.0.3 (build 2611101128) with the subtitle "Open-source RAW photo editor", alongside iOS 1.0.3 (build 2611101120).
+- [x] 1.0.4 submitted 2026-11-18 for iOS (build 2611182104) and the Mac (build 2611182107), released automatically on approval. iCloud Drive was a new capability, so both exports needed the Apple ID once.
+- [x] GitHub releases v1.0 to v1.0.4 tagged at the commits each version's builds came from (`scripts/tag-release.sh`).

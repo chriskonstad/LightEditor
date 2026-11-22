@@ -329,7 +329,7 @@ extension PhotoKitLibrary: SharedPhotoLookup {
         result.enumerateObjects { asset, _, _ in
             guard photo.couldBeTaken(at: asset.creationDate) else { return }
             let resources = PHAssetResource.assetResources(for: asset)
-            let names = resources.flatMap { [$0.originalFilename, $0.filename].compactMap { $0 } }
+            let names = resources.compactMap(\.filename)
             candidates.append(HandoffCandidate(asset: Self.makeAsset(asset), filenames: names))
         }
         return candidates

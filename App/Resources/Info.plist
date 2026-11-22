@@ -6,6 +6,18 @@
 	<array>
 		<string>_lighteditor._tcp</string>
 	</array>
+	<!-- lighteditor://edit?… opens a photo in the editor (the share extension, PhotoHandoff). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lighteditor</string>
+			</array>
+		</dict>
+	</array>
 	<!-- Bulk edits and imports keep running in the background (ContinuedProcessing.swift). -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>

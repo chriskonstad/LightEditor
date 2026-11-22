@@ -16,7 +16,8 @@ Checked against the build settings in `project.yml` and the code as of October 2
 1. **App size.** The models add about 880 MB (LaMa ~100 MB, Stable Diffusion ~780 MB). Within Apple's limits, but iOS asks before downloading over cellular. If reviewers or users push back, move Stable Diffusion to Apple-hosted Background Assets (a download from Apple's servers on first use).
 2. **Trademarks (guideline 5.2.1).** The built-in presets use Fujifilm film simulation names. Settings and THIRD-PARTY.md say they're approximations and trademarks of Fujifilm. If App Review objects, rename them and keep the Fujifilm mapping only for detecting the simulation a RAF was shot with.
 3. **Export compliance.** `ITSAppUsesNonExemptEncryption = NO`. The only encryption is CryptoKit (Curve25519, ChaCha20-Poly1305) for the device-to-device link, i.e. Apple OS encryption.
-4. **Name.** "LightEditor" was taken on the App Store when the record was created; the record is "LightEditor RAW". The home-screen name is LightEditor either way.
+4. **Opening the app from the share extension (1.0.5).** "LightEditor" in Photos' share sheet opens the app by calling the public `UIApplication.open` on the application object in the extension's responder chain, since `NSExtensionContext.open` only works for widgets. If App Review objects, the fallback is a local notification ("Tap to edit in LightEditor") or asking the user to switch to the app, where the pending photo would open.
+5. **Name.** "LightEditor" was taken on the App Store when the record was created; the record is "LightEditor RAW". The home-screen name is LightEditor either way.
 
 ## Mac
 

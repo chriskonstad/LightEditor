@@ -21,6 +21,7 @@ A free, open-source RAW photo editor for iPhone, iPad and Mac, built for quick, 
 - **Retouch:** heal and clone, plus AI object removal with LaMa, or LaMa followed by Stable Diffusion inpainting for a more photographic fill.
 - **Presets:** Fujifilm-style film looks and Sony Creative Looks (a Sony ARW offers the look and adjustments it was shot with), your own presets with an Amount slider, `.cube` LUTs, and Lightroom XMP preset import.
 - **Batch editing:** copy and paste edits with paste groups, bulk edits in "Set values" or "Adjust by" mode, and Match previous.
+- **Open from Photos:** on iPhone and iPad, Share › LightEditor in the Photos app opens that photo in the editor.
 - **Remote editing:** your iPhone shares its library to your iPad over peer-to-peer Wi-Fi, encrypted end to end, with no router or internet needed.
 - **iPhone Duo:** unfolded, the inner screen gets the iPad layouts: photo and tools side by side when it's sideways, a big photo over a roomy panel when it's upright. Folded, it's the phone editor.
 - **Built for touch:** pull away from a slider for fine control, double-tap to reset, press and hold to compare. Before/after has a draggable split.

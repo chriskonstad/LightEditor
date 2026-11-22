@@ -31,6 +31,8 @@ struct LightEditorApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(app: app)
+                // "Edit in LightEditor" from the share sheet in Photos.
+                .onOpenURL { app.open($0) }
                 .preferredColorScheme(.dark)
                 .tint(Theme.accent)
                 .task {

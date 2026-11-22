@@ -81,6 +81,9 @@ Spikes live in `Spikes/` and write their findings to `docs/spikes/<slug>.md`. Th
   - Done: mapping table in DESIGN.md, `XMPImporterTests`, and unmapped settings are reported in the import alert.
 - [ ] **M2.6 Photos editing extension.** On the Mac first; on iOS if it's worthwhile.
   - Accept: you can edit from inside Photos, with the same recipe format.
+  - iOS and iPadOS (2026-11-22): instead of an editing extension, the share sheet's "LightEditor" opens the photo in the app's editor (docs/spikes/open-from-photos.md). The Mac is still open.
+  - Spike question: does a Shortcuts share-sheet shortcut pass a Photos selection to an App Intent's `PHAsset` parameter (new in OS 27)? That would identify the asset exactly.
+  - Spike question: on a device, how long does Photos' "Preparing…" take when sharing a 61 MP RAW that's only in iCloud?
 
 **Gate:** day-to-day editing, including batches, is faster than with the current tools.
 

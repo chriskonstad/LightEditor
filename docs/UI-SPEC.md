@@ -130,6 +130,14 @@ The side-by-side workspace (filmstrip, photo with view bar, inspector) needs abo
   - Checkbox rows for each paste group, all ticked except Crop: White balance, Light, Color and grading, Film LUT (.cube), Detail and noise ("Re-decodes, slower"), Masks ("AI masks re-detect on each photo"), Crop ("Per photo", off by default).
   - A primary button: "Paste to N photos".
 
+## Opening a photo from Photos (iPhone and iPad)
+
+- In Photos, Share › **LightEditor** (the app row of the share sheet) opens that photo in LightEditor's editor, from a cold launch or with the app already running. The back button returns to the library as usual, and the status bar offers "◀ Photos".
+- The share extension shows only a small card, "Opening in LightEditor…", while it hands off. If it can't, the card explains why and offers Close:
+  - "This photo has no capture date, so LightEditor can't find it in your library. Open it from the LightEditor app instead."
+  - "LightEditor couldn't be opened from here. Open the app and choose the photo there."
+- Toasts in the app: "Your library has 2 identical copies · Opened one", "Couldn't find this photo in your library", and, with limited access, "LightEditor can't see this photo · Allow it in Settings › Privacy › Photos".
+
 ## iPad — Editor (landscape)
 
 - **Toolbar:** back to the album, the job tray pill (center), then Copy, Paste, Compare and Export (accent).

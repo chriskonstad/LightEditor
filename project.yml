@@ -13,6 +13,9 @@ settings:
     SWIFT_APPROACHABLE_CONCURRENCY: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEAD_CODE_STRIPPING: YES
+    # Shared by the app and its share extension, which must match.
+    MARKETING_VERSION: "1.0.5"
+    CURRENT_PROJECT_VERSION: "1"
 
 packages:
   EditorCore:
@@ -46,13 +49,14 @@ targets:
         buildPhase: resources
     dependencies:
       - package: EditorCore
+      # "Edit in LightEditor" in the share sheet of Photos (iOS and iPadOS).
+      - target: LightEditorShare
+        destinationFilters: [iOS]
     settings:
       base:
         PRODUCT_NAME: LightEditor
         # PRODUCT_BUNDLE_IDENTIFIER comes from Config/Base.xcconfig, so a local
         # Signing.local.xcconfig can override it.
-        MARKETING_VERSION: "1.0.4"
-        CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         # Merged with the generated keys: the Bonjour service list, which needs an array.
         INFOPLIST_FILE: App/Resources/Info.plist
@@ -91,3 +95,26 @@ targets:
         Debug:
           # Ad-hoc signed (above), which iCloud doesn't allow: presets stay on this Mac.
           "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Resources/LightEditor-macOS-Debug.entitlements
+
+  # Share extension: "Edit in LightEditor" from a photo in Apple Photos. It only works
+  # out which library photo was shared and opens the app on it; editing happens in the
+  # app (docs/spikes/open-from-photos.md).
+  LightEditorShare:
+    type: app-extension
+    supportedDestinations: [iOS]
+    configFiles:
+      Debug: Config/ShareExtension.xcconfig
+      Release: Config/ShareExtension.xcconfig
+    sources:
+      - path: ShareExtension
+    dependencies:
+      - package: EditorCore
+    settings:
+      base:
+        PRODUCT_NAME: LightEditorShare
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: ShareExtension/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Edit in LightEditor
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES

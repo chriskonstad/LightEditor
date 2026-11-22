@@ -124,3 +124,24 @@ public final class FolderLibrary: PhotoLibrary, @unchecked Sendable {
         continuations.withLock { observers.values.forEach { $0.yield() } }
     }
 }
+
+extension FolderLibrary: SharedPhotoLookup {
+    /// Files whose EXIF capture time matches, read in this device's time zone the way
+    /// Photos dates an import.
+    public func candidates(for photo: SharedPhoto) async -> [HandoffCandidate] {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        return files().compactMap { url in
+            guard let file = SharedPhoto(imageAt: url), let taken = file.taken else { return nil }
+            var date = formatter.date(from: String(taken.prefix(19)))
+            if let offset = file.offset.flatMap(SharedPhoto.seconds(fromOffset:)), let local = date {
+                date = local.addingTimeInterval(TimeInterval(TimeZone.current.secondsFromGMT(for: local)) - offset)
+            }
+            guard photo.couldBeTaken(at: date) else { return nil }
+            let edited = FileManager.default.fileExists(atPath: recipeURL(url.lastPathComponent).path)
+            let asset = PhotoAsset(id: url.lastPathComponent, creationDate: date, pixelWidth: file.pixelWidth, pixelHeight: file.pixelHeight, hasAdjustments: edited)
+            return HandoffCandidate(asset: asset, filenames: [url.lastPathComponent])
+        }
+    }
+}

@@ -1,0 +1,4 @@
+// The share extension's bundle ID goes under the app's, including a local override.
+#include "Base.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = $(inherited).share

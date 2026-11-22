@@ -246,3 +246,10 @@ Requires macOS 27.
 • Fixed: a TIFF could fail to reopen with "Couldn't read".
 • Fixed: ProRAW previews could be cropped.
 ```
+
+## What's New (1.0.5)
+
+```
+• Edit straight from Photos: open a photo in Photos, tap Share, then LightEditor, and it opens in the editor.
+• Edited photos keep their capture date, camera and lens details when you share them from Photos.
+```

@@ -33,6 +33,8 @@ final class AppModel {
     var editing: PhotoAsset?
     /// The live editor, so leaving the app can save it.
     @ObservationIgnored weak var activeEditor: EditorModel?
+    /// A photo shared from Apple Photos ("Edit in LightEditor"), waiting for library access.
+    @ObservationIgnored private var pendingHandoff: PhotoHandoff?
 
     var clipboard: RecipeClip? { didSet { persistClipboard() } }
     /// The last photo's edit, for "Match previous".
@@ -136,6 +138,7 @@ final class AppModel {
         // Start on RAW if there are any, else everything.
         if album == .raw, await library.assets(in: .raw).count == 0 { album = .recents }
         await reloadAssets()
+        await openPendingHandoff()
         guard observing == nil else { return }
         let stream = library.changes()
         observing = Task { [weak self] in
@@ -161,6 +164,33 @@ final class AppModel {
     }
 
     func useLocalLibrary() { use(localLibrary) }
+
+    // MARK: Opening photos from Apple Photos
+
+    /// Handles `lighteditor://edit?…` from the share extension: finds the shared photo
+    /// in this device's library and opens it in the editor.
+    func open(_ url: URL) {
+        guard let handoff = PhotoHandoff(url: url) else { return }
+        pendingHandoff = handoff
+        Task { await openPendingHandoff() }
+    }
+
+    private func openPendingHandoff() async {
+        guard let handoff = pendingHandoff, authorization == .authorized || authorization == .limited else { return }
+        pendingHandoff = nil
+        // Photos shared this device's photo, so leave another device's library.
+        if remoteLibrary != nil { useLocalLibrary() }
+        guard let lookup = localLibrary as? any SharedPhotoLookup else { return }
+        let matches = await lookup.assets(matching: handoff.photo)
+        guard let asset = matches.first else {
+            showToast(authorization == .limited
+                ? "LightEditor can't see this photo · Allow it in Settings › Privacy › Photos"
+                : "Couldn't find this photo in your library")
+            return
+        }
+        editing = asset
+        if matches.count > 1 { showToast("Your library has \(matches.count) identical copies · Opened one") }
+    }
 
     /// Sends edits saved while the other device was away.
     func flushRemoteOutbox() {

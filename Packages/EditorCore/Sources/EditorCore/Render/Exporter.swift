@@ -206,6 +206,8 @@ public enum Exporter {
                 image = image.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: scale, kCIInputAspectRatioKey: 1])
             }
         }
+        // Core Image writes an image's properties into the file it encodes.
+        image = image.settingProperties(carriedMetadata(from: source))
         try Task.checkCancellation()
         progress(0.4)
 
@@ -221,6 +223,33 @@ public enum Exporter {
         guard let data else { throw DecodeError.renderFailed }
         progress(1)
         return data
+    }
+
+    /// The original's capture metadata for the rendered file: when it was taken, the
+    /// camera, lens and exposure. Edits shared from Photos keep them, and "Edit in
+    /// LightEditor" can find the photo again by its capture time. Location stays out,
+    /// so a render never carries more than the person chose to share; orientation is
+    /// already applied to the pixels.
+    static func carriedMetadata(from source: PhotoSource) -> [String: Any] {
+        guard let file = CGImageSourceCreateWithURL(source.url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(file, 0, nil) as? [String: Any] else { return [:] }
+        var metadata: [String: Any] = [kCGImagePropertyOrientation as String: 1]
+        if var exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] {
+            // Describe the original's pixels, not the render's.
+            for key in [kCGImagePropertyExifPixelXDimension, kCGImagePropertyExifPixelYDimension, kCGImagePropertyExifSubjectArea] {
+                exif.removeValue(forKey: key as String)
+            }
+            metadata[kCGImagePropertyExifDictionary as String] = exif
+        }
+        if let aux = properties[kCGImagePropertyExifAuxDictionary as String] {
+            metadata[kCGImagePropertyExifAuxDictionary as String] = aux
+        }
+        if let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
+            let kept: [CFString] = [kCGImagePropertyTIFFMake, kCGImagePropertyTIFFModel, kCGImagePropertyTIFFSoftware, kCGImagePropertyTIFFDateTime,
+                                    kCGImagePropertyTIFFArtist, kCGImagePropertyTIFFCopyright, kCGImagePropertyTIFFImageDescription]
+            metadata[kCGImagePropertyTIFFDictionary as String] = tiff.filter { key, _ in kept.contains { $0 as String == key } }
+        }
+        return metadata
     }
 
     /// Whether a full-size render of the recipe blurs the 2560 px decode for clarity

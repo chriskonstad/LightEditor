@@ -317,3 +317,21 @@ private final class ByteCount: @unchecked Sendable {
     private(set) var total = 0
     func add(_ bytes: Int) { total += bytes }
 }
+
+extension PhotoKitLibrary: SharedPhotoLookup {
+    /// Photos from the shared photo's capture time; only those few get their resources read.
+    public func candidates(for photo: SharedPhoto) async -> [HandoffCandidate] {
+        guard let range = photo.searchRange else { return [] }
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate <= %@", range.lowerBound as NSDate, range.upperBound as NSDate)
+        let result = PHAsset.fetchAssets(with: .image, options: options)
+        var candidates: [HandoffCandidate] = []
+        result.enumerateObjects { asset, _, _ in
+            guard photo.couldBeTaken(at: asset.creationDate) else { return }
+            let resources = PHAssetResource.assetResources(for: asset)
+            let names = resources.flatMap { [$0.originalFilename, $0.filename].compactMap { $0 } }
+            candidates.append(HandoffCandidate(asset: Self.makeAsset(asset), filenames: names))
+        }
+        return candidates
+    }
+}

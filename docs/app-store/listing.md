@@ -249,7 +249,10 @@ Requires macOS 27.
 
 ## What's New (1.0.5)
 
+The first bullet is iPhone and iPad only, so it says so: the Mac version uses these same notes.
+
 ```
-• Edit straight from Photos: open a photo in Photos, tap Share, then LightEditor, and it opens in the editor.
-• Edited photos keep their capture date, camera and lens details when you share them from Photos.
+• Edit straight from Photos on iPhone and iPad: open a photo in Photos, tap Share, then LightEditor, and it opens in the editor on the original RAW. No finding it again in your library.
+• Photos you save or export now keep the original's capture date, camera, lens and exposure details. Where the photo was taken is still left out.
+• Fixed: an edit saved to your library had no capture date or camera details of its own, so other apps could sort it by the day you edited it.
 ```

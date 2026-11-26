@@ -57,7 +57,7 @@ let testClock = HybridLogicalClock(node: "test")
 
     @Test func decodesVersion1Fixture() throws {
         let recipe = try RecipeCodec.decode(try fixture("recipe_v1.json"))
-        #expect(recipe.schemaVersion == 1)
+        #expect(recipe.schemaVersion == Recipe.currentSchemaVersion, "upgraded on decode")
         #expect(recipe.decoder == .raw9)
         #expect(recipe.scalar(.exposure) == 0.3)
         #expect(recipe.scalar(.temperature) == 5200)
@@ -118,7 +118,7 @@ let testClock = HybridLogicalClock(node: "test")
     }
 
     @Test func defaultSelectionIsEverythingButPerPhotoGroups() {
-        #expect(PasteGroup.defaultSelection == Set(PasteGroup.allCases).subtracting([.crop, .retouch, .photosCopy]))
+        #expect(PasteGroup.defaultSelection == Set(PasteGroup.allCases).subtracting([.crop, .retouch, .finishing, .photosCopy]))
     }
 
     @Test func setModeCopiesOnlySelectedGroups() {

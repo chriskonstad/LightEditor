@@ -55,6 +55,9 @@ extension Recipe {
                 result.set(key, .curve(points.map { CurvePoint(x: $0.x, y: $0.x + ($0.y - $0.x) * amount) }), at: stamp)
             case .lut(let ref, let lutAmount):
                 result.set(key, .lut(ref, amount: min(lutAmount * amount, 1)), at: stamp)
+            case .color, .aspect, .watermark:
+                // A border or watermark has no strength; it applies as saved.
+                result.set(key, value, at: stamp)
             case .crop, .mask, .retouch:
                 continue
             }

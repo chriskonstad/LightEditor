@@ -55,7 +55,15 @@ public struct DecoderPin: Codable, Sendable, Hashable {
 /// default. Every change records a per-parameter stamp, including resets, so that a
 /// later merge can tell a reset from a value that was never touched.
 public struct Recipe: Codable, Sendable, Hashable {
-    public static let currentSchemaVersion = 1
+    /// 2 added the finishing stage (border, canvas, watermark). See `RecipeCodec`.
+    public static let currentSchemaVersion = 2
+
+    /// The oldest schema that can read this recipe. Recipes without a border or
+    /// watermark are still written as version 1, so older app versions (another
+    /// device, or the other end of a remote session) keep opening them.
+    public var minimumSchemaVersion: Int {
+        params.keys.contains { ParamCatalog.spec(for: $0)?.stage == .finishing } ? 2 : 1
+    }
 
     public var schemaVersion: Int
     public var photoID: PhotoID

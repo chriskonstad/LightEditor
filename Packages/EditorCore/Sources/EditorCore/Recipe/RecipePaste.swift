@@ -54,8 +54,8 @@ extension Recipe {
                 result.set(key, source, at: stamp)
             case .adjust:
                 switch spec.kind {
-                case .scalar where spec.stage == .output:
-                    // A saved image size has no meaningful delta either.
+                case .scalar where spec.stage == .output || spec.stage == .finishing:
+                    // A saved image size or a border has no meaningful delta either.
                     if let source { result.set(key, source, at: stamp) }
                 case .scalar:
                     guard let sourceValue = source?.scalarValue else { continue }
@@ -70,7 +70,7 @@ extension Recipe {
                     let length = (nx * nx + ny * ny).squareRoot()
                     if length > 1 { nx /= length; ny /= length }
                     result.set(key, .point(x: nx, y: ny), at: stamp)
-                case .curve, .lut, .crop, .mask, .retouch:
+                case .curve, .lut, .crop, .mask, .retouch, .color, .aspect, .watermark:
                     // These have no meaningful delta; paste them only when the source has one.
                     if let source { result.set(key, source, at: stamp) }
                 }

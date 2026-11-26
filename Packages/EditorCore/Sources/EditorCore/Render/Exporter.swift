@@ -170,7 +170,8 @@ public enum Exporter {
         if case .crop(let geometry)? = recipe[.crop] { cropRect = geometry.rect }
         if let megapixels = options.maxMegapixels, megapixels > 0 {
             let native = try await decoder.info(for: source).nativeSize
-            let output = CGSize(width: native.width * cropRect.width, height: native.height * cropRect.height)
+            let cropped = CGSize(width: native.width * cropRect.width, height: native.height * cropRect.height)
+            let output = Finishing.outputSize(photo: cropped, recipe: recipe)
             if output.width * output.height > megapixels * 1_000_000 {
                 let edge = ExportSizing.longEdge(megapixels: megapixels, for: output)
                 options.longEdge = min(options.longEdge ?? edge, edge)

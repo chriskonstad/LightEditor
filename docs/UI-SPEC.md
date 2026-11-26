@@ -60,7 +60,7 @@ From top to bottom:
 1. **Top bar.** Back ("Library") on the left; the filename in the middle, or the re-decode status while one is running; a More menu on the right.
 2. **Photo** (about 40% of the height). Overlays: a histogram (top right), the camera and decoder badge "A7R V · RAW 9" (bottom left), and the compare toggle (bottom right).
 3. **Progress line.** 2 pt, visible only during a re-decode.
-4. **Tab picker:** Presets · Light · Color · Grade · Detail · Masks. Presets come first because they set the sliders in the other tabs, which stay adjustable afterwards (imported .cube LUTs set the Film LUT and its amount instead). The editor opens on Light. In the iPad and Mac inspector it shows icons, with the tab's name underneath.
+4. **Tab picker:** Presets · Light · Color · Grade · Detail · Masks · Finish. Presets come first because they set the sliders in the other tabs, which stay adjustable afterwards (imported .cube LUTs set the Film LUT and its amount instead). The editor opens on Light. Where the names don't fit (the iPhone, and the iPad and Mac inspector) it shows icons, with the current tab's name underneath.
 5. **Tab content:**
    - **Light:** an Auto button, then Exposure, Contrast, Highlights, Shadows, Whites, Blacks; a Presence section (Clarity, Texture, Dehaze); and the tone curve.
    - **Color:** Temperature (shown in K) and Tint, Vibrance and Saturation, then the HSL mixer with a Color · Hue · Saturation · Luminance picker:
@@ -86,6 +86,10 @@ From top to bottom:
        - Brush: one finger paints, with a size cursor (red while erasing); two fingers pinch to zoom and drag to pan, and a second finger cancels a stroke in progress. As in Retouch, the brush stays the same size on screen, so zooming in paints finer.
        - Object and color: tap to add to the selection or pick the color; drag to pan and pinch to zoom.
        - The selected mask is tinted red when the overlay is on.
+   - **Finish:** what frames the cropped photo, shown on the photo and in every save and export:
+     - **Border:** Width and Extra bottom (for a gallery or instant-film look), both a share of the photo's short edge so the border looks the same at any size; Color chips White · Black · a system color picker; Canvas chips Fit · 1:1 · 4:5 · 9:16 · 3:2 · 2:3, which pad the frame to that shape (e.g. 4:5 for Instagram) without cropping the photo. The section's Reset clears the border and the watermark.
+     - **Watermark** switch. When on: a text field (it starts with the default text from Settings › Watermark, or "©"), "Make Default" and "Use “…”" links, a 3 × 3 position grid with the position's name, color chips White · Black · picker, and Size, Opacity and Margin sliders. The watermark sits on the photo, inside its margin, and long text shrinks to fit.
+     - Masks, Retouch and Crop show the photo without its frame; the histogram leaves the frame out.
    - **Presets:** 3-column grids of tiles rendered live from the current photo, in three sections:
      - Presets: Original and the built-ins.
      - Fujifilm film simulations.
@@ -127,7 +131,7 @@ The side-by-side workspace (filmstrip, photo with view bar, inspector) needs abo
 - **Paste sheet** (medium detent):
   - Title: "Paste edits to N photos", with the subtitle "From IMG_4821 · copied just now".
   - A segmented control: "Set values" or "Adjust by (+/−)".
-  - Checkbox rows for each paste group, all ticked except Crop: White balance, Light, Color and grading, Film LUT (.cube), Detail and noise ("Re-decodes, slower"), Masks ("AI masks re-detect on each photo"), Crop ("Per photo", off by default).
+  - Checkbox rows for each paste group, all ticked except Crop: White balance, Light, Color and grading, Film LUT (.cube), Detail and noise ("Re-decodes, slower"), Masks ("AI masks re-detect on each photo"), Crop ("Per photo", off by default), Border and watermark ("Frame, canvas and text", off by default).
   - A primary button: "Paste to N photos".
 
 ## Opening a photo from Photos (iPhone and iPad)
@@ -147,7 +151,7 @@ The side-by-side workspace (filmstrip, photo with view bar, inspector) needs abo
 - **Right inspector** (about 340 pt): the tab picker, then panel content. The mock shows the Grade tab with color wheels, Blending and Balance, plus a Film LUT picker and Amount.
 - **Job tray popover:** lists concurrent jobs, e.g. "Pasting edits to 6 photos · 2 left · 4 of 6 saved", "Re-decoding RAW 9 · IMG_4822", "Saving to Photos · IMG_4823 · waiting for earlier saves". While photos are queued, the pill reads "N photos left" instead of the job count.
 - **Export sheet:** HEIC or JPEG; size as Full or 24/12/6/2 MP (only those smaller than the photo), each row showing pixel dimensions and an estimated file size; a quality slider; "Save to Photos" (a new photo next to the original) and "Render for sharing" (then a share link). Format, size and quality are remembered.
-- **Saved image size** (More menu → "Saved image size…"): the size and quality of the image the edit saves to Photos, which is what Photos, iCloud and sharing use (the original keeps every pixel). "Use the Default" on follows Settings; moving either slider gives the photo its own. Maximum size is a slider from 1 MP to the photo's (cropped) size, whose right end is "Full size"; quality is 40–100%. File Size shows the setting's pixel size with an estimate (from a small sample, within about 20%), and the size of the image saved in Photos now ("Saves when you leave" while there are unsaved changes). "Make … the Default" copies the setting to Settings. The setting pastes as its own group, "Saved image size", off by default, so it can be copied to a batch. Settings has the default under "Saved Image" (the same two sliders, where the size slider's right end, past 100 MP, is "Full size").
+- **Saved image size** (More menu → "Saved image size…"): the size and quality of the image the edit saves to Photos, which is what Photos, iCloud and sharing use (the original keeps every pixel). "Use the Default" on follows Settings; moving either slider gives the photo its own. Maximum size is a slider from 1 MP to the photo's (cropped) size, whose right end is "Full size"; quality is 40–100%. File Size shows the setting's pixel size with an estimate (from a small sample, within about 20%), and the size of the image saved in Photos now ("Saves when you leave" while there are unsaved changes). "Make … the Default" copies the setting to Settings. The setting pastes as its own group, "Saved image size", off by default, so it can be copied to a batch. Settings has the default under "Saved Image" (the same two sliders, where the size slider's right end, past 100 MP, is "Full size"). Settings also has **Watermark**: the default text new watermarks start with.
 
 ## Mac — Editor
 

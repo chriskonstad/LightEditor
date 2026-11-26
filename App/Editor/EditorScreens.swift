@@ -145,12 +145,27 @@ struct CompactEditorView: View {
     }
 
     private var tabPicker: some View {
-        Picker("Tab", selection: $model.tab) {
-            ForEach(EditorModel.Tab.allCases) { tab in
-                Text(tab.title).tag(tab)
+        // Names where they fit (iPad); seven don't on an iPhone, so icons there,
+        // with the current tab's name below, like the inspector.
+        ViewThatFits(in: .horizontal) {
+            Picker("Tab", selection: $model.tab) {
+                ForEach(EditorModel.Tab.allCases) { tab in
+                    Text(tab.title).fixedSize().tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            VStack(spacing: 4) {
+                Picker("Tab", selection: $model.tab) {
+                    ForEach(EditorModel.Tab.allCases) { tab in
+                        Image(systemName: tab.systemImage).accessibilityLabel(tab.title).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(model.tab.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
-        .pickerStyle(.segmented)
         .padding(.horizontal)
         .padding(.vertical, 8)
         .frame(maxWidth: roomy ? 680 : .infinity)

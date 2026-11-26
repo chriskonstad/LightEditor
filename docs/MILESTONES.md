@@ -132,6 +132,9 @@ Masks are stored as recipes, never bitmaps: shapes, brush strokes as vector path
   - Spike question: the X-T5 recorded 1.0° where Vision found 0.5°. Is Fuji's roll rounded to whole degrees? Check more RAFs.
   - Spike question: does the RAW 9 decoder's noise reduction use a learned model? It isn't documented as AI denoise; compare against an ML denoiser before building one.
 
+- [x] **Border and watermark** (user request). A Finish tab: border width, extra bottom, color and canvas padding, and a text watermark with position, color, size, opacity and margin, as recipe parameters rendered after crop (see the DESIGN decision of 2026-11-26).
+  - Done: `Finishing`, `FinishingRenderer`, recipe schema 2, with `FinishingTests` (codec, migration, paste groups, presets, layout, rendering). Preview and a JPEG export checked in the iPhone simulator.
+
 ## M4 — Remote editing (replaces sync)
 
 See "Remote editing" in DESIGN.md. Edit the iPhone's photos from the iPad over peer-to-peer Wi-Fi, with the heavy work on the phone.

@@ -243,6 +243,8 @@ struct EditorMoreMenu: View {
             Divider()
             Toggle("Show clipping", systemImage: "exclamationmark.triangle", isOn: $model.showClipping)
             Toggle("Before/after split", systemImage: "rectangle.split.2x1", isOn: $model.splitView)
+            CanvasBackgroundPicker()
+                .pickerStyle(.menu)
             Button("Redo", systemImage: "arrow.uturn.forward") { model.redo() }
                 .disabled(!model.canRedo)
             Button("Take snapshot", systemImage: "camera.on.rectangle") { model.takeSnapshot() }
@@ -403,6 +405,18 @@ struct WorkspaceEditorView: View {
                 .frame(minWidth: compact ? Theme.minTouch : nil)
                 .help("Split before/after")
                 .accessibilityIdentifier("view.split")
+            Menu {
+                CanvasBackgroundPicker()
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+            } label: {
+                Label("Background", systemImage: "circle.lefthalf.filled")
+            }
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(minWidth: compact ? Theme.minTouch : nil)
+            .help("Background around the photo")
+            .accessibilityIdentifier("view.background")
             Button("Crop", systemImage: "crop.rotate") {
                 model.isCropping = true
             }

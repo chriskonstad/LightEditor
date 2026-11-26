@@ -12,6 +12,8 @@ xcrun simctl launch <udid> com.chriskonstad.lighteditor -ImportFolder "$PWD/Fixt
 
 It imports through the app's own `PhotoImporter`, the same path as the Import button. Grant Photos access first with `xcrun simctl privacy <udid> grant photos com.chriskonstad.lighteditor`.
 
+To open a photo and set sliders without taps, a Debug build also takes `-OpenAssetIndex <n>` and `-SetParams "effects.vignette.amount=100,light.dehaze=-100"` (scalar parameter keys; `DebugEditorHooks`). Viewing preferences can be set with `xcrun simctl spawn <udid> defaults write com.chriskonstad.lighteditor canvasBackground midGray` before launching.
+
 ## axe
 
 axe 1.5.2 looks for `SimulatorKit.framework` in `Xcode.app/Contents/Developer/Library/PrivateFrameworks`. Xcode 27 moved it to `Contents/SharedFrameworks`. A shim works without touching Xcode:

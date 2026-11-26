@@ -14,6 +14,12 @@ This spec comes from the mocks at https://claude.ai/artifact/RWe7rQCDhk5K45MKNW6
 - **Native controls** where a system control fits: segmented tab pickers, standard sheets and menus. Editing sliders and color wheels are custom (see "Adjusting values"), because the system slider can't do fine adjustment, hold-to-compare or double-tap reset.
 - **Touch targets** are at least 44 pt on iPhone and iPad.
 
+## Canvas background
+
+- The color around the photo in the editor is a viewing preference, kept on each device and never part of the edit or an export: **Black**, **Dark** (the ground, `#0E0F11`, the default), **Dark gray** (`#333333`), **Mid gray (18%)** (`#767676`, neutral 18% gray in linear light, for judging exposure), **Light gray** (`#BDBDBD`) and **White**.
+- It's under **Background** in the iPhone More menu, the iPad/Mac view bar, the Mac's Photo menu, and Settings › Editor. The change shows at once.
+- Nothing from an edit draws outside the photo: vignette, grain, dehaze and the clipping and mask overlays stay inside it at any zoom, pan and crop. (The crop overlay still dims the uncropped frame around the crop box.)
+
 ## Shared behaviors
 
 - **Open a photo:** show the embedded preview instantly, then swap in the RAW 9 render when it's decoded.
@@ -143,7 +149,7 @@ The side-by-side workspace (filmstrip, photo with view bar, inspector) needs abo
 - **Toolbar:** back to the album, the job tray pill (center), then Copy, Paste, Compare and Export (accent).
 - **Left:** a vertical filmstrip (84 pt tiles), with the current photo outlined in amber.
 - **Center:** the photo, fit to the view.
-- **View bar** under the photo: Fit · 100% · Show clipping · Split before/after, plus "History · N steps" on the right.
+- **View bar** under the photo: Fit · 100% · Show clipping · Split before/after · Background, plus "History · N steps" on the right.
 - **Right inspector** (about 340 pt): the tab picker, then panel content. The mock shows the Grade tab with color wheels, Blending and Balance, plus a Film LUT picker and Amount.
 - **Job tray popover:** lists concurrent jobs, e.g. "Pasting edits to 6 photos · 2 left · 4 of 6 saved", "Re-decoding RAW 9 · IMG_4822", "Saving to Photos · IMG_4823 · waiting for earlier saves". While photos are queued, the pill reads "N photos left" instead of the job count.
 - **Export sheet:** HEIC or JPEG; size as Full or 24/12/6/2 MP (only those smaller than the photo), each row showing pixel dimensions and an estimated file size; a quality slider; "Save to Photos" (a new photo next to the original) and "Render for sharing" (then a share link). Format, size and quality are remembered.

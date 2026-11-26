@@ -76,6 +76,13 @@ struct SettingsSheet: View {
                         Label("Report a Problem", systemImage: "exclamationmark.bubble")
                     }
                 }
+                Section {
+                    CanvasBackgroundPicker()
+                } header: {
+                    Text("Editor")
+                } footer: {
+                    Text("The color around the photo while you edit. Mid gray is a neutral 18% gray, for judging exposure. It's only for viewing: edits and exports don't change.")
+                }
                 PhotosCopyDefaultSection()
                 Section {
                     Link(destination: AppInfo.privacyPolicy) {

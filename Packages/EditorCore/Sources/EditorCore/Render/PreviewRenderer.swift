@@ -30,7 +30,14 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
     /// `before` shows to its left. nil shows no split. The divider stays put in
     /// the view while the image zooms and pans under it.
     public var split: CGFloat? { didSet { requestDraw() } }
-    public var background = CIColor(red: 0.055, green: 0.059, blue: 0.067)
+    /// The color around the photo (`CanvasBackground`, a viewing preference).
+    public var background = CanvasBackground.default.ciColor {
+        didSet {
+            guard background != oldValue else { return }
+            if let view { view.clearColor = clearColor }
+            requestDraw()
+        }
+    }
 
     /// Called after each frame with its GPU time, for performance overlays and tests.
     public var onFrame: ((Duration) -> Void)?
@@ -62,13 +69,21 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
         view.isPaused = true
         view.enableSetNeedsDisplay = true
         view.autoResizeDrawable = true
-        view.clearColor = MTLClearColor(red: Double(background.red), green: Double(background.green), blue: Double(background.blue), alpha: 1)
+        view.clearColor = clearColor
         if let layer = view.layer as? CAMetalLayer {
             layer.colorspace = colorSpace
             layer.wantsExtendedDynamicRangeContent = true
             layer.isOpaque = true
         }
         requestDraw()
+    }
+
+    /// `background` in the drawable's extended linear Display P3, for what shows
+    /// before the first frame and while resizing.
+    private var clearColor: MTLClearColor {
+        let srgb = CGColor(colorSpace: background.colorSpace, components: background.components) ?? CGColor(gray: 0, alpha: 1)
+        let c = srgb.converted(to: colorSpace, intent: .defaultIntent, options: nil)?.components ?? [0, 0, 0, 1]
+        return MTLClearColor(red: Double(c[0]), green: Double(c[1]), blue: Double(c[2]), alpha: 1)
     }
 
     public func requestDraw() {

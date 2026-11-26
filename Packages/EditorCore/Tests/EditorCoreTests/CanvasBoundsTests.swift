@@ -108,3 +108,23 @@ import Testing
         }
     }
 }
+
+@Suite struct CanvasBackgroundTests {
+    @Test func midGrayIsEighteenPercentLinear() {
+        let frame = PreviewRenderer.frame(image: nil, before: nil, split: nil, in: .zero,
+                                          drawableSize: CGSize(width: 4, height: 4), background: CanvasBackground.midGray.ciColor)
+        let p = pixel(frame)
+        #expect(abs(p.x - 0.18) < 0.003 && abs(p.y - 0.18) < 0.003 && abs(p.z - 0.18) < 0.003)
+    }
+
+    @Test func everyBackgroundIsNeutralAndOrdered() {
+        let lightness = CanvasBackground.allCases.map { option -> Double in
+            let c = option.srgbComponents
+            #expect(c.red == c.green || option == .dark)
+            return c.green
+        }
+        #expect(lightness == lightness.sorted())
+        #expect(CanvasBackground.default == .dark)
+        #expect(CanvasBackground(rawValue: CanvasBackground.midGray.rawValue) == .midGray)
+    }
+}

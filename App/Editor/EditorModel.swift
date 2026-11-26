@@ -87,16 +87,25 @@ final class EditorModel: Identifiable {
     // Masks
     var selectedMaskID: UUID? { didSet { render() } }
     var selectedComponentID: UUID?
-    var showMaskOverlay = true { didSet { render() } }
+    /// When the red overlay tints the selected mask: it hides on the first
+    /// adjustment and comes back while the selection is refined.
+    var maskOverlay = MaskOverlayVisibility() {
+        didSet { if maskOverlay.overlayMask(selected: selectedMaskID) != oldValue.overlayMask(selected: selectedMaskID) { render() } }
+    }
+    /// The "Show overlay" toggle: reflects auto-hiding, and setting it is explicit.
+    var showMaskOverlay: Bool {
+        get { maskOverlay.isVisible }
+        set { maskOverlay.setVisible(newValue) }
+    }
     /// AI shapes being computed right now, for status rows.
     var computingAI: Set<MaskShape> = []
     /// AI shapes Vision found nothing for, with the reason.
     var aiFailures: [MaskShape: String] = [:]
     /// Brush settings, shared by every brush component.
-    var brushSize = 0.04
-    var brushFeather = 0.5
-    var brushFlow = 1.0
-    var brushErase = false
+    var brushSize = 0.04 { didSet { maskOverlay.refineSelection() } }
+    var brushFeather = 0.5 { didSet { maskOverlay.refineSelection() } }
+    var brushFlow = 1.0 { didSet { maskOverlay.refineSelection() } }
+    var brushErase = false { didSet { maskOverlay.refineSelection() } }
     /// The stroke being painted, kept outside the recipe until the finger lifts.
     var paintingStroke: BrushStroke?
     /// AI masks and fills for this photo, per lens-correction setting (which moves pixels).
@@ -489,7 +498,7 @@ final class EditorModel: Identifiable {
         }
         var inputs = GradeInputs(
             defaults: defaults, luts: app.lutStore, applyGeometry: !showsOriginalFrame, showClipping: showClipping,
-            aiMasks: aiStore, maskOverlay: isEditingMasks && showMaskOverlay ? selectedMaskID : nil
+            aiMasks: aiStore, maskOverlay: isEditingMasks ? maskOverlay.overlayMask(selected: selectedMaskID) : nil
         )
         inputs.hslSelection = hslSelection
         inputs.inpaints = inpaintStore

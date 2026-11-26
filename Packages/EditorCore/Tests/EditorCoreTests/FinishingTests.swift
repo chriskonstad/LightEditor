@@ -11,7 +11,7 @@ import Testing
         return recipe
     }
 
-    static let mark = Watermark(text: "© Test", position: .bottomLeft, color: RGBColor(red: 1, green: 0.5, blue: 0))
+    static let mark = Watermark(text: "© Test", position: .bottomLeft, color: SRGBColor(red: 1, green: 0.5, blue: 0))
 
     // MARK: Codec
 
@@ -155,7 +155,7 @@ import Testing
 
     @Test func borderColorIsSRGB() {
         var recipe = Self.bordered()
-        recipe.set(.borderColor, .color(RGBColor(red: 1, green: 1, blue: 1)), at: testClock.now())
+        recipe.set(.borderColor, .color(SRGBColor(red: 1, green: 1, blue: 1)), at: testClock.now())
         let image = FinishingRenderer.apply(recipe, to: solid(0, 0, 0, size: 100))
         let corner = pixel(image, x: 1, y: 1)
         #expect(abs(corner.x - 1) < 0.01 && abs(corner.y - 1) < 0.01 && abs(corner.z - 1) < 0.01)

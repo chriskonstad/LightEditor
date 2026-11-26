@@ -69,7 +69,7 @@ final class TextImages: Sendable {
         var text: String
         var height: Int
         var maxWidth: Int
-        var color: RGBColor
+        var color: SRGBColor
     }
 
     private let cache = Mutex<[(key: Key, image: CGImage)]>([])
@@ -77,7 +77,7 @@ final class TextImages: Sendable {
 
     /// `text` in the system font, about `height` pixels tall (ascent plus descent),
     /// shrunk to fit `maxWidth`. White, black or any color, on transparency.
-    func image(_ text: String, height: Double, maxWidth: Double, color: RGBColor) -> CGImage? {
+    func image(_ text: String, height: Double, maxWidth: Double, color: SRGBColor) -> CGImage? {
         let key = Key(text: text, height: Int(height.rounded()), maxWidth: Int(maxWidth.rounded()), color: color)
         if let hit = cache.withLock({ entries in entries.first { $0.key == key }?.image }) { return hit }
         guard let image = Self.render(key) else { return nil }

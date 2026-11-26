@@ -168,7 +168,7 @@ public enum ParamValue: Sendable, Hashable {
     case mask(MaskLayer)
     case retouch(RetouchSpot)
     /// An sRGB color, e.g. a border's.
-    case color(RGBColor)
+    case color(SRGBColor)
     /// An aspect ratio on its own, e.g. a border's canvas.
     case aspect(AspectRatio)
     case watermark(Watermark)
@@ -215,7 +215,7 @@ extension ParamValue: Codable {
         } else if container.contains(.mask) {
             self = .mask(try container.decode(MaskLayer.self, forKey: .mask))
         } else if container.contains(.rgb) {
-            self = .color(try container.decode(RGBColor.self, forKey: .rgb))
+            self = .color(try container.decode(SRGBColor.self, forKey: .rgb))
         } else if container.contains(.canvas) {
             self = .aspect(try container.decode(AspectRatio.self, forKey: .canvas))
         } else if container.contains(.watermark) {

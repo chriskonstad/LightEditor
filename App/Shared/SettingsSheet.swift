@@ -77,6 +77,7 @@ struct SettingsSheet: View {
                     }
                 }
                 PhotosCopyDefaultSection()
+                WatermarkDefaultSection()
                 Section {
                     Link(destination: AppInfo.privacyPolicy) {
                         Label("Privacy Policy", systemImage: "hand.raised")

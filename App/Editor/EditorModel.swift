@@ -22,7 +22,7 @@ final class EditorModel: Identifiable {
     /// In picker order. Presets come first: they set the sliders the other tabs
     /// then fine-tune. The editor still opens on Light.
     enum Tab: String, CaseIterable, Identifiable {
-        case presets, light, color, grade, detail, masks
+        case presets, light, color, grade, detail, masks, finish
         var id: String { rawValue }
         var title: String { rawValue.capitalized }
 
@@ -34,6 +34,7 @@ final class EditorModel: Identifiable {
             case .detail: "camera.aperture"
             case .masks: "circle.dashed.inset.filled"
             case .presets: "square.grid.2x2"
+            case .finish: "photo.artframe"
             }
         }
     }
@@ -157,6 +158,7 @@ final class EditorModel: Identifiable {
     /// Whether crop, straighten, perspective or lens distortion make the edited frame differ from the original's.
     private var hasFrameGeometry: Bool {
         if case .crop(let geometry)? = recipe[.crop], !geometry.isIdentity { return true }
+        if Finishing.hasFrame(recipe) { return true }
         return ([.perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys).contains { (recipe.scalar($0) ?? 0) != 0 }
     }
     var showExport = false
@@ -497,11 +499,11 @@ final class EditorModel: Identifiable {
         let image = GradeGraph.apply(displayRecipe, to: source, inputs: inputs)
         var geometry: CIImage?
         if showsSplit || tileCache != nil {
-            // Crop and perspective only: the before side of split view, and how
-            // on-screen pixels map back to tiles.
+            // Crop, perspective and border only: the before side of split view, and
+            // how on-screen pixels map back to tiles.
             var geometryOnly = Recipe()
             let stamp = HLCStamp(millis: 0, node: "display")
-            for key in [ParamKey.crop, .perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys {
+            for key in [ParamKey.crop, .perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys + Finishing.frameKeys {
                 if let value = displayRecipe[key] { geometryOnly.set(key, value, at: stamp) }
             }
             geometry = GradeGraph.apply(geometryOnly, to: source, inputs: GradeInputs(defaults: defaults, applyGeometry: !showsOriginalFrame))
@@ -747,6 +749,7 @@ final class EditorModel: Identifiable {
         guard let small = proxies.first ?? base else { return nil }
         var inputs = GradeInputs(defaults: defaults, luts: app.lutStore, applyGeometry: !showsOriginalFrame, aiMasks: aiStore)
         inputs.inpaints = inpaintStore
+        inputs.applyFinishing = false  // The photo's tones, not its border's.
         return GradeGraph.apply(displayRecipe, to: small.image, inputs: inputs)
     }
 
@@ -1149,11 +1152,12 @@ final class EditorModel: Identifiable {
         }
     }
 
-    /// The size a full-size export comes out at: the original, cropped.
+    /// The size a full-size export comes out at: the original, cropped, plus any border.
     var exportFullSize: CGSize? {
         guard let native = info?.nativeSize, native.width > 0, native.height > 0 else { return nil }
         let rect = crop.rect
-        return CGSize(width: (native.width * rect.width).rounded(), height: (native.height * rect.height).rounded())
+        let cropped = CGSize(width: (native.width * rect.width).rounded(), height: (native.height * rect.height).rounded())
+        return Finishing.outputSize(photo: cropped, recipe: recipe)
     }
 
     /// Encodes a small render of the current edit, to estimate export file sizes.

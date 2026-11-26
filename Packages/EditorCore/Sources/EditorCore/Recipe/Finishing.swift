@@ -1,7 +1,7 @@
 import Foundation
 
 /// An sRGB color, components 0...1. Encoded as a compact `[r, g, b]` triple.
-public struct RGBColor: Codable, Sendable, Hashable {
+public struct SRGBColor: Codable, Sendable, Hashable {
     public var red: Double
     public var green: Double
     public var blue: Double
@@ -12,8 +12,8 @@ public struct RGBColor: Codable, Sendable, Hashable {
         self.blue = min(max(blue, 0), 1)
     }
 
-    public static let white = RGBColor(red: 1, green: 1, blue: 1)
-    public static let black = RGBColor(red: 0, green: 0, blue: 0)
+    public static let white = SRGBColor(red: 1, green: 1, blue: 1)
+    public static let black = SRGBColor(red: 0, green: 0, blue: 0)
 
     public init(from decoder: any Decoder) throws {
         var container = try decoder.unkeyedContainer()
@@ -58,9 +58,9 @@ public enum WatermarkPosition: String, Codable, Sendable, CaseIterable, Identifi
 public struct Watermark: Codable, Sendable, Hashable {
     public var text: String
     public var position: WatermarkPosition
-    public var color: RGBColor
+    public var color: SRGBColor
 
-    public init(text: String, position: WatermarkPosition = .bottomRight, color: RGBColor = .white) {
+    public init(text: String, position: WatermarkPosition = .bottomRight, color: SRGBColor = .white) {
         self.text = text
         self.position = position
         self.color = color
@@ -109,7 +109,7 @@ public enum Finishing {
         return mark
     }
 
-    public static func borderColor(_ recipe: Recipe) -> RGBColor {
+    public static func borderColor(_ recipe: Recipe) -> SRGBColor {
         if case .color(let color)? = recipe[.borderColor] { return color }
         return .white
     }

@@ -35,6 +35,19 @@ clean:
 
 # --- test ---
 
+# The inner loop: EditorCore unit tests, failures only; slow AI-model tests skipped
+# unless --models. e.g. `just test-fast --filter Recipe`. See docs/TESTING.md.
+[group('test')]
+test-fast *flags:
+    scripts/test-fast.sh "$@"
+
+# UI screen audits (touch targets, clipped text, off-screen layout, accessibility) with
+# screenshots in build/ui-screenshots/, in throwaway simulators. Flags pass through,
+# e.g. `just test-ui --only editor`, `just test-ui --record-baseline`.
+[group('test')]
+test-ui *flags:
+    scripts/test-ui.sh "$@"
+
 # EditorCore unit tests on the Mac; pass a filter to run a subset, e.g. `just test-core RecipeCodec`.
 [group('test')]
 test-core filter="":
@@ -56,12 +69,13 @@ test-ios:
     scripts/test.sh --ios
 
 # --- quality gates ---
-# Lint, format and other pre-ship checks go here (scripts to come). Add them to
-# `check` so one command runs every gate.
 
-# Every gate that must pass before a pull request or a TestFlight upload.
+# Every gate that must pass before a merge or a TestFlight upload (scripts/test-all.sh):
+# unit, real-RAW, AI-model and performance-budget tests, the app builds and the UI
+# audits, ~15 min. `just check --no-ui` skips the UI audits.
 [group('quality')]
-check: test build
+check *flags:
+    scripts/test-all.sh "$@"
 
 # --- build ---
 

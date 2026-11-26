@@ -58,7 +58,7 @@ Spikes live in `Spikes/` and write their findings to `docs/spikes/<slug>.md`. Th
   - Done: HEIC/JPEG at full, 4096, 2048 or 1080 px; Share, or Save to Photos as a new photo. Uses the same graph as the preview.
 - [ ] **M1.11 Performance tests.** XCTest performance tests for decode, grade and export, with recorded device baselines.
   - Accept: a regression beyond the threshold fails the test.
-  - Partial: `PerformanceTests` cover decode, grade and export. Device baselines still need recording in Xcode.
+  - Partial: `PerformanceTests` cover decode, grade and export. Device baselines still need recording in Xcode. `PerformanceBudgetTests` add coarse Mac budgets as a regression guard in `scripts/test-all.sh`; they don't replace device baselines.
 
 **Gate:** it replaces Photomator for single-photo editing at home.
 

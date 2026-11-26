@@ -41,7 +41,8 @@ You need a Mac with Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGe
 brew install xcodegen just
 git clone https://github.com/chriskonstad/LightEditor.git && cd LightEditor
 just build            # generates the Xcode project, then builds for macOS and iOS
-just test             # EditorCore unit tests on the Mac (`just test-ios` adds a simulator)
+just test-fast        # EditorCore unit tests on the Mac, failures only
+just check            # every test, build and UI audit before a pull request (docs/TESTING.md)
 just                  # lists every task: tests, builds, running against sample photos, models
 ```
 

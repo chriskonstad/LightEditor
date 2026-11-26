@@ -118,3 +118,48 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         SKIP_INSTALL: YES
+
+  # UI tests: walk the main screens in the iOS simulator at several sizes and Dynamic
+  # Type settings, audit them (clipped text, small hit targets, overflow) and save
+  # screenshots. Run with scripts/test-ui.sh; see docs/TESTING.md.
+  LightEditorUITests:
+    type: bundle.ui-testing
+    supportedDestinations: [iOS]
+    sources:
+      - path: UITests
+    dependencies:
+      - target: LightEditor
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        PRODUCT_BUNDLE_IDENTIFIER: com.chriskonstad.lighteditor.uitests
+        TEST_TARGET_NAME: LightEditor
+
+schemes:
+  # Declaring any scheme stops Xcode from generating one for the app, so it's spelled
+  # out here (scripts/build.sh, testflight.sh and install-device.sh use it).
+  LightEditor:
+    build:
+      targets:
+        LightEditor: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  LightEditorUITests:
+    build:
+      targets:
+        LightEditor: [test]
+        LightEditorUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - LightEditorUITests

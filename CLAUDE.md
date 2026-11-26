@@ -44,6 +44,7 @@ Packages/EditorCore/      Swift package with all logic, testable via `swift test
   Presets/                Native JSON presets, .cube parser, XMP mapping
   Library/                PhotoKit adapters behind protocols
   Jobs/                   JobCenter (the visible job tray model)
+UITests/                  XCUITest screen audits (scripts/test-ui.sh)
 Spikes/                   Throwaway spike apps; never shipped
 docs/                     Design, milestones, UI spec, spike reports
 project.yml               XcodeGen spec; never hand-edit the .xcodeproj
@@ -57,7 +58,10 @@ The views stay thin. Logic lives in `EditorCore` behind protocols so it can be u
 The `justfile` at the root holds the common tasks; `just` lists them by group. The recipes are thin wrappers around `scripts/` and the commands below.
 
 ```sh
-just test-core [filter]     # EditorCore unit tests (swift test), optionally filtered
+just test-fast              # inner loop: EditorCore tests, failures only (~5 s)
+just test-ui                # UI audits + screenshots in throwaway simulators
+just check                  # everything before a merge or ship (scripts/test-all.sh, ~15 min)
+just test-core [filter]     # plain swift test, optionally filtered
 just test                   # scripts/test.sh; also `just test-raw`, `just test-ios`
 just build                  # scripts/build.sh: macOS, iOS Simulator and iOS device builds
 just build-mac              # or build-ios, build-sim
@@ -76,6 +80,8 @@ xcodebuild -scheme LightEditor -destination 'generic/platform=iOS' build
 ```
 
 Performance numbers only count from real devices. The Simulator is fine for UI and logic, never for RAW 9 or render timing.
+
+`docs/TESTING.md` says which test to run for which change. In short: `just test-fast` (`scripts/test-fast.sh`) is the inner loop (about 5 s, prints only failures); `just test-ui` audits every main screen in fresh simulators for clipped text, small touch targets and off-screen layout, and saves screenshots to `build/ui-screenshots/` to look at after a UI change; `just check` runs everything before a merge. Render and recipe goldens fail on purpose when output or the stored format changes; re-record them only when the change is intended.
 
 ## Testing
 

@@ -25,7 +25,7 @@ These come from [docs/DESIGN.md](docs/DESIGN.md) and [CLAUDE.md](CLAUDE.md), whi
 2. Set up the build as in the [README](README.md#building). The Mac and the Simulator need no signing.
 3. Edit `project.yml`, never the `.xcodeproj`, then run `just generate` (or `xcodegen generate`).
 4. Add or update tests in `Packages/EditorCore/Tests`. Recipe encode/decode/migrate/merge, paste groups, `.cube` parsing and XMP mapping must stay covered.
-5. Run `just check`, which runs the tests and the builds (`scripts/test.sh` and `scripts/build.sh`); both must pass. `just` lists the other tasks, such as `just test-core <filter>` for a quick subset.
+5. Run `just check` (`scripts/test-all.sh`: unit, real-RAW, AI-model and performance-budget tests, the app builds and the UI audits); it must pass. `just test-fast` is the quick inner loop, and `just` lists the other tasks. [docs/TESTING.md](docs/TESTING.md) says which tests cover what.
 6. If you change a design decision, update `docs/DESIGN.md` and add a line to its Decisions log.
 7. Open a pull request that says what changed, why, and how you tested it. Include timings from a real device for anything performance-related; Simulator timings don't count.
 

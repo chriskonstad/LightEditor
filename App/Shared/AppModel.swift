@@ -80,6 +80,16 @@ final class AppModel {
     /// Picks Apple Photos, or a folder when launched with `-FixtureLibrary <path>`
     /// (used for UI automation and on the Mac during development).
     static func makeLibrary() -> any PhotoLibrary {
+        #if DEBUG
+        // UI tests (`-ResetState YES`): start without drafts or a clipboard left by a
+        // previous launch. Runs here because this is called before `AppModel.init`.
+        if UserDefaults.standard.bool(forKey: "ResetState") {
+            if let drafts = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appending(path: "Drafts") {
+                try? FileManager.default.removeItem(at: drafts)
+            }
+            UserDefaults.standard.removeObject(forKey: "clipboard")
+        }
+        #endif
         if let path = UserDefaults.standard.string(forKey: "FixtureLibrary"), !path.isEmpty {
             return FolderLibrary(directory: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
         }

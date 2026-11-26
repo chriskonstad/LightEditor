@@ -47,11 +47,26 @@ Packages/EditorCore/      Swift package with all logic, testable via `swift test
 Spikes/                   Throwaway spike apps; never shipped
 docs/                     Design, milestones, UI spec, spike reports
 project.yml               XcodeGen spec; never hand-edit the .xcodeproj
+justfile                  Common tasks (`just` lists them); thin wrappers over scripts/
 ```
 
 The views stay thin. Logic lives in `EditorCore` behind protocols so it can be unit-tested without Photos access.
 
 ## Build and test
+
+The `justfile` at the root holds the common tasks; `just` lists them by group. The recipes are thin wrappers around `scripts/` and the commands below.
+
+```sh
+just test-core [filter]     # EditorCore unit tests (swift test), optionally filtered
+just test                   # scripts/test.sh; also `just test-raw`, `just test-ios`
+just build                  # scripts/build.sh: macOS, iOS Simulator and iOS device builds
+just build-mac              # or build-ios, build-sim
+just run-mac-fixtures       # the Mac app against Fixtures/, never the real Photos library
+just sim-import [folder] [device]   # import RAWs into a simulator's Photos library
+just link-models            # in a git worktree: symlink Models/ from the main checkout
+```
+
+Without `just` (`brew install just`), the raw commands are:
 
 ```sh
 swift test --package-path Packages/EditorCore

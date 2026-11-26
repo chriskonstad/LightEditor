@@ -10,7 +10,7 @@ Notes from testing the app in the iOS 27 simulators. This keeps testing in a sim
 xcrun simctl launch <udid> com.chriskonstad.lighteditor -ImportFolder "$PWD/Fixtures"
 ```
 
-It imports through the app's own `PhotoImporter`, the same path as the Import button. Grant Photos access first with `xcrun simctl privacy <udid> grant photos com.chriskonstad.lighteditor`.
+It imports through the app's own `PhotoImporter`, the same path as the Import button. Grant Photos access first with `xcrun simctl privacy <udid> grant photos com.chriskonstad.lighteditor`. `just sim-import [folder] [device]` builds, installs, grants access and imports in one step.
 
 ## axe
 
@@ -33,7 +33,7 @@ cp -R Fixtures ~/Library/Containers/com.chriskonstad.lighteditor/Data/
 open "LightEditor.app" --args -FixtureLibrary ~/Library/Containers/com.chriskonstad.lighteditor/Data/Fixtures
 ```
 
-The folder has to be inside the app's sandbox container, hence the copy of the repo's `Fixtures/`. Debug builds also accept:
+The folder has to be inside the app's sandbox container, hence the copy of the repo's `Fixtures/`. `just run-mac-fixtures [folder] [app args]` builds, copies and launches; macOS only lets a terminal write into another app's container with App Management or Full Disk Access. Debug builds also accept:
 
 - `-OpenFirstAsset YES`;
 - `-SnapshotTo <dir>`, which writes window snapshots, the renderer's frame count and the canvas image every 2 s. Metal content doesn't appear in `cacheDisplay` snapshots, hence the separate `canvas.png`.

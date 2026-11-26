@@ -35,14 +35,17 @@ LightEditor collects no data. It has no servers, analytics, crash reporting or a
 
 ## Building
 
-You need a Mac with Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+You need a Mac with Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGen). [just](https://github.com/casey/just) is optional: it runs the common tasks.
 
 ```sh
-brew install xcodegen
+brew install xcodegen just
 git clone https://github.com/chriskonstad/LightEditor.git && cd LightEditor
-scripts/build.sh      # generates the Xcode project, then builds for macOS and iOS
-scripts/test.sh       # EditorCore unit tests on the Mac (add --ios for a simulator)
+just build            # generates the Xcode project, then builds for macOS and iOS
+just test             # EditorCore unit tests on the Mac (`just test-ios` adds a simulator)
+just                  # lists every task: tests, builds, running against sample photos, models
 ```
+
+Each `just` recipe is a thin wrapper, so without it you can run the scripts directly: `scripts/build.sh` and `scripts/test.sh` (add `--ios` for a simulator).
 
 The `.xcodeproj` is generated from `project.yml`; don't edit it by hand. Run `xcodegen generate` and open `LightEditor.xcodeproj` to work in Xcode.
 
@@ -52,25 +55,25 @@ The `.xcodeproj` is generated from `project.yml`; don't edit it by hand. Run `xc
 cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig
 ```
 
-`Config/Signing.local.xcconfig` is git-ignored. `scripts/install-device.sh` then builds and installs on a connected device.
+`Config/Signing.local.xcconfig` is git-ignored. `just install-device` (or `scripts/install-device.sh`) then builds and installs on a connected device.
 
 ### AI removal models (optional)
 
 The object-removal models are large, so they aren't in git. Without them the app builds and runs, and hides AI removal. To build them (needs [uv](https://docs.astral.sh/uv/)):
 
 ```sh
-scripts/fetch-models.sh                    # LaMa (~100 MB) and Stable Diffusion inpainting (~780 MB), 20–40 min
-SKIP_DIFFUSION=1 scripts/fetch-models.sh   # LaMa only
+just fetch-models        # LaMa (~100 MB) and Stable Diffusion inpainting (~780 MB), 20–40 min
+just fetch-models-lama   # LaMa only
 ```
 
-The script downloads the published weights, converts them to Core ML in a throwaway Python environment, and writes `Models/`. Read [THIRD-PARTY.md](THIRD-PARTY.md) for their licenses: the Stable Diffusion weights carry use restrictions that pass on to anyone you share a build with.
+Both run `scripts/fetch-models.sh` (`SKIP_DIFFUSION=1` for LaMa only). It downloads the published weights, converts them to Core ML in a throwaway Python environment, and writes `Models/`. Read [THIRD-PARTY.md](THIRD-PARTY.md) for their licenses: the Stable Diffusion weights carry use restrictions that pass on to anyone you share a build with.
 
 ### Testing without your own photos
 
-Use a simulator's Photos library or a folder of sample RAWs, never your real library. [docs/spikes/simulator-tooling.md](docs/spikes/simulator-tooling.md) covers importing RAWs into a simulator, running the Mac app against a folder, and testing remote editing with two simulators. Sample RAWs from Sony and Fujifilm cameras are in [Fixtures/](Fixtures/). To include the real-RAW tests (decoding, Vision, camera looks against each camera's own JPEG, performance):
+Use a simulator's Photos library or a folder of sample RAWs, never your real library. [docs/spikes/simulator-tooling.md](docs/spikes/simulator-tooling.md) covers importing RAWs into a simulator (`just sim-import`), running the Mac app against a folder (`just run-mac-fixtures`), and testing remote editing with two simulators. Sample RAWs from Sony and Fujifilm cameras are in [Fixtures/](Fixtures/). To include the real-RAW tests (decoding, Vision, camera looks against each camera's own JPEG, performance):
 
 ```sh
-scripts/test.sh --raw
+just test-raw          # or scripts/test.sh --raw
 ```
 
 ## How it works
@@ -87,6 +90,7 @@ Packages/EditorCore/      All logic, testable with `swift test`
 Config/                   Shared build settings; your local signing config goes here
 docs/                     Design, milestones, UI spec and spike reports
 scripts/                  Build, test, model conversion and release scripts
+justfile                  Common tasks; run `just` to list them
 project.yml               XcodeGen spec
 ```
 

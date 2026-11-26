@@ -23,13 +23,13 @@ These come from [docs/DESIGN.md](docs/DESIGN.md) and [CLAUDE.md](CLAUDE.md), whi
 
 1. Fork, then create a branch from `main`.
 2. Set up the build as in the [README](README.md#building). The Mac and the Simulator need no signing.
-3. Edit `project.yml`, never the `.xcodeproj`, then run `xcodegen generate`.
+3. Edit `project.yml`, never the `.xcodeproj`, then run `just generate` (or `xcodegen generate`).
 4. Add or update tests in `Packages/EditorCore/Tests`. Recipe encode/decode/migrate/merge, paste groups, `.cube` parsing and XMP mapping must stay covered.
-5. Run `scripts/test.sh` and `scripts/build.sh`; both must pass.
+5. Run `just check`, which runs the tests and the builds (`scripts/test.sh` and `scripts/build.sh`); both must pass. `just` lists the other tasks, such as `just test-core <filter>` for a quick subset.
 6. If you change a design decision, update `docs/DESIGN.md` and add a line to its Decisions log.
 7. Open a pull request that says what changed, why, and how you tested it. Include timings from a real device for anything performance-related; Simulator timings don't count.
 
-Test with a simulator's Photos library or a folder of sample RAWs, never your own library. [docs/spikes/simulator-tooling.md](docs/spikes/simulator-tooling.md) explains how.
+Test with a simulator's Photos library or a folder of sample RAWs, never your own library: `just sim-import` and `just run-mac-fixtures` set that up, and [docs/spikes/simulator-tooling.md](docs/spikes/simulator-tooling.md) explains the details.
 
 ## Style
 

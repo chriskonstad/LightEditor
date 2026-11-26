@@ -196,6 +196,8 @@ public enum Kernels {
     // geometry = (centerX, centerY, halfDiagonal, aspect), params = (amount, midpoint).
 
     extern "C" [[stitchable]] float4 vignetteKernel(coreimage::sample_t s, float4 geometry, float2 params, coreimage::destination dest) {
+        // Clear stays clear: Core Image can run this outside the photo (see PreviewRenderer.frame).
+        if (s.a <= 0.0) { return s; }
         float2 d = dest.coord() - geometry.xy;
         float r = length(d) / geometry.z;
         float inner = 0.15 + 0.6 * params.y;
@@ -215,6 +217,8 @@ public enum Kernels {
     // ---- Clipping overlay -----------------------------------------------------
 
     extern "C" [[stitchable]] float4 clippingKernel(coreimage::sample_t s) {
+        // Clear stays clear: Core Image can run this outside the photo (see PreviewRenderer.frame).
+        if (s.a <= 0.0) { return s; }
         float3 c = s.rgb;
         if (max(c.r, max(c.g, c.b)) >= 0.999) { return float4(1.0, 0.1, 0.1, s.a); }
         if (dot(max(c, 0.0), kLuma) <= 0.0015) { return float4(0.1, 0.35, 1.0, s.a); }
@@ -245,6 +249,8 @@ public enum Kernels {
     // re-expand contrast there; negative amounts add haze.
     static let dehazeSource = #"""
     extern "C" [[stitchable]] float4 dehazeKernel(coreimage::sample_t s, coreimage::sample_t blurred, float amount) {
+        // Clear stays clear: Core Image can run this outside the photo (see PreviewRenderer.frame).
+        if (s.a <= 0.0) { return s; }
         const float3 airlight = float3(0.9);
         float haze = clamp(min(blurred.r, min(blurred.g, blurred.b)) / 0.9, 0.0, 1.0);
         if (amount >= 0.0) {
@@ -262,6 +268,8 @@ public enum Kernels {
     // midtones, like film. amount 0...1.
     static let grainSource = #"""
     extern "C" [[stitchable]] float4 grainKernel(coreimage::sample_t s, coreimage::sample_t noise, float amount) {
+        // Clear stays clear: Core Image can run this outside the photo (see PreviewRenderer.frame).
+        if (s.a <= 0.0) { return s; }
         float y = max(dot(s.rgb, kLuma), 0.0);
         float v = clamp(pow(y, 1.0 / 2.2), 0.0, 1.0);
         float weight = 0.35 + 2.6 * v * (1.0 - v);

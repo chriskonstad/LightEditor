@@ -30,7 +30,14 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
     /// `before` shows to its left. nil shows no split. The divider stays put in
     /// the view while the image zooms and pans under it.
     public var split: CGFloat? { didSet { requestDraw() } }
-    public var background = CIColor(red: 0.055, green: 0.059, blue: 0.067)
+    /// The color around the photo (`CanvasBackground`, a viewing preference).
+    public var background = CanvasBackground.default.ciColor {
+        didSet {
+            guard background != oldValue else { return }
+            if let view { view.clearColor = clearColor }
+            requestDraw()
+        }
+    }
 
     /// Called after each frame with its GPU time, for performance overlays and tests.
     public var onFrame: ((Duration) -> Void)?
@@ -62,13 +69,21 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
         view.isPaused = true
         view.enableSetNeedsDisplay = true
         view.autoResizeDrawable = true
-        view.clearColor = MTLClearColor(red: Double(background.red), green: Double(background.green), blue: Double(background.blue), alpha: 1)
+        view.clearColor = clearColor
         if let layer = view.layer as? CAMetalLayer {
             layer.colorspace = colorSpace
             layer.wantsExtendedDynamicRangeContent = true
             layer.isOpaque = true
         }
         requestDraw()
+    }
+
+    /// `background` in the drawable's extended linear Display P3, for what shows
+    /// before the first frame and while resizing.
+    private var clearColor: MTLClearColor {
+        let srgb = CGColor(colorSpace: background.colorSpace, components: background.components) ?? CGColor(gray: 0, alpha: 1)
+        let c = srgb.converted(to: colorSpace, intent: .defaultIntent, options: nil)?.components ?? [0, 0, 0, 1]
+        return MTLClearColor(red: Double(c[0]), green: Double(c[1]), blue: Double(c[2]), alpha: 1)
     }
 
     public func requestDraw() {
@@ -100,6 +115,42 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
         }
     }
 
+    /// One frame: `image` scaled into `rect` (drawable pixels, top-left origin)
+    /// over the background, with `before` left of the split. Pure, for tests.
+    ///
+    /// The photo is clipped to `rect`. Once a graph is scaled and offset like
+    /// this, Core Image (27) also runs its color kernels outside their extent,
+    /// on clear pixels, and its own crops to that extent are dropped as no-ops.
+    /// Kernels that turn clear into a color (a positive vignette, negative
+    /// dehaze, the clipping overlay) then paint over the background. Masking
+    /// with an opaque rect isn't optimized away, so nothing leaks, whatever the
+    /// recipe.
+    public nonisolated static func frame(image: CIImage?, before: CIImage?, split: CGFloat?, in rect: CGRect,
+                                         drawableSize: CGSize, background: CIColor) -> CIImage {
+        let bounds = CGRect(origin: .zero, size: drawableSize)
+        let output = CIImage(color: background).cropped(to: bounds)
+        guard let image, image.extent.width > 0, image.extent.width.isFinite, rect.width > 0 else { return output }
+        let scale = rect.width / image.extent.width
+        // `rect` uses a top-left origin like SwiftUI; Core Image is bottom-left.
+        let onScreen = CGRect(x: rect.minX, y: drawableSize.height - rect.maxY, width: rect.width, height: rect.height)
+        func place(_ image: CIImage) -> CIImage {
+            image
+                .transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+                .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                .transformed(by: CGAffineTransform(translationX: onScreen.minX, y: onScreen.minY))
+        }
+        var placed = place(image)
+        if let before, let split {
+            let left = CGRect(x: 0, y: 0, width: drawableSize.width * split, height: drawableSize.height)
+            placed = place(before).cropped(to: left).composited(over: placed)
+        }
+        let visible = onScreen.intersection(bounds)
+        guard !visible.isNull, !visible.isEmpty else { return output }
+        let clip = CIImage(color: .white).cropped(to: visible)
+        placed = placed.applyingFilter("CISourceInCompositing", parameters: [kCIInputBackgroundImageKey: clip])
+        return placed.composited(over: output)
+    }
+
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         requestDraw()
     }
@@ -113,24 +164,8 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
 
         let drawableSize = view.drawableSize
         let bounds = CGRect(origin: .zero, size: drawableSize)
-        var output = CIImage(color: background).cropped(to: bounds)
-        if let image, image.extent.width > 0, image.extent.width.isFinite {
-            let rect = imageRect(in: drawableSize)
-            let scale = rect.width / image.extent.width
-            // `imageRect` uses a top-left origin like SwiftUI; Core Image is bottom-left.
-            func place(_ image: CIImage) -> CIImage {
-                image
-                    .transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
-                    .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-                    .transformed(by: CGAffineTransform(translationX: rect.minX, y: drawableSize.height - rect.maxY))
-            }
-            var placed = place(image)
-            if let before, let split {
-                let left = CGRect(x: 0, y: 0, width: drawableSize.width * split, height: drawableSize.height)
-                placed = place(before).cropped(to: left).composited(over: placed)
-            }
-            output = placed.composited(over: output)
-        }
+        let output = Self.frame(image: image, before: before, split: split, in: imageRect(in: drawableSize),
+                                drawableSize: drawableSize, background: background)
 
         // Core Image plans and encodes the frame on the CPU, which can take a few
         // milliseconds for a big graph; do that off the main thread so gestures

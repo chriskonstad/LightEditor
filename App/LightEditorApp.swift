@@ -39,6 +39,8 @@ struct LightEditorApp: App {
                     await app.start()
                     #if os(macOS) && DEBUG
                     DebugAutomation.start(app: app)
+                    #elseif os(iOS) && DEBUG
+                    DebugEditorHooks.start(app: app)
                     #endif
                 }
         }
@@ -160,6 +162,8 @@ struct EditorCommands: Commands {
             Button("Show Clipping") { editor?.showClipping.toggle() }
                 .keyboardShortcut("j", modifiers: [])
                 .disabled(editor == nil)
+            CanvasBackgroundPicker()
+                .pickerStyle(.menu)
             Divider()
             Button("Previous Photo") { app.step(-1) }
                 .keyboardShortcut(.leftArrow, modifiers: [])

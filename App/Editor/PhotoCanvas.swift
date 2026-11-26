@@ -5,19 +5,25 @@ import SwiftUI
 /// Hosts the EDR `MTKView` the preview renderer draws into.
 struct MetalPreview {
     let renderer: PreviewRenderer
+    var background = CanvasBackground.default
+
+    /// Sets the renderer's background; a new photo brings a new renderer.
+    @MainActor func configure(_ view: MTKView) {
+        renderer.background = background.ciColor
+        if view.delegate !== renderer { renderer.attach(to: view) }
+    }
 }
 
 #if os(macOS)
 extension MetalPreview: NSViewRepresentable {
     func makeNSView(context: Context) -> MTKView {
         let view = MTKView()
-        renderer.attach(to: view)
+        configure(view)
         return view
     }
 
     func updateNSView(_ view: MTKView, context: Context) {
-        // A new photo brings a new renderer; the view itself is reused.
-        if view.delegate !== renderer { renderer.attach(to: view) }
+        configure(view)
     }
 }
 #else
@@ -25,13 +31,12 @@ extension MetalPreview: UIViewRepresentable {
     func makeUIView(context: Context) -> MTKView {
         let view = MTKView()
         view.isUserInteractionEnabled = false
-        renderer.attach(to: view)
+        configure(view)
         return view
     }
 
     func updateUIView(_ view: MTKView, context: Context) {
-        // A new photo brings a new renderer; the view itself is reused.
-        if view.delegate !== renderer { renderer.attach(to: view) }
+        configure(view)
     }
 }
 #endif
@@ -44,6 +49,7 @@ struct PhotoCanvas: View {
     @Bindable var model: EditorModel
     var showOverlays = true
     @Environment(\.displayScale) private var displayScale
+    @AppStorage(CanvasBackground.defaultsKey) private var background = CanvasBackground.default
     @State private var panStart: CGPoint?
     @State private var pinchStart: (rect: CGRect, scale: Double)?
     @State private var twoFingers = false
@@ -58,8 +64,8 @@ struct PhotoCanvas: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Theme.ground
-                MetalPreview(renderer: model.renderer)
+                background.color
+                MetalPreview(renderer: model.renderer, background: background)
                     .accessibilityLabel("Photo")
                     .accessibilityIdentifier("photoCanvas")
 

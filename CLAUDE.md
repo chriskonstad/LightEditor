@@ -100,6 +100,7 @@ Test in a simulator's local Photos library or a folder library, never a real one
 ## Conventions
 
 - The recipe is the single source of truth, and rendering is a pure function of (original RAW, recipe). Views hold no hidden edit state.
+- Border and watermark are output settings, not part of the look: stored in the edit's separate `output` block, rendered in the preview and exports, never in the image saved to Photos (`Recipe.look`) or in presets. They copy and paste as their own group.
 - The recipe is `Codable` and versioned. Never break decoding of old recipes; add a migration instead.
 - Write tests for recipe encode/decode/migrate/merge, paste-group filtering, .cube parsing and XMP mapping.
 - Mark uncertain Apple API behavior as a spike question in `docs/MILESTONES.md` rather than guessing. Spike results go in `docs/spikes/<slug>.md`.

@@ -91,9 +91,14 @@ done
 if (( build )); then
     echo "Building for testing…"
     xcodegen generate --quiet
-    xcodebuild build-for-testing -scheme LightEditorUITests -destination 'generic/platform=iOS Simulator' \
-        -derivedDataPath $derived -quiet 2>&1 | grep -v -e "^$" -e DVTProvisioningProfileManager || true
-    [[ ${pipestatus[1]} -eq 0 ]] || { echo "Build failed" >&2; exit 1; }
+    # Check xcodebuild's own status: after `| grep … || true`, $pipestatus is true's,
+    # so a failed build used to fall through to testing the previous build.
+    if ! xcodebuild build-for-testing -scheme LightEditorUITests -destination 'generic/platform=iOS Simulator' \
+        -derivedDataPath $derived -quiet > build/ui-build.log 2>&1; then
+        grep -E "error:" build/ui-build.log | grep -v DVTProvisioningProfileManager | sort -u | head -20
+        echo "Build failed (build/ui-build.log)" >&2
+        exit 1
+    fi
 fi
 
 destinations=()

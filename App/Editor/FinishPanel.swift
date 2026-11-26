@@ -1,18 +1,27 @@
 import EditorCore
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// The Finish tab: a border or canvas around the cropped photo, and a text watermark.
-/// Both are recipe parameters (see `Finishing`), so they show here, in saves and
-/// exports alike, and paste and save in presets as the "Border and watermark" group.
+/// The Finish tab: a border or canvas around the cropped photo, and a watermark
+/// (text the user types, or a logo they import; there's no default either way).
+/// These are output settings, not part of the look (see `Recipe`): they show here
+/// and in exports and shares, not in the image saved to Photos or in presets, and
+/// copy and paste as the "Border and watermark" group.
 struct FinishPanel: View {
     let model: EditorModel
-    @AppStorage(Watermark.defaultTextKey) private var defaultText = ""
     @FocusState private var editingText: Bool
+    /// Logo chosen in the Text/Logo switch before a file is picked.
+    @State private var wantsLogo = false
+    @State private var importingLogo = false
+    @State private var logoError: String?
     /// Commits a color picker's changes once it stops moving: one undo step, not dozens.
     @State private var colorCommit: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            Text("For exports and shares. The photo saved in Photos stays without a border or watermark.")
+                .font(.caption).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             PanelHeader(title: "Border", model: model, group: .finishing)
             ParamSlider(model: model, key: .borderWidth, label: "Width")
             ParamSlider(model: model, key: .borderBottom)
@@ -57,8 +66,10 @@ struct FinishPanel: View {
         Toggle(isOn: Binding(
             get: { watermark != nil },
             set: { on in
-                let text = defaultText.trimmingCharacters(in: .whitespaces).isEmpty ? Watermark.fallbackText : defaultText
-                model.set(.watermark, on ? .watermark(Watermark(text: text)) : nil)
+                // Starts empty: nothing is drawn until there's text or a logo.
+                model.set(.watermark, on ? .watermark(Watermark()) : nil)
+                wantsLogo = false
+                if on { editingText = true }
             }
         )) {
             Text("Watermark").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textPrimary)
@@ -69,57 +80,125 @@ struct FinishPanel: View {
         .accessibilityIdentifier("toggle.watermark")
 
         if let mark = watermark {
-            TextField("Text, e.g. © Your Name", text: Binding(
-                get: { mark.text },
-                set: { text in
-                    var updated = mark
-                    updated.text = text
-                    model.setLive(.watermark, .watermark(updated))
+            let isLogo = mark.logo != nil || wantsLogo
+            Picker("Watermark kind", selection: Binding(
+                get: { isLogo },
+                set: { logo in
+                    wantsLogo = logo
+                    if !logo, mark.logo != nil { update { $0.logo = nil } }
+                    if logo, mark.logo == nil { importingLogo = true }
                 }
-            ))
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 10)
-            .frame(minHeight: Theme.minTouch)
-            .background(Theme.panelRaised, in: RoundedRectangle(cornerRadius: 8))
-            .focused($editingText)
-            .onSubmit { model.commit(.watermark) }
-            .onChange(of: editingText) { _, editing in if !editing { model.commit(.watermark) } }
-            .accessibilityIdentifier("watermark.text")
-
-            HStack {
-                if mark.text != defaultText, !mark.text.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Button { defaultText = mark.text } label: { Text("Make Default").touchTarget() }
-                        .accessibilityIdentifier("watermark.makeDefault")
-                }
-                if !defaultText.isEmpty, mark.text != defaultText {
-                    Button { update { $0.text = defaultText } } label: { Text("Use “\(defaultText)”").touchTarget() }
-                        .lineLimit(1)
-                }
+            )) {
+                Text("Text").tag(false)
+                Text("Logo").tag(true)
             }
-            .font(.caption)
-            .buttonStyle(.plain)
-            .foregroundStyle(Theme.accent)
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(minHeight: Theme.minTouch)
+            .accessibilityIdentifier("watermark.kind")
+
+            if isLogo {
+                logoRow(mark.logo)
+            } else {
+                TextField("Type your watermark, e.g. © Your Name", text: Binding(
+                    get: { mark.text },
+                    set: { text in
+                        var updated = mark
+                        updated.text = text
+                        model.setLive(.watermark, .watermark(updated))
+                    }
+                ))
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 10)
+                .frame(minHeight: Theme.minTouch)
+                .background(Theme.panelRaised, in: RoundedRectangle(cornerRadius: 8))
+                .focused($editingText)
+                .onSubmit { model.commit(.watermark) }
+                .onChange(of: editingText) { _, editing in if !editing { model.commit(.watermark) } }
+                .accessibilityIdentifier("watermark.text")
+            }
 
             HStack(alignment: .top, spacing: 16) {
                 positionGrid(mark.position)
                 VStack(alignment: .leading, spacing: 8) {
                     Text(mark.position.displayName).font(.subheadline).foregroundStyle(Theme.textPrimary)
-                    HStack(spacing: 8) {
-                        chip("White", selected: mark.color == .white, id: "watermark.white") { update { $0.color = .white } }
-                        chip("Black", selected: mark.color == .black, id: "watermark.black") { update { $0.color = .black } }
-                        colorPicker(mark.color, isCustom: mark.color != .white && mark.color != .black, id: "watermark.custom") { color in
-                            var updated = mark
-                            updated.color = color
-                            model.setLive(.watermark, .watermark(updated))
-                        } onEnd: { model.commit(.watermark) }
+                    // A logo keeps its own colors.
+                    if !isLogo {
+                        HStack(spacing: 8) {
+                            chip("White", selected: mark.color == .white, id: "watermark.white") { update { $0.color = .white } }
+                            chip("Black", selected: mark.color == .black, id: "watermark.black") { update { $0.color = .black } }
+                            colorPicker(mark.color, isCustom: mark.color != .white && mark.color != .black, id: "watermark.custom") { color in
+                                var updated = mark
+                                updated.color = color
+                                model.setLive(.watermark, .watermark(updated))
+                            } onEnd: { model.commit(.watermark) }
+                        }
                     }
                 }
             }
             .padding(.vertical, 8)
 
-            ParamSlider(model: model, key: .watermarkSize, label: "Size")
+            ParamSlider(model: model, key: .watermarkSize, label: isLogo ? "Height" : "Size")
             ParamSlider(model: model, key: .watermarkOpacity, label: "Opacity")
             ParamSlider(model: model, key: .watermarkMargin, label: "Margin")
+        }
+    }
+
+    /// The chosen logo (a thumbnail and its name) and a button to pick one.
+    private func logoRow(_ logo: WatermarkLogo?) -> some View {
+        HStack(spacing: 12) {
+            if let logo {
+                LogoThumbnail(store: model.app.lutStore, logo: logo)
+                Text(logo.name)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 8)
+            }
+            Button(logo == nil ? "Choose Logo…" : "Replace…") { importingLogo = true }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .accessibilityIdentifier("watermark.chooseLogo")
+            if logo == nil { Spacer(minLength: 0) }
+        }
+        .frame(minHeight: Theme.minTouch)
+        .fileImporter(isPresented: $importingLogo, allowedContentTypes: Self.logoTypes) { result in
+            guard case .success(let url) = result else {
+                if logo == nil { wantsLogo = false }
+                return
+            }
+            Task { await importLogo(url) }
+        }
+        .alert("Couldn't use that file", isPresented: Binding(get: { logoError != nil }, set: { if !$0 { logoError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(logoError ?? "")
+        }
+    }
+
+    /// PNG, JPEG, HEIC, TIFF and other images, PDF, and SVG (converted to PDF).
+    static let logoTypes: [UTType] = [.png, .jpeg, .heic, .tiff, .image, .pdf, .svg]
+
+    private func importLogo(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let store = model.app.lutStore.logos else { return }
+        do {
+            let name = url.deletingPathExtension().lastPathComponent
+            let logo: WatermarkLogo
+            if UTType(filenameExtension: url.pathExtension)?.conforms(to: .svg) == true {
+                let pdf = try await SVGToPDF.convert(try Data(contentsOf: url))
+                logo = try store.importLogo(pdf: pdf, name: name)
+            } else {
+                logo = try store.importLogo(from: url)
+            }
+            wantsLogo = false
+            // A logo usually wants more room than a line of text; start it larger.
+            if model.recipe[.watermarkSize] == nil { model.set(.watermarkSize, .scalar(10)) }
+            update { $0.logo = logo }
+        } catch {
+            logoError = error.localizedDescription
         }
     }
 
@@ -264,18 +343,25 @@ private struct ColorWell: View {
     #endif
 }
 
-/// Settings › Watermark: the text new watermarks start with.
-struct WatermarkDefaultSection: View {
-    @AppStorage(Watermark.defaultTextKey) private var defaultText = ""
+/// A small preview of a watermark logo, on a checkerboard-free dark tile.
+private struct LogoThumbnail: View {
+    let store: LUTStore
+    let logo: WatermarkLogo
 
     var body: some View {
-        Section {
-            TextField("© Your Name", text: $defaultText)
-                .accessibilityIdentifier("settings.watermarkText")
-        } header: {
-            Text("Watermark")
-        } footer: {
-            Text("New watermarks (Finish tab) start with this text.")
+        let aspect = store.aspectRatio(of: logo) ?? 1
+        let size = aspect >= 1 ? CGSize(width: 88, height: 88 / aspect) : CGSize(width: 88 * aspect, height: 88)
+        Group {
+            if let image = store.image(for: logo, size: size) {
+                Image(decorative: image, scale: 2)
+            } else {
+                Image(systemName: "questionmark.square.dashed").foregroundStyle(Theme.textSecondary)
+            }
         }
+        .frame(width: 44, height: 44)
+        .background(Theme.panelRaised, in: RoundedRectangle(cornerRadius: 6))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Logo \(logo.name)")
+        .accessibilityIdentifier("watermark.logoThumbnail")
     }
 }

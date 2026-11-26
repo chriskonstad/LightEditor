@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Synchronization
 
@@ -26,9 +27,10 @@ public struct Preset: Codable, Sendable, Hashable, Identifiable {
         self.isBuiltIn = isBuiltIn
     }
 
-    /// Captures the given groups of a recipe as a preset. Crop is never included.
+    /// Captures the given groups of a recipe as a preset. Crop, retouch and the
+    /// output settings (border and watermark) are never included: a preset is a look.
     public init(name: String, from recipe: Recipe, groups: Set<PasteGroup>) {
-        let owned = groups.subtracting([.crop, .retouch])
+        let owned = groups.subtracting([.crop, .retouch]).filter(\.belongsInPresets)
         self.init(name: name, groups: owned, params: recipe.params(in: owned))
     }
 }
@@ -39,7 +41,9 @@ extension Recipe {
     public func applying(_ preset: Preset, amount: Double, defaults: PhotoDefaults, stamp: HLCStamp) -> Recipe {
         var result = self
         let amount = min(max(amount, 0), 2)
-        for spec in ParamCatalog.all where preset.groups.contains(spec.group) {
+        // Presets are looks: they never set or reset a border or watermark, even one
+        // saved before output settings were kept out of presets.
+        for spec in ParamCatalog.all where preset.groups.contains(spec.group) && spec.group.belongsInPresets {
             let key = spec.key
             guard let value = preset.params[key] else {
                 result.set(key, nil, at: stamp)
@@ -163,13 +167,21 @@ public final class PresetStore: Sendable {
 
 /// Imported .cube files, stored by content hash so recipes can reference them,
 /// in a `SyncedFolder`. The same LUT imported on two devices is the same file.
+///
+/// It also hands out watermark logos from `logos`, since renders take one provider
+/// for every file a recipe refers to.
 public final class LUTStore: LUTProvider {
     public let folder: SyncedFolder
+    public let logos: WatermarkLogoStore?
     private let cache = Mutex<[String: CubeLUT]>([:])
 
-    public init(directory: URL) {
+    public init(directory: URL, logos: WatermarkLogoStore? = nil) {
         folder = SyncedFolder(directory: directory)
+        self.logos = logos
     }
+
+    public func aspectRatio(of logo: WatermarkLogo) -> Double? { logos?.aspectRatio(of: logo) }
+    public func image(for logo: WatermarkLogo, size: CGSize) -> CGImage? { logos?.image(for: logo, size: size) }
 
     public static func defaultDirectory() -> URL {
         URL.applicationSupportDirectory.appending(path: "LUTs", directoryHint: .isDirectory)

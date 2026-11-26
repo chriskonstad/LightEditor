@@ -68,19 +68,49 @@ import Testing
                 opacity: 0.75, engine: RemoveEngine.allCases[index % RemoveEngine.allCases.count], variation: index
             ), at: stamp())
         }
-        // The finishing stage (schema 2): border, canvas and watermark.
-        recipe.setScalar(.borderWidth, 4, at: stamp())
-        recipe.setScalar(.borderBottom, 8, at: stamp())
-        recipe.set(.borderColor, .color(SRGBColor(red: 1, green: 0.5, blue: 0.25)), at: stamp())
-        recipe.set(.borderCanvas, .aspect(AspectRatio(4, 5)), at: stamp())
-        recipe.set(.watermark, .watermark(Watermark(text: "© Golden", position: .bottomLeft, color: .black)), at: stamp())
-        recipe.setScalar(.watermarkSize, 3, at: stamp())
-        recipe.setScalar(.watermarkOpacity, 75, at: stamp())
-        recipe.setScalar(.watermarkMargin, 2, at: stamp())
         // A reset: no value, but a stamp, so a later merge can tell it from "never set".
         recipe.setScalar(.vibrance, 10, at: stamp())
         recipe.set(.vibrance, nil, at: stamp())
         return recipe
+    }
+
+    /// One of every output setting (border, canvas, watermark with text and a logo),
+    /// stored in the edit's `output` block, beside the look.
+    static var withOutputSettings: Recipe {
+        var recipe = Recipe(photoID: PhotoID(rawValue: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"), decoder: .raw9)
+        var tick: Int64 = 0
+        func stamp() -> HLCStamp {
+            tick += 1
+            return HLCStamp(millis: 1_770_000_000_000 + tick, counter: 0, node: "golden")
+        }
+        recipe.setScalar(.exposure, 0.375, at: stamp())
+        recipe.setScalar(.borderWidth, 4, at: stamp())
+        recipe.setScalar(.borderBottom, 8, at: stamp())
+        recipe.set(.borderColor, .color(SRGBColor(red: 1, green: 0.5, blue: 0.25)), at: stamp())
+        recipe.set(.borderCanvas, .aspect(AspectRatio(4, 5)), at: stamp())
+        // Text and a logo both, so the golden holds every field (a logo wins when drawn).
+        recipe.set(.watermark, .watermark(Watermark(
+            text: "© Golden", logo: WatermarkLogo(hash: "5e1f", name: "Studio", format: "pdf"), position: .bottomLeft, color: .black
+        )), at: stamp())
+        recipe.setScalar(.watermarkSize, 3, at: stamp())
+        recipe.setScalar(.watermarkOpacity, 75, at: stamp())
+        recipe.setScalar(.watermarkMargin, 2, at: stamp())
+        return recipe
+    }
+
+    static let outputGoldenName = "recipe_v1_output_block.json"
+
+    @Test func outputBlockMatchesGolden() throws {
+        let encoded = try RecipeCodec.encode(Self.withOutputSettings)
+        let source = Self.fixturesFolder.appending(path: Self.outputGoldenName)
+        if ProcessInfo.processInfo.environment["EDITORCORE_RECORD"] == "1" {
+            try encoded.write(to: source)
+            Issue.record("Recorded \(source.path). Unset EDITORCORE_RECORD and run again.")
+            return
+        }
+        let golden = try fixture(Self.outputGoldenName)
+        #expect(try RecipeCodec.decode(golden) == Self.withOutputSettings)
+        #expect(encoded == golden, "The output block's encoding changed. Encoded now: \(String(decoding: encoded, as: UTF8.self))")
     }
 
     static func uuid(_ n: Int) -> UUID {

@@ -16,7 +16,7 @@ struct SavedImageSheet: View {
 
     private var deviceDefault: PhotosCopy { PhotosCopy(maxMegapixels: defaultMegapixels, quality: defaultQuality) }
     private var draft: PhotosCopy { PhotosCopy(maxMegapixels: megapixels, quality: quality) }
-    private var fullSize: CGSize { model.exportFullSize ?? model.displayedImageSize }
+    private var fullSize: CGSize { model.savedImageFullSize ?? model.displayedImageSize }
     private var fullMegapixels: Double { fullSize.width * fullSize.height / 1_000_000 }
     private var outputSize: CGSize { draft.outputSize(full: fullSize) }
 

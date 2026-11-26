@@ -17,9 +17,28 @@ import SwiftUI
 /// - `-HideSidebar YES` collapses the sidebar;
 /// - `-SnapshotTo <dir>` writes a PNG of the window every two seconds, with the photo
 ///   painted in (window snapshots leave Metal content blank);
+/// - `-WatermarkLogo <file>` imports a logo (an SVG goes through `SVGToPDF`, as
+///   in the Finish tab) and makes it the photo's watermark;
 /// - `-DemoMaskOverlay YES` walks through the mask overlay's auto-hide (add a radial
 ///   mask, raise its exposure, then move it), four seconds per step, for snapshots.
 enum DebugAutomation {
+    /// The Finish tab's logo import, without the file picker.
+    @MainActor
+    static func setWatermarkLogo(_ path: String, editor: EditorModel) async {
+        guard let store = editor.app.lutStore.logos else { return }
+        let url = URL(fileURLWithPath: path)
+        do {
+            let logo = url.pathExtension.lowercased() == "svg"
+                ? try store.importLogo(pdf: try await SVGToPDF.convert(try Data(contentsOf: url)), name: url.deletingPathExtension().lastPathComponent)
+                : try store.importLogo(from: url)
+            editor.set(.watermarkSize, .scalar(12))
+            editor.set(.watermarkOpacity, .scalar(90))
+            editor.set(.watermark, .watermark(Watermark(logo: logo, position: .bottomRight)))
+        } catch {
+            print("WatermarkLogo: \(error)")
+        }
+    }
+
     @MainActor
     static func start(app: AppModel) {
         let defaults = UserDefaults.standard
@@ -46,6 +65,7 @@ enum DebugAutomation {
                     editor.commit(key)
                 }
                 if let tab = defaults.string(forKey: "EditorTab").flatMap(EditorModel.Tab.init(rawValue:)) { editor.tab = tab }
+                if let path = defaults.string(forKey: "WatermarkLogo") { await setWatermarkLogo(path, editor: editor) }
                 if defaults.bool(forKey: "DemoMaskOverlay") { await demoMaskOverlay(editor) }
             }
         }

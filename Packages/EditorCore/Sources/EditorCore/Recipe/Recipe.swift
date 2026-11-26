@@ -49,21 +49,24 @@ public struct DecoderPin: Codable, Sendable, Hashable {
     public static let none = DecoderPin(version: "none")
 }
 
-/// A non-destructive edit: a flat map of parameter to value.
+/// A photo's non-destructive edit: a flat map of parameter to value.
 ///
-/// Rendering is a pure function of (original, recipe). An absent key means the
-/// default. Every change records a per-parameter stamp, including resets, so that a
-/// later merge can tell a reset from a value that was never touched.
+/// It has two parts. The **look** is the recipe proper: everything that changes how
+/// the photo itself looks, which presets carry and the image saved to Photos shows.
+/// The **output settings** (border, canvas and watermark, `PipelineStage.finishing`)
+/// frame the photo for exports and shares only: they're stored as a separate
+/// `output` block, never in presets, and never drawn into the image saved to Photos.
+/// Both share one undo history, draft and per-parameter merge, and copy and paste
+/// alike ("Border and watermark" is its own paste group).
+///
+/// Rendering is a pure function of (original, recipe): `look` for the Photos copy,
+/// the whole edit for the preview and exports. An absent key means the default.
+/// Every change records a per-parameter stamp, including resets, so that a later
+/// merge can tell a reset from a value that was never touched.
 public struct Recipe: Codable, Sendable, Hashable {
-    /// 2 added the finishing stage (border, canvas, watermark). See `RecipeCodec`.
-    public static let currentSchemaVersion = 2
-
-    /// The oldest schema that can read this recipe. Recipes without a border or
-    /// watermark are still written as version 1, so older app versions (another
-    /// device, or the other end of a remote session) keep opening them.
-    public var minimumSchemaVersion: Int {
-        params.keys.contains { ParamCatalog.spec(for: $0)?.stage == .finishing } ? 2 : 1
-    }
+    /// See `RecipeCodec`. The output block needs no version of its own: readers
+    /// that predate it ignore it.
+    public static let currentSchemaVersion = 1
 
     public var schemaVersion: Int
     public var photoID: PhotoID
@@ -80,6 +83,55 @@ public struct Recipe: Codable, Sendable, Hashable {
     }
 
     public subscript(key: ParamKey) -> ParamValue? { params[key] }
+
+    /// The recipe proper, without the output settings (border, canvas, watermark):
+    /// what presets save and the image saved to Photos shows.
+    public var look: Recipe {
+        var look = self
+        look.params = params.filter { !$0.key.isOutputSetting }
+        look.stamps = stamps.filter { !$0.key.isOutputSetting }
+        return look
+    }
+
+    /// Whether the edit has a border, canvas or watermark.
+    public var hasOutputSettings: Bool { params.keys.contains { $0.isOutputSetting } }
+
+    // MARK: Coding
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion, photoID, decoder, params, stamps, output
+    }
+
+    private struct OutputBlock: Codable {
+        var params: [ParamKey: ParamValue]
+        var stamps: [ParamKey: HLCStamp]
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        photoID = try container.decode(PhotoID.self, forKey: .photoID)
+        self.decoder = try container.decode(DecoderPin.self, forKey: .decoder)
+        params = try container.decode([ParamKey: ParamValue].self, forKey: .params)
+        stamps = try container.decode([ParamKey: HLCStamp].self, forKey: .stamps)
+        if let output = try container.decodeIfPresent(OutputBlock.self, forKey: .output) {
+            params.merge(output.params.filter { $0.key.isOutputSetting }) { _, new in new }
+            stamps.merge(output.stamps.filter { $0.key.isOutputSetting }) { _, new in new }
+        }
+    }
+
+    /// The output settings go in their own `output` block, so the look's `params`
+    /// read the same as before they existed, and older readers skip the block.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(photoID, forKey: .photoID)
+        try container.encode(decoder, forKey: .decoder)
+        try container.encode(params.filter { !$0.key.isOutputSetting }, forKey: .params)
+        try container.encode(stamps.filter { !$0.key.isOutputSetting }, forKey: .stamps)
+        let output = OutputBlock(params: params.filter { $0.key.isOutputSetting }, stamps: stamps.filter { $0.key.isOutputSetting })
+        if !output.stamps.isEmpty || !output.params.isEmpty { try container.encode(output, forKey: .output) }
+    }
 
     /// The explicit scalar value for `key`, or nil when it's at its default.
     public func scalar(_ key: ParamKey) -> Double? { params[key]?.scalarValue }

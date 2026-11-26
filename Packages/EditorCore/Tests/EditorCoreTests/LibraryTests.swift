@@ -1,3 +1,4 @@
+import ImageIO
 import CoreImage
 import Foundation
 import Synchronization
@@ -43,6 +44,38 @@ func makeFolderLibrary(count: Int) throws -> (FolderLibrary, URL) {
             }
             #expect(recipe.scalar(.exposure) == 0.5)
             #expect(recipe[.crop] == nil, "crop is per photo and off by default")
+        }
+    }
+
+    /// Border and watermark paste to a batch as output settings: stored with each
+    /// edit, but the image saved to Photos is the photo alone, without the border.
+    @Test func pastedBordersAreStoredButNotSavedIntoThePhotosImage() async throws {
+        let (library, directory) = try makeFolderLibrary(count: 2)
+        let assets = await library.assets(in: .recents)
+        var source = Recipe()
+        source.setScalar(.exposure, 0.5, at: testClock.now())
+        source.setScalar(.borderWidth, 10, at: testClock.now())
+        source.set(.watermark, .watermark(Watermark(text: "© Test")), at: testClock.now())
+        let clip = RecipeClip(recipe: source, sourceName: "IMG_0001", sourceDefaults: .generic)
+        try await BulkEditor.apply(
+            .paste(clip, groups: PasteGroup.defaultSelection.union([.finishing]), mode: .set),
+            to: (0..<assets.count).map { assets[$0] }, library: library, luts: nil, clock: testClock, format: .jpeg,
+            progress: { _ in }, thumbnail: { _, _ in }
+        )
+        for index in 0..<assets.count {
+            guard case .ours(let recipe) = await library.storedEdit(for: assets[index]) else {
+                Issue.record("photo \(index) has no edit")
+                continue
+            }
+            #expect(recipe.scalar(.borderWidth) == 10, "the border is kept with the edit, for exports")
+            #expect(Finishing.watermark(recipe)?.text == "© Test")
+            let original = try #require(CGImageSourceCreateWithURL(directory.appending(path: assets[index].id) as CFURL, nil))
+            let rendered = try #require(CGImageSourceCreateWithURL(directory.appending(path: ".raweditor/\(assets[index].id).rendered") as CFURL, nil))
+            func size(_ source: CGImageSource) -> [Int] {
+                let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+                return [kCGImagePropertyPixelWidth, kCGImagePropertyPixelHeight].compactMap { properties?[$0] as? Int }
+            }
+            #expect(size(rendered) == size(original), "the Photos image has no border around it")
         }
     }
 

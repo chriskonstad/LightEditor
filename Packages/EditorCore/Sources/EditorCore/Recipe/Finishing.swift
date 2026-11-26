@@ -26,7 +26,7 @@ public struct SRGBColor: Codable, Sendable, Hashable {
     }
 }
 
-/// Where a text watermark sits on the photo, on a 3 × 3 grid.
+/// Where a watermark sits on the photo, on a 3 × 3 grid.
 public enum WatermarkPosition: String, Codable, Sendable, CaseIterable, Identifiable {
     case topLeft, top, topRight, left, center, right, bottomLeft, bottom, bottomRight
 
@@ -53,27 +53,53 @@ public enum WatermarkPosition: String, Codable, Sendable, CaseIterable, Identifi
     }
 }
 
-/// A text watermark such as "© Name". Its size, opacity and margin are scalar
-/// parameters of their own, so they get the usual sliders.
+/// A watermark: text the user typed, or a logo image they imported. There's no
+/// default text: a watermark with neither draws nothing. Its size, opacity and
+/// margin are scalar parameters of their own, so they get the usual sliders.
 public struct Watermark: Codable, Sendable, Hashable {
     public var text: String
+    /// A logo in place of the text. When set, the text and color are unused.
+    public var logo: WatermarkLogo?
     public var position: WatermarkPosition
+    /// The text's color. A logo keeps its own colors.
     public var color: SRGBColor
 
-    public init(text: String, position: WatermarkPosition = .bottomRight, color: SRGBColor = .white) {
+    public init(text: String = "", logo: WatermarkLogo? = nil, position: WatermarkPosition = .bottomRight, color: SRGBColor = .white) {
         self.text = text
+        self.logo = logo
         self.position = position
         self.color = color
     }
 
-    /// The `UserDefaults` key of the text new watermarks start with (Settings › Watermark).
-    public static let defaultTextKey = "watermark.defaultText"
-    public static let fallbackText = "©"
+    /// Whether there's anything to draw.
+    public var isEmpty: Bool { logo == nil && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
 
-/// The finishing stage: a border or canvas around the cropped photo, and a text
-/// watermark on it. Rendered last, after crop, vignette and grain, so a preview and
-/// any save or export of the recipe match.
+/// A logo image the recipe refers to by content hash, like a film LUT: the file
+/// itself lives in `WatermarkLogoStore` (synced between devices like LUTs) and is
+/// sent along with renders done on another device. Masks are never bitmaps in the
+/// recipe; neither are logos.
+public struct WatermarkLogo: Codable, Sendable, Hashable {
+    /// SHA-256 of the stored file.
+    public var hash: String
+    /// The imported file's name, for display.
+    public var name: String
+    /// The stored file's extension: "pdf" (vector; SVGs are converted on import)
+    /// or "png" (bitmaps, with transparency).
+    public var format: String
+
+    public init(hash: String, name: String, format: String) {
+        self.hash = hash
+        self.name = name
+        self.format = format
+    }
+
+    public var fileName: String { "\(hash).\(format)" }
+}
+
+/// The output settings: a border or canvas around the cropped photo, and a
+/// watermark on it. Rendered last, after crop, vignette and grain, in the preview,
+/// exports and shares; not in the image saved to Photos, which renders `Recipe.look`.
 ///
 /// Sizes are percentages of the cropped photo's short edge, so they look the same
 /// at every resolution.
@@ -104,8 +130,9 @@ public enum Finishing {
         (recipe.scalar(.borderWidth) ?? 0) > 0 || (recipe.scalar(.borderBottom) ?? 0) > 0 || canvas(recipe) != nil
     }
 
+    /// The watermark to draw: nil when there's none or it's empty.
     public static func watermark(_ recipe: Recipe) -> Watermark? {
-        guard case .watermark(let mark)? = recipe[.watermark], !mark.text.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        guard case .watermark(let mark)? = recipe[.watermark], !mark.isEmpty else { return nil }
         return mark
     }
 
@@ -148,7 +175,9 @@ public enum Finishing {
         layout(photo: size, recipe: recipe).canvas
     }
 
-    /// The watermark's text height, margin and opacity for a photo of `size` pixels.
+    /// The watermark's height (the text's, or the logo's), margin and opacity for a
+    /// photo of `size` pixels. A logo keeps its aspect ratio and shrinks to fit
+    /// between the margins if it's too wide.
     public static func watermarkMetrics(photo size: CGSize, recipe: Recipe) -> (height: Double, margin: Double, opacity: Double) {
         let short = Double(min(size.width, size.height))
         let height = recipe.scalar(.watermarkSize, defaults: .generic) / 100 * short
@@ -159,6 +188,10 @@ public enum Finishing {
 }
 
 extension ParamKey {
+    /// A border, canvas or watermark setting: an output setting, not part of the
+    /// look (see `Recipe`).
+    public var isOutputSetting: Bool { ParamCatalog.spec(for: self)?.stage == .finishing }
+
     // Finishing: border, canvas and watermark (see `Finishing`)
     /// Border on every side, in percent of the cropped photo's short edge.
     public static let borderWidth = ParamKey("finish.border.width")
@@ -170,7 +203,7 @@ extension ParamKey {
     public static let borderCanvas = ParamKey("finish.border.canvas")
     /// `.watermark`; absent is none.
     public static let watermark = ParamKey("finish.watermark")
-    /// Text height in percent of the cropped photo's short edge.
+    /// Watermark height (text or logo) in percent of the cropped photo's short edge.
     public static let watermarkSize = ParamKey("finish.watermark.size")
     public static let watermarkOpacity = ParamKey("finish.watermark.opacity")
     /// Distance from the photo's edges, in percent of its short edge.

@@ -7,14 +7,16 @@ import Synchronization
 /// Draws the finishing stage (`Finishing`): the watermark onto the cropped photo,
 /// then the border and canvas around it. The result's extent starts at the origin.
 public enum FinishingRenderer {
-    public static func apply(_ recipe: Recipe, to image: CIImage) -> CIImage {
+    /// `files` supplies a logo watermark's image; without it (or without the logo's
+    /// file) a logo watermark is skipped.
+    public static func apply(_ recipe: Recipe, to image: CIImage, files: (any LUTProvider)? = nil) -> CIImage {
         let hasFrame = Finishing.hasFrame(recipe)
         let mark = Finishing.watermark(recipe)
         guard hasFrame || mark != nil else { return image }
         let extent = image.extent
         guard extent.width > 0, extent.height > 0, extent.width.isFinite, extent.height.isFinite else { return image }
         var photo = image.transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
-        if let mark { photo = watermark(mark, recipe, on: photo) }
+        if let mark { photo = watermark(mark, recipe, on: photo, files: files) }
         guard hasFrame else { return photo }
 
         let layout = Finishing.layout(photo: extent.size, recipe: recipe)
@@ -27,13 +29,25 @@ public enum FinishingRenderer {
     }
 
     /// The watermark over a photo whose extent starts at the origin.
-    static func watermark(_ mark: Watermark, _ recipe: Recipe, on photo: CIImage) -> CIImage {
+    static func watermark(_ mark: Watermark, _ recipe: Recipe, on photo: CIImage, files: (any LUTProvider)?) -> CIImage {
         let size = photo.extent.size
         let metrics = Finishing.watermarkMetrics(photo: size, recipe: recipe)
         let maxWidth = Double(size.width) - 2 * metrics.margin
-        guard metrics.height >= 1, maxWidth > 1, let text = TextImages.shared.image(mark.text, height: metrics.height, maxWidth: maxWidth, color: mark.color) else {
-            return photo
+        guard metrics.height >= 1, maxWidth > 1 else { return photo }
+        let art: CGImage?
+        if let logo = mark.logo {
+            // Fit: the logo's height is the watermark size, its width follows its
+            // aspect ratio, and a logo too wide for the margins shrinks to fit.
+            guard let aspect = files?.aspectRatio(of: logo), aspect > 0 else { return photo }
+            var logoSize = CGSize(width: metrics.height * aspect, height: metrics.height)
+            if logoSize.width > maxWidth { logoSize = CGSize(width: maxWidth, height: maxWidth / aspect) }
+            logoSize = CGSize(width: logoSize.width.rounded(), height: logoSize.height.rounded())
+            guard logoSize.width >= 1, logoSize.height >= 1 else { return photo }
+            art = files?.image(for: logo, size: logoSize)
+        } else {
+            art = TextImages.shared.image(mark.text, height: metrics.height, maxWidth: maxWidth, color: mark.color)
         }
+        guard let text = art else { return photo }
         let w = Double(text.width), h = Double(text.height)
         let (column, row) = mark.position.cell
         let x: Double = switch column {

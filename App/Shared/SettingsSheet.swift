@@ -90,7 +90,6 @@ struct SettingsSheet: View {
                     Text("The color around the photo while you edit. Mid gray is a neutral 18% gray, for judging exposure. It's only for viewing: edits and exports don't change.")
                 }
                 PhotosCopyDefaultSection()
-                WatermarkDefaultSection()
                 Section {
                     Link(destination: AppInfo.privacyPolicy) {
                         Label("Privacy Policy", systemImage: "hand.raised")

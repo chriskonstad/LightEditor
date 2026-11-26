@@ -157,7 +157,8 @@ public final class RemoteHost: @unchecked Sendable {
         case .save(let id, let recipe, let files):
             let session = try await session(id)
             let data = try await Exporter.render(
-                source: session.original, recipe: recipe, luts: merged(files), options: recipe.photosCopy().exportOptions(), priority: .soon,
+                // The image saved to Photos shows the look, without border or watermark.
+                source: session.original, recipe: recipe.look, luts: merged(files), options: recipe.photosCopy().exportOptions(), priority: .soon,
                 queued: { progress(nil, "Waiting for earlier saves") },
                 progress: { progress($0 * 0.9, nil) }
             )
@@ -212,13 +213,18 @@ public final class RemoteHost: @unchecked Sendable {
         return session
     }
 
-    /// This device's LUTs plus any the iPad sent along.
+    /// This device's LUTs and logos plus any the iPad sent along.
     private func merged(_ files: [LUTFile]) -> any LUTProvider {
         var extra: [String: CubeLUT] = [:]
+        var logos: [String: Data] = [:]
         for file in files {
-            if let lut = try? CubeParser.parse(file.data, fallbackTitle: file.name) { extra[file.hash] = lut }
+            if file.logoFormat != nil {
+                logos[file.hash] = file.data
+            } else if let lut = try? CubeParser.parse(file.data, fallbackTitle: file.name) {
+                extra[file.hash] = lut
+            }
         }
-        return MergedLUTs(base: luts, extra: extra)
+        return MergedLUTs(base: luts, extra: extra, logos: logos)
     }
 
     static func jpeg(_ image: CGImage, quality: Double) -> Data? {
@@ -229,10 +235,23 @@ public final class RemoteHost: @unchecked Sendable {
     }
 }
 
-/// LUTs from this device, plus ones another device sent for a render.
+/// LUTs and logos from this device, plus ones another device sent for a render.
 struct MergedLUTs: LUTProvider {
     var base: (any LUTProvider)?
     var extra: [String: CubeLUT]
+    var logos: [String: Data] = [:]
 
     func lut(for ref: LUTRef) -> CubeLUT? { extra[ref.hash] ?? base?.lut(for: ref) }
+
+    func aspectRatio(of logo: WatermarkLogo) -> Double? {
+        if let data = logos[logo.hash] { return WatermarkLogoStore.aspectRatio(data: data, format: logo.format) }
+        return base?.aspectRatio(of: logo)
+    }
+
+    func image(for logo: WatermarkLogo, size: CGSize) -> CGImage? {
+        if let data = logos[logo.hash] {
+            return WatermarkLogoStore.render(data: data, format: logo.format, width: Int(size.width.rounded()), height: Int(size.height.rounded()))
+        }
+        return base?.image(for: logo, size: size)
+    }
 }

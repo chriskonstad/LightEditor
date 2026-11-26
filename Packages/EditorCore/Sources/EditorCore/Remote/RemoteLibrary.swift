@@ -362,9 +362,16 @@ public final class RemoteOutbox: @unchecked Sendable {
 }
 
 extension Recipe {
-    /// The LUTs this recipe uses, to send with renders done on another device.
+    /// The LUT and watermark logo this recipe uses, to send with renders done on
+    /// another device.
     public func lutFiles(from store: LUTStore) -> [LUTFile] {
-        guard case .lut(let ref, _)? = self[.lut], let data = store.data(for: ref) else { return [] }
-        return [LUTFile(hash: ref.hash, name: ref.name, data: data)]
+        var files: [LUTFile] = []
+        if case .lut(let ref, _)? = self[.lut], let data = store.data(for: ref) {
+            files.append(LUTFile(hash: ref.hash, name: ref.name, data: data))
+        }
+        if let logo = Finishing.watermark(self)?.logo, let data = store.logos?.data(for: logo) {
+            files.append(LUTFile(hash: logo.hash, name: logo.name, data: data, logoFormat: logo.format))
+        }
+        return files
     }
 }

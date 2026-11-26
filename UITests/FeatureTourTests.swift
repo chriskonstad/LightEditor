@@ -125,6 +125,14 @@ final class FeatureTourTests: XCTestCase {
             if reveal(element("toggle.watermark"), label: "Watermark") {
                 element("toggle.watermark").tap()
                 pause(0.8)
+                // No default text: the empty field is focused, and nothing is drawn yet.
+                shot("watermark-on-empty")
+                let field = element("watermark.text")
+                if field.waitForExistence(timeout: 2) {
+                    field.tap()
+                    field.typeText("© Your Name\n")
+                    pause(0.8)
+                }
                 shot("border-with-watermark")
             }
             if reveal(element("canvas.4x5"), label: "Canvas") {
@@ -136,6 +144,27 @@ final class FeatureTourTests: XCTestCase {
         } else {
             XCTFail("couldn't find the Finish tab's border width slider")
         }
+    }
+
+    /// A logo watermark from an SVG, imported the way the Finish tab does it
+    /// (`-WatermarkLogo`, since XCUITest can't easily drive the file picker).
+    func testLogoWatermark() throws {
+        let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
+        let logo = UITestConfig.repoRoot.appending(path: "UITests/Fixtures/watermark-logo.svg").path
+        app = XCUIApplication()
+        app.launchArguments = [
+            "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
+            "-OpenAssetIndex", "0", "-EditorTab", "finish", "-WatermarkLogo", logo,
+        ]
+        app.launch()
+        XCTAssertTrue(waitUntilEnabled("editor.export", timeout: 120), "the editor never finished decoding")
+        let thumbnail = element("watermark.logoThumbnail")
+        _ = reveal(element("watermark.chooseLogo"), label: "Watermark")
+        XCTAssertTrue(element("watermark.chooseLogo").waitForExistence(timeout: 10), "the logo wasn't set")
+        XCTAssertTrue(thumbnail.exists, "no thumbnail for the imported logo")
+        XCTAssertEqual(thumbnail.label, "Logo watermark-logo")
+        shot("logo-watermark-svg")
     }
 
     // MARK: Helpers

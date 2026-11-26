@@ -42,16 +42,25 @@ enum WireMessage: Codable, Sendable {
     case bye
 }
 
-/// A .cube file the phone may not have, sent along with renders that use it.
+/// A file the phone may not have, sent along with renders that use it: a .cube
+/// LUT, or a watermark logo when `logoFormat` is set. (Older phones skip logos:
+/// they don't parse as .cube.)
 public struct LUTFile: Codable, Sendable, Hashable {
     public var hash: String
     public var name: String
     public var data: Data
+    /// "pdf" or "png" for a watermark logo; nil for a LUT.
+    public var logoFormat: String?
 
-    public init(hash: String, name: String, data: Data) {
+    public init(hash: String, name: String, data: Data, logoFormat: String? = nil) {
         self.hash = hash
         self.name = name
         self.data = data
+        self.logoFormat = logoFormat
+    }
+
+    public var logo: WatermarkLogo? {
+        logoFormat.map { WatermarkLogo(hash: hash, name: name, format: $0) }
     }
 }
 

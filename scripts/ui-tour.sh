@@ -27,7 +27,7 @@ done
 derived=build/UITests
 out=$root/build/ui-tour
 dir=$out/${device// /-}
-rm -rf $dir && mkdir -p $dir
+rm -rf $dir $out/tour.xcresult && mkdir -p $dir
 
 if [[ ! -e Models ]]; then
     main=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
@@ -58,9 +58,14 @@ trap cleanup EXIT
 if (( build )); then
     echo "Building for testing…"
     xcodegen generate --quiet
-    xcodebuild build-for-testing -scheme LightEditorUITests -destination 'generic/platform=iOS Simulator' \
-        -derivedDataPath $derived -quiet 2>&1 | grep -v -e "^$" -e DVTProvisioningProfileManager || true
-    [[ ${pipestatus[1]} -eq 0 ]] || { echo "Build failed" >&2; exit 1; }
+    # Check xcodebuild's own status: after `| grep … || true`, $pipestatus is true's,
+    # so a failed build used to fall through to testing the previous build.
+    if ! xcodebuild build-for-testing -scheme LightEditorUITests -destination 'generic/platform=iOS Simulator' \
+        -derivedDataPath $derived -quiet > build/ui-build.log 2>&1; then
+        grep -E "error:" build/ui-build.log | grep -v DVTProvisioningProfileManager | sort -u | head -20
+        echo "Build failed (build/ui-build.log)" >&2
+        exit 1
+    fi
 fi
 
 xcrun simctl boot $udid
@@ -75,13 +80,22 @@ TEST_RUNNER_UITEST_LIBRARY=$library \
 TEST_RUNNER_UITEST_OUTPUT=$out \
 xcodebuild test-without-building -scheme LightEditorUITests -derivedDataPath $derived \
     -destination "id=$udid" -only-testing:LightEditorUITests/FeatureTourTests \
-    -collect-test-diagnostics never -quiet > $out/last.log 2>&1
+    -collect-test-diagnostics never -resultBundlePath $out/tour.xcresult -quiet > $out/last.log 2>&1
 rc=$?
 set -e
 kill -INT $recorder 2>/dev/null; wait $recorder 2>/dev/null || true
 recorder=""
 
-grep -E "error:|\[FAIL\]" $out/last.log | sed 's/^.*: error: /error: /' | sort -u | head -30 || true
+# Each failed assertion's message, from the result bundle.
+xcrun xcresulttool get test-results tests --path $out/tour.xcresult 2>/dev/null | python3 -c "
+import json, sys
+def walk(node):
+    if node.get('nodeType') == 'Failure Message': print('  ' + node.get('name', ''))
+    for child in node.get('children', []): walk(child)
+try:
+    for root in json.load(sys.stdin).get('testNodes', []): walk(root)
+except Exception: pass
+" || true
 echo "Screenshots: ${dir#$root/}/tour/   Video: ${dir#$root/}/tour.mp4   Log: build/ui-tour/last.log"
 echo "Tour $([[ $rc -eq 0 ]] && echo passed || echo FAILED)"
 exit $rc

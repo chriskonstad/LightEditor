@@ -5,7 +5,10 @@ import Foundation
 public enum PipelineStage: Sendable, Hashable {
     case rawDecode
     case grade
-    /// Border, canvas and watermark, on the cropped, graded photo (see `Finishing`).
+    /// Output settings: border, canvas and watermark, drawn around and on the
+    /// cropped, graded photo (see `Finishing`) for the preview, exports and shares.
+    /// Not part of the look: stored in the edit's `output` block, never in presets,
+    /// and left out of the image saved to Photos (`Recipe.look`).
     case finishing
     /// Changes only how the saved image is encoded, not how it looks.
     case output
@@ -40,7 +43,7 @@ public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
         case .crop: "Per photo"
         case .masks: "AI masks re-detect on each photo"
         case .retouch: "Per photo"
-        case .finishing: "Frame, canvas and text"
+        case .finishing: "For exports and shares"
         case .photosCopy: "Resolution and quality of the image saved to Photos"
         default: nil
         }
@@ -49,6 +52,10 @@ public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
     /// Whether the group is ticked by default in the paste sheet. Everything but
     /// Crop and Retouch, which are specific to one photo, and the border, watermark
     /// and saved image's size, which aren't part of the look.
+    /// Whether presets can carry this group. Border and watermark are output
+    /// settings, not part of the look, so they spread by copy and paste only.
+    public var belongsInPresets: Bool { self != .finishing }
+
     public var isOnByDefault: Bool { ![.crop, .retouch, .finishing, .photosCopy].contains(self) }
 
     public static var defaultSelection: Set<PasteGroup> {

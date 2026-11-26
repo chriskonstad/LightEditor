@@ -38,7 +38,7 @@ Tests that need something big are skipped unless it's there:
 
 The recipe is stored in every edited photo and must decode forever.
 
-- `RecipeCompatibilityTests` pins the encoding. `Fixtures/recipe_v1_all_kinds.json` holds one of every value kind (scalars, wheels, curves, LUTs, crop with auto straighten, every mask shape, every retouch kind, a reset). The test checks that it decodes to the same recipe and that today's encoder writes the same bytes. If it fails, the encoding changed: bump `Recipe.currentSchemaVersion`, add a migration in `RecipeCodec`, keep the old file, and record the new version's (`EDITORCORE_RECORD=1`). It also checks that every older version has a migration and a fixture, and that the parameter catalog is consistent.
+- `RecipeCompatibilityTests` pins the encoding. `Fixtures/recipe_v1_all_kinds.json` holds one of every value kind (scalars, wheels, curves, LUTs, crop with auto straighten, every mask shape, every retouch kind, a reset). The test checks that it decodes to the same recipe and that today's encoder writes the same bytes. If it fails, the encoding changed: bump `Recipe.currentSchemaVersion`, add a migration in `RecipeCodec`, keep the old file, and record the new version's (`EDITORCORE_RECORD=1`). It also checks that every older version has a migration and a fixture, and that the parameter catalog is consistent. The kitchen sink is the look only, so this also proves the look's stored form is unchanged; `Fixtures/recipe_v1_output_block.json` pins the separate `output` block (border, canvas, watermark with text and a logo) the same way.
 - `RecipePropertyTests` runs codec, clamping and paste invariants on 200 seeded random recipes: round trips, Set-mode paste copies the source, paste never touches unselected groups, pasting twice equals once, paste groups partition the catalog. A failure names its seed; `RecipeGenerator(seed:)` rebuilds the case. New parameters are covered automatically.
 
 ### Render goldens
@@ -67,7 +67,7 @@ Two layers, because the Simulator and the Mac aren't the devices that matter (CL
 
 `UITests/` (target `LightEditorUITests`, scheme `LightEditorUITests`), run by `scripts/test-ui.sh`.
 
-`ScreenAuditTests` launches the app on a folder library (`-FixtureLibrary`, a fresh copy of one ARW and one JPEG from `Fixtures/` for each test) and walks the main screens: library, Settings, Devices, the editor and each tab (scrolled too), a radial mask, the More menu, crop, retouch and export. It does that at the default text size and at the largest accessibility size, and in landscape on iPad. On each screen it:
+`ScreenAuditTests` launches the app on a folder library (`-FixtureLibrary`, a fresh copy of one ARW and one JPEG from `Fixtures/` for each test) and walks the main screens: library, Settings, Devices, the editor and each tab (scrolled too) including Finish with the watermark switched on and an open color wheel, a radial mask, the More menu, crop, retouch and export. It does that at the default text size and at the largest accessibility size, and in landscape on iPad. On each screen it:
 
 - saves a screenshot to `build/ui-screenshots/<device>/<orientation>-<size>/NN-<screen>.png`, so you (or an agent) can look at every screen after a UI change;
 - checks touch targets of 44 × 44 pt or more on the buttons and fields we lay out (system switches, sliders, list rows and bar buttons are left to Apple's audit, since their hit areas are larger than their frames);
@@ -92,6 +92,10 @@ scripts/test-ui.sh --record-baseline      # accept the current findings as known
 ```
 
 Only re-record the baseline when a finding is accepted on purpose (say so in the commit), never to make a regression go away. The script creates its own simulators (named "LightEditor UITest …", on the newest iOS runtime that supports each device) and deletes them afterwards unless `--keep`, so it never disturbs a simulator you're using. A failed run doesn't collect simulator diagnostics, which took ten minutes.
+
+`FeatureTourTests` is a demo, not an audit: `scripts/ui-tour.sh` (`just ui-tour`) runs it in a throwaway simulator and records `build/ui-tour/<device>/tour.mp4` plus a screenshot per step: canvas backgrounds with a strong vignette, the color wheels opened with their sliders, the mask overlay hiding on adjust, and the Finish tab (border, the color picker, a typed watermark, a 4:5 canvas). `testLogoWatermark` imports an SVG logo through `-WatermarkLogo` (the same import the Finish tab runs, without the file picker) to check SVG conversion on iOS. Run it to look at a UI change; `scripts/test-ui.sh` skips it. It brings controls on screen by tapping their labels, since a scroll drag can grab a control (one moved a tone-curve point).
+
+Both scripts check `xcodebuild`'s own exit status before testing; a failed build used to fall through to testing the previous build.
 
 When you add a screen, add it to the walk and give its controls accessibility identifiers (`area.control`, as in `editor.export`). For anything the walk can't reach, the Mac's `-SnapshotTo` and the iOS tooling in `docs/spikes/simulator-tooling.md` still work.
 

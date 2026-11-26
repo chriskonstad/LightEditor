@@ -17,7 +17,8 @@ final class AppModel {
     let remote = RemoteModel()
     let jobs = JobCenter()
     let clock: HybridLogicalClock
-    let lutStore = LUTStore(directory: LUTStore.defaultDirectory())
+    /// Imported LUTs, and watermark logos (`lutStore.logos`): the files recipes refer to by hash.
+    let lutStore = LUTStore(directory: LUTStore.defaultDirectory(), logos: WatermarkLogoStore(directory: WatermarkLogoStore.defaultDirectory()))
     private let presetStore = PresetStore(directory: PresetStore.defaultDirectory())
 
     var authorization: LibraryAuthorization
@@ -98,7 +99,7 @@ final class AppModel {
 
     // MARK: Presets in iCloud Drive
 
-    /// Keeps presets and imported LUTs in the app's iCloud Drive container, so
+    /// Keeps presets, imported LUTs and watermark logos in the app's iCloud Drive container, so
     /// they're on every device signed in to the same Apple ID. Always on; without
     /// iCloud they stay on this device and move into iCloud Drive once it's there.
     func syncPresetsWithICloud() async {
@@ -107,6 +108,7 @@ final class AppModel {
             guard let container = UbiquitousStorage.container() else { return false }
             presetStore.folder.move(to: container.appending(path: "Presets", directoryHint: .isDirectory))
             lutStore.folder.move(to: container.appending(path: "LUTs", directoryHint: .isDirectory))
+            lutStore.logos?.folder.move(to: container.appending(path: "Watermarks", directoryHint: .isDirectory))
             return true
         }.value
         reloadPresets()
@@ -117,13 +119,18 @@ final class AppModel {
 
     private func reloadPresets() {
         let presets = presetStore.load(), all = lutStore.all()
+        let logos = Set(["pdf", "png"].flatMap { lutStore.logos?.folder.files(withExtension: $0) ?? [] })
         if presets != userPresets { userPresets = presets }
-        if all != luts {
+        if all != luts || logos != logoFiles {
             luts = all
-            // A LUT the open photo uses may just have arrived.
+            logoFiles = logos
+            // A LUT or logo the open photo uses may just have arrived.
             activeEditor?.render()
         }
     }
+
+    /// The watermark logo files seen last, to notice ones arriving from iCloud Drive.
+    private var logoFiles: Set<String> = []
 
     // MARK: Library
 

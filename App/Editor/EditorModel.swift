@@ -1097,7 +1097,8 @@ final class EditorModel: Identifiable {
                 return
             }
             let data = try await Exporter.render(
-                source: session.original, recipe: recipe, luts: luts, options: recipe.photosCopy().exportOptions(), priority: priority,
+                // The image saved to Photos shows the look, without border or watermark.
+                source: session.original, recipe: recipe.look, luts: luts, options: recipe.photosCopy().exportOptions(), priority: priority,
                 queued: { reporter.progress(nil, detail: "\(filename) · waiting for earlier saves") }
             ) {
                 reporter.progress($0 * 0.9, detail: filename)
@@ -1163,10 +1164,15 @@ final class EditorModel: Identifiable {
 
     /// The size a full-size export comes out at: the original, cropped, plus any border.
     var exportFullSize: CGSize? {
+        savedImageFullSize.map { Finishing.outputSize(photo: $0, recipe: recipe) }
+    }
+
+    /// The full size of the image saved to Photos: the original, cropped. It never
+    /// has the border, which is an output setting for exports.
+    var savedImageFullSize: CGSize? {
         guard let native = info?.nativeSize, native.width > 0, native.height > 0 else { return nil }
         let rect = crop.rect
-        let cropped = CGSize(width: (native.width * rect.width).rounded(), height: (native.height * rect.height).rounded())
-        return Finishing.outputSize(photo: cropped, recipe: recipe)
+        return CGSize(width: (native.width * rect.width).rounded(), height: (native.height * rect.height).rounded())
     }
 
     /// Encodes a small render of the current edit, to estimate export file sizes.

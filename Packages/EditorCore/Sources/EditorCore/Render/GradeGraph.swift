@@ -48,9 +48,19 @@ public enum RenderContext {
     public static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 }
 
-/// Resolves a recipe's LUT reference to parsed cube data.
+/// The files a recipe refers to by content hash: film LUTs (`LUTRef`) and
+/// watermark logos (`WatermarkLogo`). Rendering asks for them here.
 public protocol LUTProvider: Sendable {
     func lut(for ref: LUTRef) -> CubeLUT?
+    /// The logo's width / height, or nil when its file isn't on this device.
+    func aspectRatio(of logo: WatermarkLogo) -> Double?
+    /// The logo drawn at `size` pixels, on transparency.
+    func image(for logo: WatermarkLogo, size: CGSize) -> CGImage?
+}
+
+extension LUTProvider {
+    public func aspectRatio(of logo: WatermarkLogo) -> Double? { nil }
+    public func image(for logo: WatermarkLogo, size: CGSize) -> CGImage? { nil }
 }
 
 /// Everything besides the recipe that the grade needs.
@@ -132,7 +142,7 @@ public enum GradeGraph {
         image = grain(image, recipe)
         if inputs.showClipping { image = Kernels.compiled.clipping.apply(extent: image.extent, arguments: [image]) ?? image }
         // Last, on the cropped photo: a white border isn't clipping.
-        if inputs.applyGeometry && inputs.applyFinishing { image = FinishingRenderer.apply(recipe, to: image) }
+        if inputs.applyGeometry && inputs.applyFinishing { image = FinishingRenderer.apply(recipe, to: image, files: inputs.luts) }
         return image
     }
 

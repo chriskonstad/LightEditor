@@ -29,39 +29,65 @@ import Testing
         let json = String(decoding: data, as: UTF8.self)
         #expect(json.contains(#""finish.border.canvas":{"canvas":"4:5"}"#))
         #expect(json.contains(#""finish.border.color":{"rgb":[0,0,0]}"#))
-        #expect(json.contains(#""schemaVersion":2"#))
+        #expect(json.contains(#""schemaVersion":1"#))
         let decoded = try RecipeCodec.decode(data)
         #expect(decoded.params == recipe.params)
         #expect(decoded.stamps == recipe.stamps)
         #expect(decoded[.watermark] == .watermark(Self.mark))
     }
 
-    @Test func recipesWithoutFinishingStayVersion1() throws {
-        var recipe = Recipe()
-        recipe.setScalar(.exposure, 0.5, at: testClock.now())
-        let json = String(decoding: try RecipeCodec.encode(recipe), as: UTF8.self)
-        #expect(json.contains(#""schemaVersion":1"#), "older app versions keep reading edits that don't use a border")
-        #expect(recipe.minimumSchemaVersion == 1)
-        #expect(Self.bordered().minimumSchemaVersion == 2)
+    /// Output settings are a separate block, not part of the look's params, so older
+    /// readers (another device, a remote phone) skip them and still read the look.
+    @Test func outputSettingsAreStoredInTheirOwnBlock() throws {
+        let recipe = Self.bordered {
+            $0.setScalar(.exposure, 0.5, at: testClock.now())
+            $0.set(.watermark, .watermark(Self.mark), at: testClock.now())
+        }
+        let object = try #require(try JSONSerialization.jsonObject(with: RecipeCodec.encode(recipe)) as? [String: Any])
+        let params = try #require(object["params"] as? [String: Any])
+        let output = try #require(object["output"] as? [String: Any])
+        #expect(params.keys.sorted() == ["light.exposure"])
+        #expect((output["params"] as? [String: Any])?.keys.sorted() == ["finish.border.width", "finish.watermark"])
+        #expect((output["stamps"] as? [String: Any])?.count == 2)
+
+        // An edit without output settings writes no block at all.
+        let plain = String(decoding: try RecipeCodec.encode(recipe.look), as: UTF8.self)
+        #expect(!plain.contains("output"))
     }
 
-    @Test func migratesVersion1Recipes() throws {
+    @Test func theLookLeavesOutTheOutputSettings() {
+        let recipe = Self.bordered {
+            $0.setScalar(.exposure, 0.5, at: testClock.now())
+            $0.set(.watermark, .watermark(Self.mark), at: testClock.now())
+        }
+        #expect(recipe.hasOutputSettings)
+        #expect(!recipe.look.hasOutputSettings)
+        #expect(recipe.look.scalar(.exposure) == 0.5)
+        #expect(recipe.look.stamps.keys.allSatisfy { !$0.isOutputSetting })
+        // The image saved to Photos renders the look: no border, so no change in size.
+        let base = solid(0.5, 0.5, 0.5, size: 40)
+        #expect(FinishingRenderer.apply(recipe.look, to: base).extent == base.extent)
+        #expect(FinishingRenderer.apply(recipe, to: base).extent != base.extent)
+    }
+
+    @Test func readsVersion1Recipes() throws {
         let recipe = try RecipeCodec.decode(try fixture("recipe_v1.json"))
         #expect(recipe.schemaVersion == Recipe.currentSchemaVersion)
         #expect(recipe.scalar(.exposure) == 0.3)
-        #expect(!recipe.hasEdits(in: .finishing))
+        #expect(!recipe.hasOutputSettings)
         #expect(FinishingRenderer.apply(recipe, to: solid(0.5, 0.5, 0.5, size: 40)).extent == CGRect(x: 0, y: 0, width: 40, height: 40))
     }
 
-    @Test func decodesVersion2Json() throws {
+    @Test func decodesAnOutputBlock() throws {
         let data = Data(#"""
-        {"schemaVersion": 2, "photoID": "", "decoder": {"version": "9"},
-         "params": {"finish.border.width": 3, "finish.watermark": {"watermark": {"text": "© Me", "position": "top", "color": [1, 1, 1]}}},
-         "stamps": {}}
+        {"schemaVersion": 1, "photoID": "", "decoder": {"version": "9"}, "params": {"light.exposure": 1}, "stamps": {},
+         "output": {"params": {"finish.border.width": 3, "finish.watermark": {"watermark": {"text": "© Me", "position": "top", "color": [1, 1, 1]}}},
+                    "stamps": {}}}
         """#.utf8)
         let recipe = try RecipeCodec.decode(data)
         #expect(recipe.scalar(.borderWidth) == 3)
         #expect(Finishing.watermark(recipe) == Watermark(text: "© Me", position: .top))
+        #expect(recipe.scalar(.exposure) == 1)
     }
 
     // MARK: Paste groups and presets
@@ -94,12 +120,24 @@ import Testing
         #expect(result.scalar(.borderWidth) == 5, "a border width is set, not added")
     }
 
-    @Test func presetsCarryBorderAndWatermark() {
-        let source = Self.bordered { $0.set(.watermark, .watermark(Self.mark), at: testClock.now()) }
-        let preset = Preset(name: "Frame", from: source, groups: [.finishing])
-        let applied = Recipe().applying(preset, amount: 0.5, defaults: .generic, stamp: testClock.now())
-        #expect(applied[.watermark] == .watermark(Self.mark))
-        #expect(applied.scalar(.borderWidth) == 2.5)
+    /// Presets are looks: they never take, set or reset a border or watermark.
+    @Test func presetsLeaveBorderAndWatermarkAlone() {
+        let source = Self.bordered {
+            $0.setScalar(.exposure, 1, at: testClock.now())
+            $0.set(.watermark, .watermark(Self.mark), at: testClock.now())
+        }
+        let preset = Preset(name: "Look", from: source, groups: Set(PasteGroup.allCases))
+        #expect(!preset.groups.contains(.finishing))
+        #expect(preset.params.keys.allSatisfy { !$0.isOutputSetting })
+
+        // Applying one keeps the photo's own border, even from a preset saved with
+        // the group before (hand-built here).
+        var photo = Recipe()
+        photo.setScalar(.borderWidth, 8, at: testClock.now())
+        let old = Preset(name: "Old", groups: [.finishing, .light], params: [.borderWidth: .scalar(2), .exposure: .scalar(1)])
+        let applied = photo.applying(old, amount: 1, defaults: .generic, stamp: testClock.now())
+        #expect(applied.scalar(.borderWidth) == 8)
+        #expect(applied.scalar(.exposure) == 1)
     }
 
     // MARK: Layout

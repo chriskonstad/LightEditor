@@ -69,7 +69,7 @@ struct RecipeGenerator {
                 recipe.set(spec.key, .aspect(coin() ? AspectRatio(1, 1) : AspectRatio(4, 5)), at: stamp())
             case .watermark:
                 let positions = WatermarkPosition.allCases
-                recipe.set(spec.key, .watermark(Watermark(text: "© Test \(rng.next() % 100)", position: positions[Int(rng.next() % UInt64(positions.count))])), at: stamp())
+                recipe.set(spec.key, .watermark(Watermark(text: "© Test \(rng.next() % 100)", logo: coin() ? WatermarkLogo(hash: "h\(rng.next() % 100)", name: "Logo", format: coin() ? "pdf" : "png") : nil, position: positions[Int(rng.next() % UInt64(positions.count))])), at: stamp())
             case .mask, .retouch:
                 break
             }

@@ -359,15 +359,13 @@ struct PresetsPanel: View {
             TextField("Name", text: $newName)
             Button("Save") {
                 let name = newName.trimmingCharacters(in: .whitespaces)
-                // A preset owns its groups and resets them when applied, so it takes
-                // the border and watermark only when this photo has them.
-                var excluded: Set<PasteGroup> = [.crop, .detail, .photosCopy]
-                if !model.recipe.hasEdits(in: .finishing) { excluded.insert(.finishing) }
+                // A preset is a look: never crop, detail, saved size, border or watermark.
+                let excluded: Set<PasteGroup> = [.crop, .detail, .photosCopy, .finishing]
                 model.app.savePreset(named: name.isEmpty ? "My preset" : name, from: model.recipe, groups: Set(PasteGroup.allCases).subtracting(excluded))
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Saves everything except Crop and Detail. A border or watermark is included only when this photo has one.")
+            Text("Saves the look: everything except Crop, Detail, and the border and watermark.")
         }
         .alert("Import", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("OK") { message = nil }

@@ -109,18 +109,20 @@ iPad mini (A17 Pro) | landscape-L | tab-light | hit target under 44 pt | crop.ro
 iPad mini (A17 Pro) | landscape-L | tab-light | hit target under 44 pt | light.auto (button)
 iPad mini (A17 Pro) | landscape-L | tab-light | hit target under 44 pt | view.history (button)
 iPad mini (A17 Pro) | landscape-L | tab-light | hit target under 44 pt | view.retouch (button)
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Background"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Color range"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Linear gradient"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Luminance range"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Object"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "People"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Radial gradient"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Subject"
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | crop.rotate
-iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | eye
-iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | mask.new
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | view.clipping
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | view.history
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | view.retouch
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | view.split
-iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | "Radial gradient options" (button)
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | crop.rotate (button)
-iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | eye (button)
-iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | mask.new (button)
-iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | unlabeled (button)
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | view.history (button)
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit target under 44 pt | view.retouch (button)
 iPad mini (A17 Pro) | landscape-L | tab-presets | clipped text | "Original"
@@ -146,8 +148,8 @@ iPad mini (A17 Pro) | portrait-AX5 | mask-radial-scrolled | hit target under 44 
 iPad mini (A17 Pro) | portrait-AX5 | mask-radial-scrolled | hit target under 44 pt | mask.part.Radial gradient (button)
 iPad mini (A17 Pro) | portrait-AX5 | mask-radial-scrolled | hit target under 44 pt | unlabeled (button)
 iPad mini (A17 Pro) | portrait-AX5 | tab-grade-scrolled | clipped text | screen
-iPad mini (A17 Pro) | portrait-AX5 | tab-masks | hit target under 44 pt | "Radial gradient options" (button)
-iPad mini (A17 Pro) | portrait-AX5 | tab-masks | hit target under 44 pt | unlabeled (button)
+iPad mini (A17 Pro) | portrait-AX5 | tab-masks | clipped text | "Background"
+iPad mini (A17 Pro) | portrait-AX5 | tab-masks | clipped text | "Subject"
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.16:9 (button)
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.1:1 (button)
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.3:2 (button)
@@ -159,7 +161,6 @@ iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.Free (
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.Original (button)
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | straighten.auto (button)
 iPad mini (A17 Pro) | portrait-L | devices | clipped text | "Simulator on this Mac"
-iPad mini (A17 Pro) | portrait-L | editor | hit target under 44 pt | jobTray (button)
 iPad mini (A17 Pro) | portrait-L | editor | hit target under 44 pt | light.auto (button)
 iPad mini (A17 Pro) | portrait-L | mask-radial | hit region | eye
 iPad mini (A17 Pro) | portrait-L | mask-radial | hit region | mask.addPart
@@ -210,23 +211,6 @@ iPhone SE (3rd generation) | portrait-AX5 | editor | laid out off screen | ellip
 iPhone SE (3rd generation) | portrait-AX5 | editor | laid out off screen | square.and.arrow.up (image)
 iPhone SE (3rd generation) | portrait-AX5 | editor | laid out off screen | square.split.2x1 (image)
 iPhone SE (3rd generation) | portrait-AX5 | editor | laid out off screen | unlabeled (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | clipped text | "Copy edits"
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | clipped text | "Export"
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | clipped text | "Library"
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | clipped text | "Retouch"
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | clipped text | editor.title
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | hit target under 44 pt | "Radial gradient options" (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | hit target under 44 pt | unlabeled (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | "Export" (text)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | "Masks" (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | compareToggle (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | editor.export (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | editor.more (button)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | editor.tabs (segmented control)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | ellipsis.circle (image)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | square.and.arrow.up (image)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | square.split.2x1 (image)
-iPhone SE (3rd generation) | portrait-AX5 | mask-radial | laid out off screen | unlabeled (button)
 iPhone SE (3rd generation) | portrait-AX5 | retouch | clipped text | "Library"
 iPhone SE (3rd generation) | portrait-AX5 | retouch | clipped text | editor.title
 iPhone SE (3rd generation) | portrait-AX5 | tab-color | clipped text | "Copy edits"
@@ -294,8 +278,6 @@ iPhone SE (3rd generation) | portrait-AX5 | tab-masks | clipped text | "Export"
 iPhone SE (3rd generation) | portrait-AX5 | tab-masks | clipped text | "Library"
 iPhone SE (3rd generation) | portrait-AX5 | tab-masks | clipped text | "Retouch"
 iPhone SE (3rd generation) | portrait-AX5 | tab-masks | clipped text | editor.title
-iPhone SE (3rd generation) | portrait-AX5 | tab-masks | hit target under 44 pt | "Radial gradient options" (button)
-iPhone SE (3rd generation) | portrait-AX5 | tab-masks | hit target under 44 pt | unlabeled (button)
 iPhone SE (3rd generation) | portrait-AX5 | tab-masks | laid out off screen | "Export" (text)
 iPhone SE (3rd generation) | portrait-AX5 | tab-masks | laid out off screen | "Masks" (button)
 iPhone SE (3rd generation) | portrait-AX5 | tab-masks | laid out off screen | compareToggle (button)
@@ -339,7 +321,6 @@ iPhone SE (3rd generation) | portrait-L | editor | clipped text | "Export"
 iPhone SE (3rd generation) | portrait-L | editor | clipped text | "Library"
 iPhone SE (3rd generation) | portrait-L | editor | clipped text | "Retouch"
 iPhone SE (3rd generation) | portrait-L | editor | clipped text | editor.title
-iPhone SE (3rd generation) | portrait-L | editor | hit target under 44 pt | jobTray (button)
 iPhone SE (3rd generation) | portrait-L | editor | hit target under 44 pt | light.auto (button)
 iPhone SE (3rd generation) | portrait-L | library | clipped text | "RAW"
 iPhone SE (3rd generation) | portrait-L | mask-radial | clipped text | "Copy edits"

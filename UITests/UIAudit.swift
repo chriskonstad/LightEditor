@@ -123,8 +123,13 @@ final class ScreenAuditor {
     func capture(_ screen: String, audit: Bool = true) {
         screens.append(screen)
         let file = String(format: "%02d-%@", screens.count, screen)
-        // Let animations settle so frames are final.
+        // Let animations settle so frames are final, and let background jobs (decodes,
+        // thumbnails) finish: the job tray pill comes and goes with them, which would
+        // make findings depend on timing.
         Thread.sleep(forTimeInterval: 0.8)
+        let jobTray = app.descendants(matching: .any)["jobTray"]
+        let deadline = Date().addingTimeInterval(15)
+        while jobTray.exists, Date() < deadline { Thread.sleep(forTimeInterval: 0.5) }
         saveScreenshot(file)
         guard audit else { return }
         checkTree(screen: screen)

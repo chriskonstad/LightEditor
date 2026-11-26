@@ -45,7 +45,8 @@ final class ScreenAuditTests: XCTestCase {
         app.launchArguments = [
             "-FixtureLibrary", library.path,
             "-UIPreferredContentSizeCategoryName", contentSize.rawValue,
-            // No hardware keyboard, no leftover state from a previous run.
+            // No leftover state (drafts, clipboard, restored windows) from a previous run.
+            "-ResetState", "YES",
             "-ApplePersistenceIgnoreState", "YES",
         ]
         app.launch()

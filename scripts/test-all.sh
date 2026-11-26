@@ -44,12 +44,15 @@ stage() {
     fi
 }
 
-stage "unit, RAW and budgets" env EDITORCORE_RAW_FIXTURES=$PWD/Fixtures EDITORCORE_PERF_BUDGETS=1 scripts/test-fast.sh --models
+stage "unit and RAW" env EDITORCORE_RAW_FIXTURES=$PWD/Fixtures scripts/test-fast.sh --models
+# Alone, after the rest: in the parallel run above the AI-model and RAW tests share the
+# GPU, which slowed a 5 ms preview frame to 500 ms and failed its budget.
+stage "performance budgets" env EDITORCORE_RAW_FIXTURES=$PWD/Fixtures EDITORCORE_PERF_BUDGETS=1 scripts/test-fast.sh --filter PerformanceBudget
 stage "builds" scripts/build.sh
 (( ui )) && stage "UI audits" scripts/test-ui.sh $ui_args
 
 echo
 printf '%s\n' $results
-grep -h "^BUDGET " build/test-all/unit*.log 2>/dev/null | sed 's/^/      /'
+grep -h "^BUDGET " build/test-all/performance*.log 2>/dev/null | sed 's/^/      /'
 echo "Total $(( $(date +%s) - started )) s"
 exit $failed

@@ -2,10 +2,11 @@ import Foundation
 
 /// Coarse/fine drag math for sliders and color wheels.
 ///
-/// Dragging along a slider is coarse. Pulling the finger away from the control
-/// (above or below a slider, outside a wheel) switches to finer steps, like Nitro's
-/// sliders and darktable's fine adjustment. Every precision change re-anchors the
-/// drag, so the value never jumps when the precision changes.
+/// Dragging along a slider is coarse. Pulling the finger away from the track
+/// (above or below it) switches to finer steps, like Nitro's sliders and
+/// darktable's fine adjustment. Every precision change re-anchors the drag, so the
+/// value never jumps when the precision changes. Color wheels get their precision
+/// from drag speed instead (see `WheelTracker`).
 public enum FineAdjust {
     public enum Precision: Int, Sendable, Comparable {
         case coarse, fine, finer
@@ -70,40 +71,113 @@ public enum FineAdjust {
 
     /// Tracks one color wheel drag. Points are in the unit disc; movement is
     /// relative, so the puck never jumps under the finger.
+    ///
+    /// Precision comes from drag speed rather than from pulling the finger off the
+    /// control, which a wheel that fills the panel has no room for: a quick drag
+    /// moves the puck one-to-one with the finger, and a slow, deliberate one moves it
+    /// down to `slowGain` of that, like pointer acceleration in reverse. A held
+    /// modifier (`forcedPrecision`, Option on the Mac) scales that further. Movement
+    /// is integrated step by step, so at the rim, moving back inward responds at once.
     public struct WheelTracker: Sendable {
+        /// Gain at or below `slowSpeed`.
+        public static let slowGain = 0.25
+        /// Finger speeds, in points per second, where the gain starts to rise and where it reaches 1.
+        public static let slowSpeed = 40.0
+        public static let fastSpeed = 400.0
+
         public private(set) var precision: Precision = .coarse
-        private var anchor: (x: Double, y: Double)
-        private var anchorTouch: (x: Double, y: Double)
+        public private(set) var point: (x: Double, y: Double)
+        private var lastTouch: (x: Double, y: Double)
+        private var lastTime: Double?
+        /// Smoothed finger speed, so one jittery sample doesn't jerk the gain.
+        private var speed: Double?
 
-        public init(start: (x: Double, y: Double), touch: (x: Double, y: Double)) {
-            anchor = start
-            anchorTouch = touch
+        /// `time` is when the finger was at `touch`, in seconds; pass it to measure
+        /// speed from the first move.
+        public init(start: (x: Double, y: Double), touch: (x: Double, y: Double), time: Double? = nil) {
+            point = start
+            lastTouch = touch
+            lastTime = time
         }
 
-        /// The new wheel point for a touch at `touch` (view points, y down), on a
-        /// wheel of `radius` points centered at `center`.
-        public mutating func update(touch: (x: Double, y: Double), center: (x: Double, y: Double), radius: Double, forcedPrecision: Precision = .coarse) -> (x: Double, y: Double) {
-            let distance = max(hypot(touch.x - center.x, touch.y - center.y) - radius, 0)
-            let wanted = max(FineAdjust.precision(forDistance: distance, fineAt: 30, finerAt: 110), forcedPrecision)
-            let current = point(at: touch, radius: radius)
-            if wanted != precision {
-                anchor = current
-                anchorTouch = touch
-                precision = wanted
+        /// The gain for a finger moving at `speed` points per second (smoothstep
+        /// from `slowGain` to 1).
+        public static func gain(forSpeed speed: Double) -> Double {
+            let t = min(max((speed - slowSpeed) / (fastSpeed - slowSpeed), 0), 1)
+            return slowGain + (1 - slowGain) * t * t * (3 - 2 * t)
+        }
+
+        /// The new wheel point for a touch at `touch` (view points, y down) at `time`
+        /// seconds, on a wheel of `radius` points. Without times the gain stays 1.
+        public mutating func update(touch: (x: Double, y: Double), time: Double? = nil, radius: Double, forcedPrecision: Precision = .coarse) -> (x: Double, y: Double) {
+            precision = forcedPrecision
+            let dx = touch.x - lastTouch.x, dy = touch.y - lastTouch.y
+            var gain = 1.0
+            if let time {
+                if let lastTime, time > lastTime {
+                    let sample = hypot(dx, dy) / (time - lastTime)
+                    speed = speed.map { $0 * 0.5 + sample * 0.5 } ?? sample
+                }
+                if let speed { gain = Self.gain(forSpeed: speed) }
+                lastTime = time
             }
-            return current
+            lastTouch = touch
+            guard radius > 0 else { return point }
+            let scale = gain * precision.factor / radius
+            point = WheelPolar.clampedToDisc(x: point.x + dx * scale, y: point.y - dy * scale)
+            return point
         }
+    }
+}
 
-        private func point(at touch: (x: Double, y: Double), radius: Double) -> (x: Double, y: Double) {
-            guard radius > 0 else { return anchor }
-            var x = anchor.x + (touch.x - anchorTouch.x) / radius * precision.factor
-            var y = anchor.y - (touch.y - anchorTouch.y) / radius * precision.factor
-            let length = hypot(x, y)
-            if length > 1 {
-                x /= length
-                y /= length
-            }
-            return (x, y)
-        }
+/// A color wheel point in the unit disc as hue (degrees, 0..<360, counterclockwise
+/// from +x, the HSV hue the wheel is painted with) and strength (0...1). The focused
+/// wheel's Hue and Saturation sliders edit these.
+public struct WheelPolar: Sendable, Equatable {
+    public var hue: Double
+    public var strength: Double
+
+    public init(hue: Double, strength: Double) {
+        self.hue = WheelPolar.wrap(hue)
+        self.strength = min(max(strength, 0), 1)
+    }
+
+    /// Reads a point. A neutral point has no hue of its own, so it takes
+    /// `fallbackHue` (the hue last shown), and raising Saturation from zero, or
+    /// dragging it to zero and back, keeps the hue the user chose.
+    public init(x: Double, y: Double, fallbackHue: Double = 0) {
+        let polar = ColorMath.wheelPolar(x: x, y: y)
+        self.init(hue: polar.strength < Self.neutral ? fallbackHue : polar.hue, strength: polar.strength)
+    }
+
+    /// Below this strength a point counts as neutral.
+    public static let neutral = 1e-4
+
+    public var isNeutral: Bool { strength < Self.neutral }
+
+    public var point: (x: Double, y: Double) {
+        let radians = hue * .pi / 180
+        return (cos(radians) * strength, sin(radians) * strength)
+    }
+
+    /// The recipe value: nil when neutral, so a wheel set back to the middle reads
+    /// as unedited, as a reset does.
+    public var paramValue: ParamValue? {
+        guard !isNeutral else { return nil }
+        let p = point
+        return .point(x: p.x, y: p.y)
+    }
+
+    public func with(hue: Double) -> WheelPolar { WheelPolar(hue: hue, strength: strength) }
+    public func with(strength: Double) -> WheelPolar { WheelPolar(hue: hue, strength: strength) }
+
+    public static func wrap(_ hue: Double) -> Double {
+        let h = hue.truncatingRemainder(dividingBy: 360)
+        return h < 0 ? h + 360 : h
+    }
+
+    public static func clampedToDisc(x: Double, y: Double) -> (x: Double, y: Double) {
+        let length = hypot(x, y)
+        return length > 1 ? (x / length, y / length) : (x, y)
     }
 }

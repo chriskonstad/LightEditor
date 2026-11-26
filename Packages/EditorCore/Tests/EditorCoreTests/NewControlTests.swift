@@ -204,23 +204,74 @@ func edgeImage(width: Int = 200, height: Int = 20, dark: Double = 0.05, bright: 
 
     @Test func wheelMovesRelativelyAndClampsToDisc() {
         var tracker = FineAdjust.WheelTracker(start: (0, 0), touch: (50, 50))
-        let p = tracker.update(touch: (75, 50), center: (50, 50), radius: 50)
+        let p = tracker.update(touch: (75, 50), radius: 50)
         #expect(abs(p.x - 0.5) < 1e-9 && abs(p.y) < 1e-9)
-        let up = tracker.update(touch: (75, 25), center: (50, 50), radius: 50)
+        let up = tracker.update(touch: (75, 25), radius: 50)
         #expect(up.y > 0, "screen up is positive y")
-        let far = tracker.update(touch: (400, 25), center: (50, 50), radius: 50)
-        #expect(hypot(far.x, far.y) <= 1 + 1e-9)
+        let far = tracker.update(touch: (400, 25), radius: 50)
+        #expect(abs(hypot(far.x, far.y) - 1) < 1e-9)
+        // Pinned at the rim, moving back inward responds at once.
+        let back = tracker.update(touch: (390, 25), radius: 50)
+        #expect(hypot(back.x, back.y) < 1)
     }
 
-    @Test func wheelGoesFineOutsideTheWheel() {
-        // A drag that starts near the bottom edge of a 100 pt-radius wheel.
-        var tracker = FineAdjust.WheelTracker(start: (0, 0), touch: (100, 190))
-        _ = tracker.update(touch: (100, 225), center: (100, 100), radius: 100)  // 25 pt outside: still coarse
-        #expect(tracker.precision == .coarse)
-        let before = tracker.update(touch: (100, 235), center: (100, 100), radius: 100)  // 35 pt outside
+    @Test func wheelSlowDragsAreFiner() {
+        // The same 20 pt of movement, fast (in 10 ms steps) and slow (in 1 s steps).
+        var fast = FineAdjust.WheelTracker(start: (0, 0), touch: (0, 0), time: 0)
+        var slow = FineAdjust.WheelTracker(start: (0, 0), touch: (0, 0), time: 0)
+        for step in 1...4 {
+            _ = fast.update(touch: (Double(step) * 5, 0), time: Double(step) * 0.01, radius: 100)
+            _ = slow.update(touch: (Double(step) * 5, 0), time: Double(step), radius: 100)
+        }
+        #expect(abs(fast.point.x - 0.2) < 1e-6, "fast drags move one-to-one")
+        #expect(abs(slow.point.x - 0.2 * FineAdjust.WheelTracker.slowGain) < 1e-6)
+    }
+
+    @Test func wheelGainIsMonotonic() {
+        let gains = stride(from: 0.0, through: 600, by: 20).map(FineAdjust.WheelTracker.gain(forSpeed:))
+        #expect(gains.first == FineAdjust.WheelTracker.slowGain)
+        #expect(gains.last == 1)
+        #expect(zip(gains, gains.dropFirst()).allSatisfy { $0 <= $1 })
+    }
+
+    @Test func wheelModifierForcesFine() {
+        var tracker = FineAdjust.WheelTracker(start: (0.5, 0), touch: (0, 0))
+        let p = tracker.update(touch: (0, -100), radius: 100, forcedPrecision: .fine)
         #expect(tracker.precision == .fine)
-        let after = tracker.update(touch: (200, 235), center: (100, 100), radius: 100)
-        #expect(abs((after.x - before.x) - 0.1) < 1e-9)
-        #expect(abs(after.y - before.y) < 1e-9)
+        #expect(abs(p.x - 0.5) < 1e-9 && abs(p.y - 0.1) < 1e-9)
+    }
+}
+
+@Suite struct WheelPolarTests {
+    @Test func roundTripsPoints() {
+        for (x, y) in [(0.3, 0.0), (0.0, 0.5), (-0.2, -0.2), (0.7, -0.1)] {
+            let polar = WheelPolar(x: x, y: y)
+            #expect(abs(polar.point.x - x) < 1e-9 && abs(polar.point.y - y) < 1e-9)
+        }
+        let down = WheelPolar(x: 0, y: -0.4)
+        #expect(abs(down.hue - 270) < 1e-9 && abs(down.strength - 0.4) < 1e-9)
+    }
+
+    @Test func matchesTheRendersPolarReading() {
+        let polar = WheelPolar(x: -0.3, y: 0.2)
+        let render = ColorMath.wheelPolar(x: -0.3, y: 0.2)
+        #expect(abs(polar.hue - render.hue) < 1e-9 && abs(polar.strength - render.strength) < 1e-9)
+    }
+
+    @Test func neutralKeepsTheFallbackHue() {
+        let neutral = WheelPolar(x: 0, y: 0, fallbackHue: 210)
+        #expect(neutral.isNeutral && neutral.hue == 210)
+        #expect(neutral.paramValue == nil)
+        let raised = neutral.with(strength: 0.25)
+        #expect(abs(raised.hue - 210) < 1e-9)
+        #expect(raised.paramValue != nil)
+    }
+
+    @Test func hueEditsKeepStrengthAndWrap() {
+        let polar = WheelPolar(x: 0.4, y: 0).with(hue: 90)
+        #expect(abs(polar.point.x) < 1e-9 && abs(polar.point.y - 0.4) < 1e-9)
+        #expect(WheelPolar(hue: -30, strength: 1).hue == 330)
+        #expect(WheelPolar(hue: 360, strength: 1).hue == 0)
+        #expect(WheelPolar(hue: 10, strength: 1.5).strength == 1)
     }
 }

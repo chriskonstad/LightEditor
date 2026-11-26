@@ -111,16 +111,7 @@ struct GradePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             PanelHeader(title: "Color grading", model: model, group: .grade)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(ToneRange.allCases) { range in
-                    ColorWheel(model: model, range: range, diameter: 118)
-                }
-            }
-            Text("Drag a wheel's puck; pull your finger outside the wheel for fine control.")
-                .font(.caption2).foregroundStyle(Theme.textSecondary)
-            ForEach(ToneRange.allCases) { range in
-                ParamSlider(model: model, key: .gradeLuminance(range), label: "\(range.displayName) luminance")
-            }
+            GradeWheelsSection(model: model)
             ParamSlider(model: model, key: .gradeBlending)
             ParamSlider(model: model, key: .gradeBalance)
 

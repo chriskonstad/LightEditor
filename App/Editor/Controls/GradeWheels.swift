@@ -19,6 +19,7 @@ struct GradeWheelsSection: View {
     /// same whatever its hue, but its Hue slider shouldn't snap back to red.
     @State private var hueMemory: [ToneRange: Double] = [:]
     @State private var width: CGFloat = 0
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
@@ -58,8 +59,10 @@ struct GradeWheelsSection: View {
     // MARK: One wheel open
 
     /// Beside the sliders where the panel is short (iPhone) or wide (iPad portrait);
-    /// above them in a tall, narrow inspector (iPad landscape, Mac).
+    /// above them in a tall, narrow inspector (iPad landscape, Mac), and at
+    /// accessibility text sizes, where the slider labels need the full width.
     private var sideBySide: Bool {
+        if dynamicTypeSize.isAccessibilitySize { return false }
         #if os(iOS)
         if sizeClass == .compact { return true }
         #endif
@@ -70,23 +73,17 @@ struct GradeWheelsSection: View {
         let side = sideBySide
         let diameter = side ? min(max(width * 0.46, 140), 300) : min(max(width - 24, 140), 300)
         let layout = side
-            ? AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+            ? AnyLayout(HStackLayout(alignment: .top, spacing: 16))
             : AnyLayout(VStackLayout(alignment: .center, spacing: 12))
+        let selection = Binding(get: { range }, set: { open = $0 })
         return VStack(alignment: .leading, spacing: 8) {
-            Button {
-                show(nil)
-            } label: {
-                Label("All wheels", systemImage: "chevron.backward")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(minHeight: Theme.minTouch)
-                    .contentShape(Rectangle())
+            // One row: back, then the wheel chips. Narrower widths and larger text
+            // drop the back button's title, then turn the chips into a menu.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { backButton(titled: true); WheelRangeChips(model: model, selection: selection) }
+                HStack(spacing: 0) { backButton(titled: false); WheelRangeChips(model: model, selection: selection) }
+                HStack(spacing: 0) { backButton(titled: false); WheelRangeMenu(selection: selection); Spacer(minLength: 0) }
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Theme.accent)
-            .keyboardShortcut(.cancelAction)
-            .accessibilityIdentifier("wheel.overview")
-
-            WheelRangePicker(model: model, selection: Binding(get: { range }, set: { open = $0 }))
 
             layout {
                 ColorWheel(model: model, range: range, diameter: diameter)
@@ -101,28 +98,43 @@ struct GradeWheelsSection: View {
         .transition(.opacity)
     }
 
+    private func backButton(titled: Bool) -> some View {
+        Button {
+            show(nil)
+        } label: {
+            Group {
+                if titled {
+                    Label("All wheels", systemImage: "chevron.backward")
+                } else {
+                    Image(systemName: "chevron.backward")
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .fixedSize()
+            .frame(minWidth: Theme.minTouch, minHeight: Theme.minTouch, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Theme.accent)
+        .keyboardShortcut(.cancelAction)
+        .accessibilityLabel("All wheels")
+        .accessibilityIdentifier("wheel.overview")
+    }
+
     private func show(_ range: ToneRange?) {
         withAnimation(.snappy(duration: 0.25)) { open = range }
     }
 }
 
-/// Chips to switch the open wheel; a menu when they don't fit (large text sizes).
-private struct WheelRangePicker: View {
+/// Chips to switch the open wheel. An edited wheel's chip has a dot in its color.
+private struct WheelRangeChips: View {
     let model: EditorModel
     @Binding var selection: ToneRange
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 4) {
-                ForEach(ToneRange.allCases) { range in chip(range) }
-            }
-            Picker("Wheel", selection: $selection) {
-                ForEach(ToneRange.allCases) { range in Text(range.displayName).tag(range) }
-            }
-            .pickerStyle(.menu)
-            .frame(minHeight: Theme.minTouch)
+        HStack(spacing: 2) {
+            ForEach(ToneRange.allCases) { range in chip(range) }
         }
-        .accessibilityIdentifier("wheel.picker")
     }
 
     private func chip(_ range: ToneRange) -> some View {
@@ -131,26 +143,40 @@ private struct WheelRangePicker: View {
         return Button {
             withAnimation(.snappy(duration: 0.2)) { selection = range }
         } label: {
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(point.map { WheelPaint.color(x: $0.x, y: $0.y) } ?? Color.white.opacity(0.25))
-                    .frame(width: 8, height: 8)
-                Text(range.displayName)
-                    .font(.subheadline.weight(selected ? .semibold : .regular))
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(selected ? Theme.panelRaised : .clear, in: Capsule())
-            .overlay(Capsule().strokeBorder(selected ? Theme.divider : .clear, lineWidth: 1))
-            .frame(minHeight: Theme.minTouch)
-            .contentShape(Rectangle())
+            Text(range.displayName)
+                .font(.footnote.weight(selected ? .semibold : .regular))
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(selected ? Theme.panelRaised : .clear, in: Capsule())
+                .overlay(Capsule().strokeBorder(selected ? Theme.divider : .clear, lineWidth: 1))
+                .overlay(alignment: .bottom) {
+                    if let point {
+                        Circle().fill(WheelPaint.color(x: point.x, y: point.y)).frame(width: 5, height: 5).offset(y: 6)
+                    }
+                }
+                .frame(minHeight: Theme.minTouch)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("wheel.chip.\(range.rawValue)")
+    }
+}
+
+/// The chips as a menu, for when they don't fit (large text sizes).
+private struct WheelRangeMenu: View {
+    @Binding var selection: ToneRange
+
+    var body: some View {
+        Picker("Wheel", selection: $selection) {
+            ForEach(ToneRange.allCases) { range in Text(range.displayName).tag(range) }
+        }
+        .pickerStyle(.menu)
+        .frame(minHeight: Theme.minTouch)
+        .accessibilityIdentifier("wheel.picker")
     }
 }
 

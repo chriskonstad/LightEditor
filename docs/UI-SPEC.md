@@ -31,7 +31,7 @@ Every editing slider and color wheel behaves the same way:
 
 - **Drag** for coarse changes. Movement is relative to where the finger lands, so touching a control never makes the value jump.
 - **Fine adjustment (Nitro-style):** while dragging a slider, pull the finger above or below the track. The thumb turns blue with a "Fine" label (one tenth of the movement); pull further for "Finer" (one fortieth, purple). Coming back to the track resumes coarse movement from the current value. On the Mac, hold Option.
-- **Color wheels (darktable-style):** drag anywhere on the wheel to move the puck relatively; pull the finger outside the wheel for fine and finer control, with the same colors and labels.
+- **Color wheels:** drag anywhere on a wheel to move the puck relatively. A quick drag moves it with the finger; a slow, deliberate one moves it down to a quarter as far, so precision needs no special gesture. On the Mac, hold Option for a tenth. For exact values, open the wheel (see Grade) and use its sliders.
 - **Double-tap** a slider or wheel to reset it to its default.
 - **Press and hold** a slider or wheel to see the photo without that setting. A "Without exposure" badge shows until release.
 - Bipolar sliders fill from their default position (a small tick), not from the left end.
@@ -67,7 +67,12 @@ From top to bottom:
      - **Color:** a row of 8 hue swatches (Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta). The selected swatch drives three sliders: hue, saturation and luminance, tinted with that hue.
      - **Press and hold** a swatch, or any HSL slider, to see which parts of the photo that band affects: its colors stay and the rest turns dim gray, with a "Showing blues" badge.
      - **Hue, Saturation or Luminance:** Lightroom's layout, with all 8 colors for that one property.
-   - **Grade:** four color wheels in a 2×2 grid (Shadows, Midtones, Highlights, Global), each with a hue and strength readout. Then their luminance sliders, Blending and Balance; a Film LUT picker and Amount; and Effects (Vignette, Midpoint, Grain, Grain size).
+   - **Grade:** four color wheels (Shadows, Midtones, Highlights, Global): a 2×2 grid, or one row of four when the panel is at least 560 pt wide. Under each wheel, its name with a chevron and a readout ("211° · 29 · L −8", or "Neutral"). Drag a wheel for a quick change. Tap it, or its name, to **open** it:
+     - A row with a back chevron ("All wheels" where it fits; Escape on a keyboard) and chips for the four wheels, so you can switch without going back; an edited wheel's chip has a dot in its color. When the chips don't fit (large text), they become a menu.
+     - The wheel, large, with a crosshair and a dashed ring at the current strength. Beside it (iPhone, and panels at least 560 pt wide) or above it (the iPad landscape and Mac inspector, and accessibility text sizes): **Hue** (0–359°, on a rainbow track), **Saturation** (0–100, gray to the hue) and **Luminance**. Hue and Saturation edit the same point as the wheel and fine-adjust like every slider. Raising Saturation from zero uses the hue last shown, so a neutral wheel keeps the hue you chose. Double-tap Hue or Saturation to reset the wheel; press and hold to see the photo without it.
+     - The open wheel fits the iPhone panel without scrolling.
+     
+     Then Blending and Balance; a Film LUT picker and Amount; and Effects (Vignette, Midpoint, Grain, Grain size).
    - **Detail:** an info note ("Detail runs in the RAW 9 decoder…"), then Noise reduction, Color noise, Sharpness and Detail, Moiré reduction and the Lens corrections switch (the camera's lens profile). Below, **Manual Lens Corrections**: Distortion (positive fixes barrel, negative pincushion; the frame stays filled), Red/cyan fringe, Blue/yellow fringe (lateral chromatic aberration) and Lens vignetting, with its Midpoint once it's set. These grade without a re-decode; distortion and fringing show outside Masks and Retouch, like perspective.
    - **Masks:**
      - With no masks yet, a grid to create one: Subject, Sky, People, Background, Object (tap to select), Brush, Linear gradient, Radial gradient, Luminance range, Color range. AI masks are amber.

@@ -15,6 +15,8 @@ struct FineSlider: View {
     /// Where the fill starts, usually the default value's position.
     var origin: Double = 0
     var tint: Color = Theme.accent
+    /// Paints the track with these colors (a hue rainbow, say) instead of a fill.
+    var trackGradient: Gradient?
     let onChange: (Double) -> Void
     var onEditingChanged: (Bool) -> Void = { _ in }
     var onReset: () -> Void = {}
@@ -34,15 +36,22 @@ struct FineSlider: View {
             let x = CGFloat(position) * usable + thumb / 2
             let originX = CGFloat(origin) * usable + thumb / 2
             ZStack(alignment: .topLeading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.16))
-                    .frame(width: usable, height: 4)
-                    .position(x: proxy.size.width / 2, y: midY)
-                Capsule()
-                    .fill(tint)
-                    .frame(width: max(abs(x - originX), 0), height: 4)
-                    .position(x: (x + originX) / 2, y: midY)
-                if origin > 0.001 && origin < 0.999 {
+                if let trackGradient {
+                    Capsule()
+                        .fill(LinearGradient(gradient: trackGradient, startPoint: .leading, endPoint: .trailing))
+                        .frame(width: usable, height: 6)
+                        .position(x: proxy.size.width / 2, y: midY)
+                } else {
+                    Capsule()
+                        .fill(Color.white.opacity(0.16))
+                        .frame(width: usable, height: 4)
+                        .position(x: proxy.size.width / 2, y: midY)
+                    Capsule()
+                        .fill(tint)
+                        .frame(width: max(abs(x - originX), 0), height: 4)
+                        .position(x: (x + originX) / 2, y: midY)
+                }
+                if trackGradient == nil && origin > 0.001 && origin < 0.999 {
                     Capsule().fill(Color.white.opacity(0.5)).frame(width: 2, height: 10).position(x: originX, y: midY)
                 }
                 Circle()

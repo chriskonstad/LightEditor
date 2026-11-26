@@ -16,6 +16,8 @@ struct ControlTouchHandlers {
     /// Press and hold without moving: true on hold, false on release.
     var hold: (Bool) -> Void
     var doubleTap: () -> Void
+    /// A single tap, once it's clear it isn't a double-tap. Color wheels use it to open.
+    var tap: (() -> Void)? = nil
 }
 
 enum ControlTouchShape {
@@ -80,7 +82,15 @@ private struct TouchLayer: UIViewRepresentable {
             let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
             doubleTap.numberOfTapsRequired = 2
             addGestureRecognizer(doubleTap)
+
+            let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+            tap.require(toFail: doubleTap)
+            tap.delegate = self
+            addGestureRecognizer(tap)
+            self.tap = tap
         }
+
+        private weak var tap: UITapGestureRecognizer?
 
         required init?(coder: NSCoder) { fatalError("not used") }
 
@@ -112,7 +122,13 @@ private struct TouchLayer: UIViewRepresentable {
             handlers?.doubleTap()
         }
 
+        @objc private func handleTap() {
+            handlers?.tap?()
+        }
+
         override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            // Without a tap handler, don't hold up taps meant for views underneath.
+            if recognizer === tap { return handlers?.tap != nil }
             guard recognizer is UIPanGestureRecognizer, shape == .horizontalSlider else { return true }
             // A touch that stops a scrolling panel shouldn't change a value.
             if let scrollView = enclosingScrollView, scrollView.isDecelerating || scrollView.isDragging { return false }
@@ -212,7 +228,10 @@ private struct MacControlTouches: ViewModifier {
                         holding = false
                     }
             )
-            .simultaneousGesture(TapGesture(count: 2).onEnded { handlers.doubleTap() })
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded { handlers.doubleTap() }
+                    .exclusively(before: TapGesture(count: 1).onEnded { handlers.tap?() })
+            )
     }
 }
 #endif

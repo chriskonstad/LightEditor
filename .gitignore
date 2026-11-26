@@ -16,3 +16,5 @@ __pycache__/
 *.pyc
 .env
 *.p8
+# Models/ as a symlink to another checkout's models (`just link-models`).
+/Models

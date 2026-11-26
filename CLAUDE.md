@@ -44,6 +44,7 @@ Packages/EditorCore/      Swift package with all logic, testable via `swift test
   Presets/                Native JSON presets, .cube parser, XMP mapping
   Library/                PhotoKit adapters behind protocols
   Jobs/                   JobCenter (the visible job tray model)
+UITests/                  XCUITest screen audits (scripts/test-ui.sh)
 Spikes/                   Throwaway spike apps; never shipped
 docs/                     Design, milestones, UI spec, spike reports
 project.yml               XcodeGen spec; never hand-edit the .xcodeproj
@@ -61,6 +62,8 @@ xcodebuild -scheme LightEditor -destination 'generic/platform=iOS' build
 ```
 
 Performance numbers only count from real devices. The Simulator is fine for UI and logic, never for RAW 9 or render timing.
+
+`docs/TESTING.md` says which test to run for which change. In short: `scripts/test-fast.sh` is the inner loop (about 5 s, prints only failures); `scripts/test-ui.sh` audits every main screen in fresh simulators for clipped text, small touch targets and off-screen layout, and saves screenshots to `build/ui-screenshots/` to look at after a UI change; `scripts/test-all.sh` runs everything before a merge. Render and recipe goldens fail on purpose when output or the stored format changes; re-record them only when the change is intended.
 
 ## Testing
 

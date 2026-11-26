@@ -1,16 +1,21 @@
-#if os(macOS) && DEBUG
+#if DEBUG
+#if os(macOS)
 import AppKit
 import MetalKit
+#endif
 import EditorCore
 import SwiftUI
 
-/// Development-only hooks for driving the Mac app without screen-recording access,
+/// Development-only hooks for driving the app (the photo, tab and demo hooks also
+/// work in the iOS simulator) without screen-recording access,
 /// e.g. for App Store screenshots:
 /// - `-OpenFirstAsset YES` opens the first photo, or `-OpenAsset <file name>` that one;
 /// - then `-AutoTone YES`, `-ApplyPreset <name>` and `-EditorTab <presets|light|color|grade|detail|masks>`;
 /// - `-HideSidebar YES` collapses the sidebar;
 /// - `-SnapshotTo <dir>` writes a PNG of the window every two seconds, with the photo
-///   painted in (window snapshots leave Metal content blank).
+///   painted in (window snapshots leave Metal content blank);
+/// - `-DemoMaskOverlay YES` walks through the mask overlay's auto-hide (add a radial
+///   mask, raise its exposure, then move it), four seconds per step, for snapshots.
 enum DebugAutomation {
     @MainActor
     static func start(app: AppModel) {
@@ -29,8 +34,10 @@ enum DebugAutomation {
                 }
                 if defaults.bool(forKey: "AutoTone") { editor.autoTone() }
                 if let tab = defaults.string(forKey: "EditorTab").flatMap(EditorModel.Tab.init(rawValue:)) { editor.tab = tab }
+                if defaults.bool(forKey: "DemoMaskOverlay") { await demoMaskOverlay(editor) }
             }
         }
+        #if os(macOS)
         if defaults.bool(forKey: "HideSidebar") {
             Task {
                 // The split view shows up a moment after launch, and again whenever the
@@ -76,8 +83,29 @@ enum DebugAutomation {
                 }
             }
         }
+        #endif
     }
 
+    /// The same model calls the Masks panel and canvas make.
+    @MainActor
+    private static func demoMaskOverlay(_ editor: EditorModel) async {
+        let step = Duration.seconds(4)
+        editor.addMask(.radial(center: NormalizedPoint(x: 0.5, y: 0.6), radiusX: 0.3, radiusY: 0.25, angle: 0, feather: 0.5))
+        print("DEMO step 1: added mask, overlay \(editor.showMaskOverlay)")
+        try? await Task.sleep(for: step)
+        editor.setMaskValueLive(.exposure, 1.5)
+        editor.commitMaskValue(.exposure)
+        print("DEMO step 2: exposure +1.5, overlay \(editor.showMaskOverlay)")
+        try? await Task.sleep(for: step)
+        editor.editSelectedShape("Move") { $0 = .radial(center: NormalizedPoint(x: 0.4, y: 0.6), radiusX: 0.3, radiusY: 0.25, angle: 0, feather: 0.5) }
+        print("DEMO step 3: moved the mask, overlay \(editor.showMaskOverlay)")
+        try? await Task.sleep(for: step)
+        editor.setMaskValueLive(.exposure, 1.0)
+        editor.commitMaskValue(.exposure)
+        print("DEMO step 4: exposure +1.0, overlay \(editor.showMaskOverlay)")
+    }
+
+    #if os(macOS)
     /// Paints the renderer's last frame where its Metal view sits, since
     /// `cacheDisplay` leaves Metal content blank: so the snapshot shows the
     /// window as it looks, e.g. for App Store screenshots.
@@ -100,5 +128,6 @@ enum DebugAutomation {
         context.cgContext.draw(cg, in: target)
         NSGraphicsContext.restoreGraphicsState()
     }
+    #endif
 }
 #endif

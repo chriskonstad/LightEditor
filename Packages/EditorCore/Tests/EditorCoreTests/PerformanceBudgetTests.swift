@@ -7,7 +7,7 @@ import Testing
 ///
 /// These are not device numbers (CLAUDE.md: only real devices count, and
 /// `PerformanceTests` holds the XCTest baselines for those). Each budget is several
-/// times what an M1 Mac measures, so they only fail on a real regression, such as an
+/// times what an M4 Pro measures (with room for an M1 and a busy machine), so they only fail on a real regression, such as an
 /// accidental re-decode, a CPU fallback, or a slow graph build on the slider path,
 /// and stay quiet when other work is running on the machine. They take a few
 /// seconds, so they run only with EDITORCORE_PERF_BUDGETS=1 (`scripts/test-all.sh`).
@@ -102,7 +102,7 @@ struct PerformanceBudgetTests {
             let decoder = RawDecoder(cache: DecodeCache(directory: nil))
             _ = try await decoder.decode(PhotoSource(url: url), rawStage: RawStageParams(), longEdge: 2560)
         }
-        Self.check("RAW preview decode (cold)", time, budget: .seconds(8))
+        Self.check("RAW preview decode (cold)", time, budget: .seconds(15))
     }
 
     /// A full-resolution HEIC export from a cold decoder.
@@ -113,6 +113,6 @@ struct PerformanceBudgetTests {
             let decoder = RawDecoder(cache: DecodeCache(directory: nil))
             _ = try await Exporter.render(source: PhotoSource(url: url), recipe: recipe, luts: nil, options: ExportOptions(format: .heic), decoder: decoder)
         }
-        Self.check("full-size HEIC export (cold)", time, budget: .seconds(20))
+        Self.check("full-size HEIC export (cold)", time, budget: .seconds(40))
     }
 }

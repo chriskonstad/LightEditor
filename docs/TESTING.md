@@ -9,7 +9,7 @@ How LightEditor is tested, which command to run for which change, and how to rea
 | `scripts/test-fast.sh` | EditorCore unit tests, goldens and property tests. Prints only failures. | ~5 s warm, 1–2 min cold |
 | `scripts/test-fast.sh --filter <regex>` | One suite or test, e.g. `--filter RenderGolden` | seconds |
 | `scripts/test.sh --raw` | Unit tests plus the real-RAW tests on `Fixtures/`: decode, Vision masks, camera looks, RAW goldens, XCTest performance runs | ~1.5 min |
-| `scripts/test-ui.sh` | UI audits and screenshots on iPhone SE and iPad mini simulators | ~8 min |
+| `scripts/test-ui.sh` | UI audits and screenshots on iPhone SE and iPad mini simulators | ~8–12 min |
 | `scripts/test-all.sh` | All of the above with the AI-model tests, performance budgets and the app builds, with a summary | ~15 min |
 
 **The inner loop is `scripts/test-fast.sh`.** Run `scripts/test-all.sh` before merging or shipping a feature.
@@ -59,7 +59,7 @@ then review the JSON diff and commit it with the change. When you add a grading 
 Two layers, because the Simulator and the Mac aren't the devices that matter (CLAUDE.md):
 
 - **`PerformanceTests`** (XCTest `measure`) times decode, grade and export. Their baselines are meant to be recorded per device in Xcode; on a Mac via `swift test` they only print numbers. Device baselines are still to record (M1.11).
-- **`PerformanceBudgetTests`** are coarse regression guards for local runs, enabled with `EDITORCORE_PERF_BUDGETS=1` (`scripts/test-all.sh` sets it). Each prints a `BUDGET` line with the median of several runs and fails over a budget set at several times what an M4 Pro measures, with room for an M1: graph build on the slider path (0.2 ms, budget 5 ms), a 2560 px frame with a mask (7 ms, budget 60 ms), the recipe codec, and with RAW fixtures a cold preview decode (1.4 s, budget 8 s) and a full-size HEIC export (7.3 s, budget 20 s). They catch an accidental re-decode, a CPU fallback or a slow graph build, not a 10% slip; for that, measure on a device.
+- **`PerformanceBudgetTests`** are coarse regression guards for local runs, enabled with `EDITORCORE_PERF_BUDGETS=1` (`scripts/test-all.sh` sets it). Each prints a `BUDGET` line with the median of several runs and fails over a budget set at several times what an M4 Pro measures, with room for an M1: graph build on the slider path (0.2 ms, budget 5 ms), a 2560 px frame with a mask (7 ms, budget 60 ms), the recipe codec, and with RAW fixtures a cold preview decode (1.4 s idle, 6.5 s with the machine busy; budget 15 s) and a full-size HEIC export (7.3 s idle, 17 s busy; budget 40 s). They catch an accidental re-decode, a CPU fallback or a slow graph build, not a 10% slip; for that, measure on a device.
 
 ## UI tests
 

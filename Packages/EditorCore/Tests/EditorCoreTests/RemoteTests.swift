@@ -40,7 +40,15 @@ import Testing
 }
 
 /// Two links over loopback TCP, as two devices would use over peer-to-peer Wi-Fi.
-@Suite(.serialized) struct PeerLinkTests {
+/// Every suite that opens peer links, sets `RawDecoder.remote` (a process-wide
+/// global) or depends on timing runs one at a time, never alongside another. Two
+/// suites swapping the global at once routed one test's save to the other's dropped
+/// link; it then waited forever inside `RenderGate.fullSize`, and every full-size
+/// render in other suites queued behind it, hanging the whole run.
+@Suite(.serialized) enum RemoteSuites {}
+
+extension RemoteSuites {
+@Suite struct PeerLinkTests {
     final class Accepted: @unchecked Sendable {
         let link = Mutex<PeerLink?>(nil)
         let error = Mutex<(any Error)?>(nil)
@@ -117,9 +125,11 @@ import Testing
         client.close()
     }
 }
+}
 
 /// The iPad's library and decoder backed by a phone's, over a loopback link.
-@Suite(.serialized) struct RemoteLibraryTests {
+extension RemoteSuites {
+@Suite struct RemoteLibraryTests {
     @Test func editsPhotosOnTheOtherDevice() async throws {
         let (folder, _) = try makeFolderLibrary(count: 3)
         let (hostLink, clientLink) = try await PeerLinkTests().pair()
@@ -156,8 +166,10 @@ import Testing
         guard case .ours = await remote.storedEdit(for: asset) else { Issue.record("not visible remotely"); return }
     }
 }
+}
 
-@Suite(.serialized) struct PeerDiscoveryTests {
+extension RemoteSuites {
+@Suite struct PeerDiscoveryTests {
     /// Advertising and browsing find each other over Bonjour.
     @Test func browserFindsTheListener() async throws {
         let name = "Discovery \(UUID().uuidString.prefix(6))"
@@ -174,10 +186,12 @@ import Testing
         #expect(found.withLock { $0.contains { $0.name == name } })
     }
 }
+}
 
 
 /// The phone locks mid-edit: the iPad keeps working and nothing is lost or done twice.
-@Suite(.serialized) struct RemoteReconnectTests {
+extension RemoteSuites {
+@Suite struct RemoteReconnectTests {
     final class Counter: @unchecked Sendable {
         let saves = Mutex(0)
     }
@@ -270,8 +284,10 @@ import Testing
         #expect(RemoteOutbox(host: Data(repeating: 4, count: 32), directory: directory).isEmpty, "per device")
     }
 }
+}
 
-@Suite(.serialized) struct PeerHeartbeatTests {
+extension RemoteSuites {
+@Suite struct PeerHeartbeatTests {
     /// A frozen phone (its app suspended, socket still open) is noticed by silence.
     @Test func aFrozenPeerCountsAsLost() async throws {
         let (interval, limit) = (PeerLink.pingInterval, PeerLink.silenceLimit)
@@ -288,4 +304,5 @@ import Testing
         #expect(client.isClosed)
         #expect(reason.withLock { $0 } == .lost, "lost, so the iPad reconnects rather than giving up")
     }
+}
 }

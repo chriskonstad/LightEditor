@@ -93,6 +93,8 @@ scripts/test-ui.sh --record-baseline      # accept the current findings as known
 
 Only re-record the baseline when a finding is accepted on purpose (say so in the commit), never to make a regression go away. The script creates its own simulators (named "LightEditor UITest …", on the newest iOS runtime that supports each device) and deletes them afterwards unless `--keep`, so it never disturbs a simulator you're using. A failed run doesn't collect simulator diagnostics, which took ten minutes.
 
+`EditorBehaviorTests` checks behavior only the running app shows, on every device `scripts/test-ui.sh` tests: so far, that every character typed into the watermark field lands and survives Return (`--only EditorBehaviorTests/<method>` runs one). XCUITest drops keystrokes typed before the keyboard has appeared, so wait for `app.keyboards` first.
+
 `FeatureTourTests` is a demo, not an audit: `scripts/ui-tour.sh` (`just ui-tour`) runs it in a throwaway simulator and records `build/ui-tour/<device>/tour.mp4` plus a screenshot per step: canvas backgrounds with a strong vignette, the color wheels opened with their sliders, the mask overlay hiding on adjust, and the Finish tab (border, the color picker, a typed watermark, a 4:5 canvas). `testLogoWatermark` imports an SVG logo through `-WatermarkLogo` (the same import the Finish tab runs, without the file picker) to check SVG conversion on iOS. Run it to look at a UI change; `scripts/test-ui.sh` skips it. It brings controls on screen by tapping their labels, since a scroll drag can grab a control (one moved a tone-curve point).
 
 Both scripts check `xcodebuild`'s own exit status before testing; a failed build used to fall through to testing the previous build.

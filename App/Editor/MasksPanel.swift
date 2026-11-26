@@ -118,7 +118,8 @@ struct MaskRow: View {
                 model.setMaskEnabled(layer.id, !layer.isEnabled)
             } label: {
                 Image(systemName: layer.isEnabled ? "eye" : "eye.slash")
-                    .frame(width: Theme.minTouch, height: 32)
+                    .frame(width: Theme.minTouch, height: Theme.minTouch)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(layer.isEnabled ? "Hide \(layer.name)" : "Show \(layer.name)")
@@ -126,7 +127,7 @@ struct MaskRow: View {
                 Button("Duplicate", systemImage: "plus.square.on.square") { model.duplicateMask(layer.id) }
                 Button("Delete", systemImage: "trash", role: .destructive) { model.deleteMask(layer.id) }
             } label: {
-                Image(systemName: "ellipsis").frame(width: 32, height: 32)
+                Image(systemName: "ellipsis").frame(width: Theme.minTouch, height: Theme.minTouch).contentShape(Rectangle())
             }
             .accessibilityLabel("\(layer.name) options")
         }

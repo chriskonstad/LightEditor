@@ -100,7 +100,7 @@ struct FinishPanel: View {
             if isLogo {
                 logoRow(mark.logo)
             } else {
-                TextField("Type your watermark, e.g. © Your Name", text: Binding(
+                TextField("Your watermark, e.g. © Your Name", text: Binding(
                     get: { mark.text },
                     set: { text in
                         var updated = mark
@@ -118,22 +118,18 @@ struct FinishPanel: View {
                 .accessibilityIdentifier("watermark.text")
             }
 
-            HStack(alignment: .top, spacing: 16) {
-                positionGrid(mark.position)
+            // Grid beside its name and the text colors; in a narrow inspector (iPad
+            // landscape, Mac) the colors go below, so the chips never wrap.
+            let colors = watermarkColors(mark, isLogo: isLogo)
+            let name = Text(mark.position.displayName).font(.subheadline).foregroundStyle(Theme.textPrimary)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 16) {
+                    positionGrid(mark.position)
+                    VStack(alignment: .leading, spacing: 8) { name; colors }
+                }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(mark.position.displayName).font(.subheadline).foregroundStyle(Theme.textPrimary)
-                    // A logo keeps its own colors.
-                    if !isLogo {
-                        HStack(spacing: 8) {
-                            chip("White", selected: mark.color == .white, id: "watermark.white") { update { $0.color = .white } }
-                            chip("Black", selected: mark.color == .black, id: "watermark.black") { update { $0.color = .black } }
-                            colorPicker(mark.color, isCustom: mark.color != .white && mark.color != .black, id: "watermark.custom") { color in
-                                var updated = mark
-                                updated.color = color
-                                model.setLive(.watermark, .watermark(updated))
-                            } onEnd: { model.commit(.watermark) }
-                        }
-                    }
+                    HStack(alignment: .top, spacing: 16) { positionGrid(mark.position); name }
+                    colors
                 }
             }
             .padding(.vertical, 8)
@@ -141,6 +137,21 @@ struct FinishPanel: View {
             ParamSlider(model: model, key: .watermarkSize, label: isLogo ? "Height" : "Size")
             ParamSlider(model: model, key: .watermarkOpacity, label: "Opacity")
             ParamSlider(model: model, key: .watermarkMargin, label: "Margin")
+        }
+    }
+
+    /// White, Black and a custom color for text; nothing for a logo, which keeps its colors.
+    @ViewBuilder private func watermarkColors(_ mark: Watermark, isLogo: Bool) -> some View {
+        if !isLogo {
+            HStack(spacing: 8) {
+                chip("White", selected: mark.color == .white, id: "watermark.white") { update { $0.color = .white } }
+                chip("Black", selected: mark.color == .black, id: "watermark.black") { update { $0.color = .black } }
+                colorPicker(mark.color, isCustom: mark.color != .white && mark.color != .black, id: "watermark.custom") { color in
+                    var updated = mark
+                    updated.color = color
+                    model.setLive(.watermark, .watermark(updated))
+                } onEnd: { model.commit(.watermark) }
+            }
         }
     }
 
@@ -248,6 +259,8 @@ struct FinishPanel: View {
             Text(title)
                 .font(.subheadline.weight(selected ? .semibold : .regular))
                 .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 12)
                 .frame(minWidth: Theme.minTouch, minHeight: 32)
                 .background(selected ? Theme.accent : Theme.panelRaised, in: Capsule())

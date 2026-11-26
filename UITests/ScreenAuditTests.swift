@@ -97,7 +97,27 @@ final class ScreenAuditTests: XCTestCase {
                 _ = tap(["wheel.overview"])
             }
             if tab == "Finish", tap(["toggle.watermark"]) {
-                // The watermark's settings appear once it's on.
+                // The watermark's settings appear once it's on. Its text field takes
+                // focus; type something and dismiss the keyboard before auditing.
+                let field = app.descendants(matching: .any)["watermark.text"].firstMatch
+                if field.waitForExistence(timeout: 2) {
+                    field.tap()
+                    // Typing before the keyboard has appeared drops keystrokes.
+                    _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
+                    field.typeText("Test watermark")
+                    // In the iPad landscape inspector XCUITest sometimes loses keys while it
+                    // scrolls the field into view; retype once. (Typing itself is checked
+                    // in both orientations by EditorBehaviorTests.)
+                    if field.value as? String != "Test watermark" {
+                        field.doubleTap()
+                        field.typeText(XCUIKeyboardKey.delete.rawValue + "Test watermark")
+                    }
+                    if field.value as? String != "Test watermark" {
+                        print("UIAudit: the walk couldn't type the watermark (got \(field.value ?? "nil"))")
+                    }
+                    field.typeText("\n")
+                    Thread.sleep(forTimeInterval: 0.8)
+                }
                 auditor.capture("tab-finish-watermark")
             }
             if scrollPanel() { auditor.capture("tab-\(tab.lowercased())-scrolled") }

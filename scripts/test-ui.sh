@@ -7,6 +7,7 @@
 #   scripts/test-ui.sh --all             ...plus iPhone 18 Pro Max and iPad Pro 13-inch
 #   scripts/test-ui.sh --devices "iPhone 17e,iPad Air 11-inch (M4)"
 #   scripts/test-ui.sh --only testScreensAtDefaultTextSize     one test method
+#   scripts/test-ui.sh --only EditorBehaviorTests/testTypingAWatermarkKeepsEveryCharacter
 #   scripts/test-ui.sh --keep            keep the simulators for a faster next run
 #   scripts/test-ui.sh --no-build        reuse the last build
 #   scripts/test-ui.sh --report-only     write the audit without failing on it
@@ -105,7 +106,10 @@ destinations=()
 for device in $devices; do destinations+=(-destination "id=${udids[$device]}"); done
 # FeatureTourTests is a demo for scripts/ui-tour.sh, not an audit.
 filter=(-skip-testing:LightEditorUITests/FeatureTourTests)
-[[ -n $only ]] && filter=(-only-testing:"LightEditorUITests/ScreenAuditTests/$only")
+# --only takes a ScreenAuditTests method, or Class/method for another class.
+if [[ -n $only ]]; then
+    [[ $only == */* ]] && filter=(-only-testing:"LightEditorUITests/$only") || filter=(-only-testing:"LightEditorUITests/ScreenAuditTests/$only")
+fi
 
 bundle=$results/$(date +%Y%m%d-%H%M%S).xcresult
 rm -rf build/ui-screenshots

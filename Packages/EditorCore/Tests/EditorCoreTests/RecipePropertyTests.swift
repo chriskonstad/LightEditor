@@ -63,6 +63,13 @@ struct RecipeGenerator {
                     rect: NormalizedRect(x: unit() * (1 - w), y: unit() * (1 - h), width: w, height: h),
                     angle: unit() * 20 - 10, aspect: coin() ? AspectRatio(3, 2) : nil
                 )), at: stamp())
+            case .color:
+                recipe.set(spec.key, .color(coin() ? .white : SRGBColor(red: 0.5, green: 0.25, blue: 0)), at: stamp())
+            case .aspect:
+                recipe.set(spec.key, .aspect(coin() ? AspectRatio(1, 1) : AspectRatio(4, 5)), at: stamp())
+            case .watermark:
+                let positions = WatermarkPosition.allCases
+                recipe.set(spec.key, .watermark(Watermark(text: "© Test \(rng.next() % 100)", position: positions[Int(rng.next() % UInt64(positions.count))])), at: stamp())
             case .mask, .retouch:
                 break
             }

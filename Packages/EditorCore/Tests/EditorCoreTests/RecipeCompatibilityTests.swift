@@ -68,6 +68,15 @@ import Testing
                 opacity: 0.75, engine: RemoveEngine.allCases[index % RemoveEngine.allCases.count], variation: index
             ), at: stamp())
         }
+        // The finishing stage (schema 2): border, canvas and watermark.
+        recipe.setScalar(.borderWidth, 4, at: stamp())
+        recipe.setScalar(.borderBottom, 8, at: stamp())
+        recipe.set(.borderColor, .color(SRGBColor(red: 1, green: 0.5, blue: 0.25)), at: stamp())
+        recipe.set(.borderCanvas, .aspect(AspectRatio(4, 5)), at: stamp())
+        recipe.set(.watermark, .watermark(Watermark(text: "© Golden", position: .bottomLeft, color: .black)), at: stamp())
+        recipe.setScalar(.watermarkSize, 3, at: stamp())
+        recipe.setScalar(.watermarkOpacity, 75, at: stamp())
+        recipe.setScalar(.watermarkMargin, 2, at: stamp())
         // A reset: no value, but a stamp, so a later merge can tell it from "never set".
         recipe.setScalar(.vibrance, 10, at: stamp())
         recipe.set(.vibrance, nil, at: stamp())

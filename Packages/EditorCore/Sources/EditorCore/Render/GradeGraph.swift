@@ -58,7 +58,11 @@ public struct GradeInputs: Sendable {
     public var defaults: PhotoDefaults
     public var luts: (any LUTProvider)?
     /// Off while the crop tool is open, so the whole frame stays visible.
+    /// Also turns off the finishing stage, which frames the cropped photo.
     public var applyGeometry: Bool
+    /// The border, canvas and watermark (`Finishing`). Off for the histogram, which
+    /// describes the photo, not its frame.
+    public var applyFinishing = true
     public var showClipping: Bool
     /// Computed AI masks for this photo.
     public var aiMasks: (any AIMaskProvider)?
@@ -127,6 +131,8 @@ public enum GradeGraph {
         image = vignette(image, recipe)
         image = grain(image, recipe)
         if inputs.showClipping { image = Kernels.compiled.clipping.apply(extent: image.extent, arguments: [image]) ?? image }
+        // Last, on the cropped photo: a white border isn't clipping.
+        if inputs.applyGeometry && inputs.applyFinishing { image = FinishingRenderer.apply(recipe, to: image) }
         return image
     }
 

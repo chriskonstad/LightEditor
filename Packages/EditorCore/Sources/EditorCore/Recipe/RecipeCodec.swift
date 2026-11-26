@@ -18,9 +18,18 @@ public enum RecipeCodecError: Error, Equatable, LocalizedError {
 /// version N and returns version N+1. Never edit a shipped step; add a new one.
 public enum RecipeCodec {
     /// Migration steps keyed by the version they upgrade *from*.
-    static let migrations: [Int: @Sendable ([String: Any]) throws -> [String: Any]] = [:]
+    static let migrations: [Int: @Sendable ([String: Any]) throws -> [String: Any]] = [
+        // v2 added the finishing keys (`finish.*`) and their value types; nothing
+        // in a v1 recipe changes meaning.
+        1: { $0 },
+    ]
 
+    /// Writes the oldest schema version that can read the recipe
+    /// (`Recipe.minimumSchemaVersion`), so only edits that use newer features are
+    /// refused by older app versions, with a clear "newer version" message.
     public static func encode(_ recipe: Recipe) throws -> Data {
+        var recipe = recipe
+        recipe.schemaVersion = recipe.minimumSchemaVersion
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(recipe)

@@ -5,13 +5,15 @@ import Foundation
 public enum PipelineStage: Sendable, Hashable {
     case rawDecode
     case grade
+    /// Border, canvas and watermark, on the cropped, graded photo (see `Finishing`).
+    case finishing
     /// Changes only how the saved image is encoded, not how it looks.
     case output
 }
 
 /// The groups offered in the paste sheet.
 public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
-    case whiteBalance, light, color, grade, filmLUT, effects, detail, crop, masks, retouch, photosCopy
+    case whiteBalance, light, color, grade, filmLUT, effects, detail, crop, masks, retouch, finishing, photosCopy
 
     public var id: String { rawValue }
 
@@ -27,6 +29,7 @@ public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
         case .crop: "Crop"
         case .masks: "Masks"
         case .retouch: "Retouch"
+        case .finishing: "Border and watermark"
         case .photosCopy: "Saved image size"
         }
     }
@@ -37,15 +40,16 @@ public enum PasteGroup: String, CaseIterable, Sendable, Codable, Identifiable {
         case .crop: "Per photo"
         case .masks: "AI masks re-detect on each photo"
         case .retouch: "Per photo"
+        case .finishing: "Frame, canvas and text"
         case .photosCopy: "Resolution and quality of the image saved to Photos"
         default: nil
         }
     }
 
     /// Whether the group is ticked by default in the paste sheet. Everything but
-    /// Crop and Retouch, which are specific to one photo, and the saved image's size,
-    /// which isn't part of the look.
-    public var isOnByDefault: Bool { self != .crop && self != .retouch && self != .photosCopy }
+    /// Crop and Retouch, which are specific to one photo, and the border, watermark
+    /// and saved image's size, which aren't part of the look.
+    public var isOnByDefault: Bool { ![.crop, .retouch, .finishing, .photosCopy].contains(self) }
 
     public static var defaultSelection: Set<PasteGroup> {
         Set(allCases.filter(\.isOnByDefault))
@@ -64,6 +68,9 @@ public struct ParamSpec: Sendable, Identifiable {
         case crop
         case mask
         case retouch
+        case color
+        case aspect
+        case watermark
     }
 
     public let key: ParamKey
@@ -156,6 +163,15 @@ public enum ParamCatalog {
             ParamSpec(key: .crop, label: "Crop", kind: .crop, group: .crop, stage: .grade),
             scalar(.perspectiveVertical, "Vertical", .crop),
             scalar(.perspectiveHorizontal, "Horizontal", .crop),
+            scalar(.borderWidth, "Border", .finishing, range: 0...25, stage: .finishing),
+            scalar(.borderBottom, "Extra bottom", .finishing, range: 0...50, stage: .finishing),
+            ParamSpec(key: .borderColor, label: "Border color", kind: .color, group: .finishing, stage: .finishing),
+            ParamSpec(key: .borderCanvas, label: "Canvas", kind: .aspect, group: .finishing, stage: .finishing),
+            ParamSpec(key: .watermark, label: "Watermark", kind: .watermark, group: .finishing, stage: .finishing),
+            scalar(.watermarkSize, "Watermark size", .finishing, range: 1...20, defaultValue: 4, stage: .finishing),
+            scalar(.watermarkOpacity, "Watermark opacity", .finishing, range: 5...100, defaultValue: 80, stage: .finishing),
+            scalar(.watermarkMargin, "Watermark margin", .finishing, range: 0...20, defaultValue: 4, stage: .finishing),
+
             // Absent means this device's default from Settings (`PhotosCopy.deviceDefault`).
             scalar(.photosMaxMegapixels, "Maximum size", .photosCopy, range: 0...1000, defaultValue: nil, stage: .output),
             scalar(.photosQuality, "Quality", .photosCopy, range: PhotosCopy.qualityRange, defaultValue: nil, stage: .output),

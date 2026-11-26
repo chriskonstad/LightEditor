@@ -167,6 +167,11 @@ public enum ParamValue: Sendable, Hashable {
     case crop(CropGeometry)
     case mask(MaskLayer)
     case retouch(RetouchSpot)
+    /// An sRGB color, e.g. a border's.
+    case color(SRGBColor)
+    /// An aspect ratio on its own, e.g. a border's canvas.
+    case aspect(AspectRatio)
+    case watermark(Watermark)
 
     public var scalarValue: Double? {
         if case .scalar(let value) = self { return value }
@@ -181,7 +186,7 @@ public enum ParamValue: Sendable, Hashable {
 
 extension ParamValue: Codable {
     private enum CodingKeys: String, CodingKey {
-        case x, y, curve, lut, name, amount, crop, angle, aspect, level, mask, retouch
+        case x, y, curve, lut, name, amount, crop, angle, aspect, level, mask, retouch, rgb, canvas, watermark
     }
 
     public init(from decoder: any Decoder) throws {
@@ -209,6 +214,12 @@ extension ParamValue: Codable {
             self = .retouch(try container.decode(RetouchSpot.self, forKey: .retouch))
         } else if container.contains(.mask) {
             self = .mask(try container.decode(MaskLayer.self, forKey: .mask))
+        } else if container.contains(.rgb) {
+            self = .color(try container.decode(SRGBColor.self, forKey: .rgb))
+        } else if container.contains(.canvas) {
+            self = .aspect(try container.decode(AspectRatio.self, forKey: .canvas))
+        } else if container.contains(.watermark) {
+            self = .watermark(try container.decode(Watermark.self, forKey: .watermark))
         } else if container.contains(.x) {
             self = .point(x: try container.decode(Double.self, forKey: .x), y: try container.decode(Double.self, forKey: .y))
         } else {
@@ -245,6 +256,15 @@ extension ParamValue: Codable {
         case .retouch(let spot):
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(spot, forKey: .retouch)
+        case .color(let color):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(color, forKey: .rgb)
+        case .aspect(let aspect):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(aspect, forKey: .canvas)
+        case .watermark(let mark):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(mark, forKey: .watermark)
         }
     }
 }

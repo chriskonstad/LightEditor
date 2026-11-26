@@ -100,6 +100,42 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
         }
     }
 
+    /// One frame: `image` scaled into `rect` (drawable pixels, top-left origin)
+    /// over the background, with `before` left of the split. Pure, for tests.
+    ///
+    /// The photo is clipped to `rect`. Once a graph is scaled and offset like
+    /// this, Core Image (27) also runs its color kernels outside their extent,
+    /// on clear pixels, and its own crops to that extent are dropped as no-ops.
+    /// Kernels that turn clear into a color (a positive vignette, negative
+    /// dehaze, the clipping overlay) then paint over the background. Masking
+    /// with an opaque rect isn't optimized away, so nothing leaks, whatever the
+    /// recipe.
+    public nonisolated static func frame(image: CIImage?, before: CIImage?, split: CGFloat?, in rect: CGRect,
+                                         drawableSize: CGSize, background: CIColor) -> CIImage {
+        let bounds = CGRect(origin: .zero, size: drawableSize)
+        let output = CIImage(color: background).cropped(to: bounds)
+        guard let image, image.extent.width > 0, image.extent.width.isFinite, rect.width > 0 else { return output }
+        let scale = rect.width / image.extent.width
+        // `rect` uses a top-left origin like SwiftUI; Core Image is bottom-left.
+        let onScreen = CGRect(x: rect.minX, y: drawableSize.height - rect.maxY, width: rect.width, height: rect.height)
+        func place(_ image: CIImage) -> CIImage {
+            image
+                .transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+                .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                .transformed(by: CGAffineTransform(translationX: onScreen.minX, y: onScreen.minY))
+        }
+        var placed = place(image)
+        if let before, let split {
+            let left = CGRect(x: 0, y: 0, width: drawableSize.width * split, height: drawableSize.height)
+            placed = place(before).cropped(to: left).composited(over: placed)
+        }
+        let visible = onScreen.intersection(bounds)
+        guard !visible.isNull, !visible.isEmpty else { return output }
+        let clip = CIImage(color: .white).cropped(to: visible)
+        placed = placed.applyingFilter("CISourceInCompositing", parameters: [kCIInputBackgroundImageKey: clip])
+        return placed.composited(over: output)
+    }
+
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         requestDraw()
     }
@@ -113,24 +149,8 @@ public final class PreviewRenderer: NSObject, MTKViewDelegate {
 
         let drawableSize = view.drawableSize
         let bounds = CGRect(origin: .zero, size: drawableSize)
-        var output = CIImage(color: background).cropped(to: bounds)
-        if let image, image.extent.width > 0, image.extent.width.isFinite {
-            let rect = imageRect(in: drawableSize)
-            let scale = rect.width / image.extent.width
-            // `imageRect` uses a top-left origin like SwiftUI; Core Image is bottom-left.
-            func place(_ image: CIImage) -> CIImage {
-                image
-                    .transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
-                    .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-                    .transformed(by: CGAffineTransform(translationX: rect.minX, y: drawableSize.height - rect.maxY))
-            }
-            var placed = place(image)
-            if let before, let split {
-                let left = CGRect(x: 0, y: 0, width: drawableSize.width * split, height: drawableSize.height)
-                placed = place(before).cropped(to: left).composited(over: placed)
-            }
-            output = placed.composited(over: output)
-        }
+        let output = Self.frame(image: image, before: before, split: split, in: imageRect(in: drawableSize),
+                                drawableSize: drawableSize, background: background)
 
         // Core Image plans and encodes the frame on the CPU, which can take a few
         // milliseconds for a big graph; do that off the main thread so gestures

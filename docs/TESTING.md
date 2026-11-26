@@ -12,6 +12,8 @@ How LightEditor is tested, which command to run for which change, and how to rea
 | `scripts/test-ui.sh` | UI audits and screenshots on iPhone SE and iPad mini simulators | ~8–12 min |
 | `scripts/test-all.sh` | All of the above with the AI-model tests, performance budgets and the app builds, with a summary | ~15 min |
 
+A unit run that prints nothing for 5 minutes (`TEST_STALL_SECONDS`) is stopped as hung and lists the tests that started but never finished. Tests that set process-wide state (`RawDecoder.remote`, peer links) nest under the serialized `RemoteSuites`; put any new one there too, or it can deadlock other suites behind `RenderGate.fullSize`.
+
 **The inner loop is `scripts/test-fast.sh` (`just test-fast`).** Run `scripts/test-all.sh` (`just check`) before merging or shipping a feature. `just test-ui` wraps `scripts/test-ui.sh`.
 
 | You changed… | Run |

@@ -9,7 +9,10 @@ import SwiftUI
 /// Development-only hooks for driving the app (the photo, tab and demo hooks also
 /// work in the iOS simulator) without screen-recording access,
 /// e.g. for App Store screenshots:
-/// - `-OpenFirstAsset YES` opens the first photo, or `-OpenAsset <file name>` that one;
+/// - `-OpenFirstAsset YES` opens the first photo, `-OpenAsset <file name>` that one, or
+///   `-OpenAssetIndex <n>` the n-th;
+/// - then `-SetParams "effects.vignette.amount=100,light.exposure=0.5"` sets scalar
+///   parameters, as if each slider had been moved;
 /// - then `-AutoTone YES`, `-ApplyPreset <name>` and `-EditorTab <presets|light|color|grade|detail|masks>`;
 /// - `-HideSidebar YES` collapses the sidebar;
 /// - `-SnapshotTo <dir>` writes a PNG of the window every two seconds, with the photo
@@ -21,18 +24,27 @@ enum DebugAutomation {
     static func start(app: AppModel) {
         let defaults = UserDefaults.standard
         let name = defaults.string(forKey: "OpenAsset")
-        if defaults.bool(forKey: "OpenFirstAsset") || name != nil {
+        let index = defaults.object(forKey: "OpenAssetIndex") != nil ? defaults.integer(forKey: "OpenAssetIndex") : nil
+        if defaults.bool(forKey: "OpenFirstAsset") || name != nil || index != nil {
             Task {
-                for _ in 0..<50 where app.assets.count == 0 { try? await Task.sleep(for: .milliseconds(200)) }
+                for _ in 0..<100 where app.assets.count <= (index ?? 0) { try? await Task.sleep(for: .milliseconds(200)) }
                 let assets = (0..<app.assets.count).map { app.assets[$0] }
-                guard let asset = name.map({ name in assets.first { $0.id == name } }) ?? assets.first else { return }
+                let picked = index.flatMap { $0 < assets.count ? assets[$0] : nil }
+                guard let asset = picked ?? name.map({ name in assets.first { $0.id == name } }) ?? assets.first else { return }
                 app.editing = asset
-                for _ in 0..<100 where app.activeEditor?.phase != .ready { try? await Task.sleep(for: .milliseconds(200)) }
+                for _ in 0..<150 where app.activeEditor?.phase != .ready { try? await Task.sleep(for: .milliseconds(200)) }
                 guard let editor = app.activeEditor else { return }
                 if let preset = defaults.string(forKey: "ApplyPreset"), let match = app.presets.first(where: { $0.name == preset }) {
                     editor.apply(match)
                 }
                 if defaults.bool(forKey: "AutoTone") { editor.autoTone() }
+                for pair in (defaults.string(forKey: "SetParams") ?? "").split(separator: ",") {
+                    let parts = pair.split(separator: "=", maxSplits: 1)
+                    guard parts.count == 2, let value = Double(parts[1]) else { continue }
+                    let key = ParamKey(String(parts[0]))
+                    editor.setLive(key, value)
+                    editor.commit(key)
+                }
                 if let tab = defaults.string(forKey: "EditorTab").flatMap(EditorModel.Tab.init(rawValue:)) { editor.tab = tab }
                 if defaults.bool(forKey: "DemoMaskOverlay") { await demoMaskOverlay(editor) }
             }

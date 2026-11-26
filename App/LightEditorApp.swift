@@ -39,8 +39,6 @@ struct LightEditorApp: App {
                     await app.start()
                     #if DEBUG
                     DebugAutomation.start(app: app)
-                    #elseif os(iOS) && DEBUG
-                    DebugEditorHooks.start(app: app)
                     #endif
                 }
         }

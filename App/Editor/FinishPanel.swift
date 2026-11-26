@@ -168,6 +168,9 @@ struct FinishPanel: View {
                 .frame(minHeight: 32)
                 .background(selected ? Theme.accent : Theme.panelRaised, in: Capsule())
                 .foregroundStyle(selected ? Theme.onAccent : Theme.textPrimary)
+                // A 32 pt capsule, with a 44 pt touch target around it.
+                .frame(minHeight: Theme.minTouch)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])

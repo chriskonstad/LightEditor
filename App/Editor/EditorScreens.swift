@@ -407,6 +407,7 @@ struct WorkspaceEditorView: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
                 .frame(minWidth: 40, alignment: .leading)
+                .fixedSize()
                 .accessibilityIdentifier("view.zoomPercent")
             Toggle(isOn: $model.showClipping) { Label("Clipping", systemImage: "exclamationmark.triangle") }
                 .toggleStyle(.button)
@@ -425,11 +426,13 @@ struct WorkspaceEditorView: View {
                     .pickerStyle(.inline)
                     .labelsHidden()
             } label: {
+                // The frame inside the label is what makes the menu's hit area 44 pt.
                 Label("Background", systemImage: "circle.lefthalf.filled")
+                    .frame(minWidth: Theme.minTouch, minHeight: Theme.minTouch)
+                    .contentShape(Rectangle())
             }
             .menuIndicator(.hidden)
             .fixedSize()
-            .frame(minWidth: compact ? Theme.minTouch : nil)
             .help("Background around the photo")
             .accessibilityIdentifier("view.background")
             Button("Crop", systemImage: "crop.rotate") {

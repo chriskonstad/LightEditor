@@ -85,11 +85,21 @@ final class ScreenAuditTests: XCTestCase {
         XCTAssertTrue(waitUntilEnabled(["editor.export", "toolbar.export"], timeout: 120), "the editor never finished decoding")
         auditor.capture("editor")
 
-        for tab in ["Presets", "Light", "Color", "Grade", "Detail", "Masks"] {
+        for tab in ["Presets", "Light", "Color", "Grade", "Detail", "Finish", "Masks"] {
             let segment = app.segmentedControls.buttons[tab].firstMatch
             guard segment.exists else { continue }
             segment.tap()
             auditor.capture("tab-\(tab.lowercased())")
+            if tab == "Grade", tap(["wheel.open.shadows"]) {
+                // One wheel open, with its Hue, Saturation and Luminance sliders.
+                Thread.sleep(forTimeInterval: 0.6)
+                auditor.capture("wheel-open")
+                _ = tap(["wheel.overview"])
+            }
+            if tab == "Finish", tap(["toggle.watermark"]) {
+                // The watermark's settings appear once it's on.
+                auditor.capture("tab-finish-watermark")
+            }
             if scrollPanel() { auditor.capture("tab-\(tab.lowercased())-scrolled") }
         }
 

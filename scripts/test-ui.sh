@@ -98,7 +98,8 @@ fi
 
 destinations=()
 for device in $devices; do destinations+=(-destination "id=${udids[$device]}"); done
-filter=()
+# FeatureTourTests is a demo for scripts/ui-tour.sh, not an audit.
+filter=(-skip-testing:LightEditorUITests/FeatureTourTests)
 [[ -n $only ]] && filter=(-only-testing:"LightEditorUITests/ScreenAuditTests/$only")
 
 bundle=$results/$(date +%Y%m%d-%H%M%S).xcresult

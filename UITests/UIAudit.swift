@@ -243,6 +243,11 @@ final class ScreenAuditor {
                 if kind == .clippedText, scrolledOutOfView.contains(element) {
                     detail += " (cut off by scrolling)"
                     enforced = false
+                } else if kind == .clippedText, element == "screen", screen.hasSuffix("-scrolled") {
+                    // Apple's audit names no element, and a scrolled panel always has a
+                    // row cut by its edge; which one depends on where the scroll stopped.
+                    detail += " (no element; likely the scroll edge)"
+                    enforced = false
                 }
                 record(kind, screen, element, detail, enforced: enforced)
                 // Handled here: failures are reported together at the end of the test.

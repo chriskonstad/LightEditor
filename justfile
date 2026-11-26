@@ -48,6 +48,12 @@ test-fast *flags:
 test-ui *flags:
     scripts/test-ui.sh "$@"
 
+# Use it to look at a UI change, e.g. `just ui-tour --device "iPad Pro 13-inch (M5)"`.
+[doc("Scripted tour of recent features, with screenshots and a video in build/ui-tour/.")]
+[group('test')]
+ui-tour *flags:
+    scripts/ui-tour.sh "$@"
+
 # EditorCore unit tests on the Mac; pass a filter to run a subset, e.g. `just test-core RecipeCodec`.
 [group('test')]
 test-core filter="":

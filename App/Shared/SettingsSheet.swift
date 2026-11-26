@@ -78,6 +78,7 @@ struct SettingsSheet: View {
                 }
                 Section {
                     CanvasBackgroundPicker()
+                        .frame(minHeight: Theme.minTouch)
                 } header: {
                     Text("Editor")
                 } footer: {

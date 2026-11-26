@@ -77,8 +77,13 @@ struct SettingsSheet: View {
                     }
                 }
                 Section {
+                    // A row that opens a list: a menu-style picker's button is only 35 pt.
+                    #if os(iOS)
                     CanvasBackgroundPicker()
-                        .frame(minHeight: Theme.minTouch)
+                        .pickerStyle(.navigationLink)
+                    #else
+                    CanvasBackgroundPicker()
+                    #endif
                 } header: {
                     Text("Editor")
                 } footer: {

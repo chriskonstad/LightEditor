@@ -171,11 +171,19 @@ private struct WheelRangeMenu: View {
     @Binding var selection: ToneRange
 
     var body: some View {
-        Picker("Wheel", selection: $selection) {
-            ForEach(ToneRange.allCases) { range in Text(range.displayName).tag(range) }
+        // A Menu, not a menu-style Picker: only a label's own frame grows the hit area.
+        Menu {
+            Picker("Wheel", selection: $selection) {
+                ForEach(ToneRange.allCases) { range in Text(range.displayName).tag(range) }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(selection.displayName)
+                Image(systemName: "chevron.up.chevron.down").imageScale(.small)
+            }
+            .foregroundStyle(Theme.accent)
+            .touchTarget()
         }
-        .pickerStyle(.menu)
-        .frame(minHeight: Theme.minTouch)
         .accessibilityIdentifier("wheel.picker")
     }
 }

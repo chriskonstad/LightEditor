@@ -115,6 +115,13 @@ final class FeatureTourTests: XCTestCase {
             let bottom = element("slider.finish.border.bottom")
             if bottom.exists { drag(bottom, from: 0.0, to: 0.4) }
             shot("border-white-polaroid")
+            // The custom color swatch opens the system color picker.
+            if tapIfPresent("border.custom") {
+                pause(1)
+                shot("border-custom-color-picker")
+                app.swipeDown(velocity: .fast)
+                pause(0.8)
+            }
             if reveal(element("toggle.watermark"), label: "Watermark") {
                 element("toggle.watermark").tap()
                 pause(0.8)

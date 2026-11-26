@@ -113,9 +113,11 @@ struct PanelHeader: View {
             if let model, let group, model.hasEdits(group) {
                 // With earlier edits, offer going back to them as well as to the defaults.
                 if model.canReturnToOpened(group) {
-                    Menu("Reset") {
+                    Menu {
                         Button("Back to when opened", systemImage: "clock.arrow.circlepath") { model.returnToOpened(group) }
                         Button("Reset to defaults", systemImage: "arrow.counterclockwise") { model.reset(group: group) }
+                    } label: {
+                        Text("Reset").touchTarget(layoutHeight: 16)
                     }
                     .font(.caption)
                     .foregroundStyle(Theme.accent)
@@ -124,7 +126,7 @@ struct PanelHeader: View {
                     .fixedSize()
                     .accessibilityIdentifier("reset.\(group.rawValue)")
                 } else {
-                    Button("Reset") { model.reset(group: group) }
+                    Button { model.reset(group: group) } label: { Text("Reset").touchTarget(layoutHeight: 16) }
                         .font(.caption)
                         .foregroundStyle(Theme.accent)
                         .buttonStyle(.plain)

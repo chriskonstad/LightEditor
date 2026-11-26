@@ -46,3 +46,15 @@ struct AccentButtonStyle: ButtonStyle {
             .background(Theme.accent.opacity(configuration.isPressed ? 0.8 : 1), in: Capsule())
     }
 }
+
+extension View {
+    /// At least a 44 pt square to touch (Theme.minTouch), whatever the visible size.
+    /// Put it inside a button's label: a frame outside the button doesn't grow its
+    /// hit area. `layoutHeight` keeps the view's layout height (e.g. a caption-sized
+    /// Reset in a section header) while the touch area extends around it.
+    func touchTarget(layoutHeight: CGFloat? = nil) -> some View {
+        frame(minWidth: Theme.minTouch, minHeight: Theme.minTouch)
+            .contentShape(Rectangle())
+            .padding(.vertical, layoutHeight.map { -max(0, (Theme.minTouch - $0) / 2) } ?? 0)
+    }
+}

@@ -62,6 +62,7 @@ struct FinishPanel: View {
             }
         )) {
             Text("Watermark").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+                .fixedSize()
         }
         .tint(Theme.accent)
         .padding(.top, 16)
@@ -76,7 +77,10 @@ struct FinishPanel: View {
                     model.setLive(.watermark, .watermark(updated))
                 }
             ))
-            .textFieldStyle(.roundedBorder)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 10)
+            .frame(minHeight: Theme.minTouch)
+            .background(Theme.panelRaised, in: RoundedRectangle(cornerRadius: 8))
             .focused($editingText)
             .onSubmit { model.commit(.watermark) }
             .onChange(of: editingText) { _, editing in if !editing { model.commit(.watermark) } }
@@ -84,11 +88,11 @@ struct FinishPanel: View {
 
             HStack {
                 if mark.text != defaultText, !mark.text.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Button("Make Default") { defaultText = mark.text }
+                    Button { defaultText = mark.text } label: { Text("Make Default").touchTarget() }
                         .accessibilityIdentifier("watermark.makeDefault")
                 }
                 if !defaultText.isEmpty, mark.text != defaultText {
-                    Button("Use “\(defaultText)”") { update { $0.text = defaultText } }
+                    Button { update { $0.text = defaultText } } label: { Text("Use “\(defaultText)”").touchTarget() }
                         .lineLimit(1)
                 }
             }
@@ -127,7 +131,7 @@ struct FinishPanel: View {
 
     /// Nine cells, like the photo: tap one to put the watermark there.
     private func positionGrid(_ selected: WatermarkPosition) -> some View {
-        Grid(horizontalSpacing: 4, verticalSpacing: 4) {
+        Grid(horizontalSpacing: 0, verticalSpacing: 0) {
             ForEach(0..<3) { row in
                 GridRow {
                     ForEach(0..<3) { column in
@@ -137,6 +141,7 @@ struct FinishPanel: View {
                                 .fill(position == selected ? Theme.accent : Theme.panelRaised)
                                 .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.divider))
                                 .frame(width: 28, height: 22)
+                                .touchTarget()
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(position.displayName)
@@ -165,7 +170,7 @@ struct FinishPanel: View {
                 .font(.subheadline.weight(selected ? .semibold : .regular))
                 .monospacedDigit()
                 .padding(.horizontal, 12)
-                .frame(minHeight: 32)
+                .frame(minWidth: Theme.minTouch, minHeight: 32)
                 .background(selected ? Theme.accent : Theme.panelRaised, in: Capsule())
                 .foregroundStyle(selected ? Theme.onAccent : Theme.textPrimary)
                 // A 32 pt capsule, with a 44 pt touch target around it.
@@ -180,23 +185,83 @@ struct FinishPanel: View {
     /// The system color picker, ringed in amber while it holds the current color.
     private func colorPicker(_ color: SRGBColor, isCustom: Bool, id: String,
                              onChange: @escaping (SRGBColor) -> Void, onEnd: @escaping () -> Void) -> some View {
+        let changed: (SRGBColor) -> Void = { newColor in
+            onChange(newColor)
+            colorCommit?.cancel()
+            colorCommit = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                if !Task.isCancelled { onEnd() }
+            }
+        }
+        return ColorWell(color: color, onChange: changed)
+            .overlay(Circle().strokeBorder(isCustom ? Theme.accent : .clear, lineWidth: 2).padding(2).allowsHitTesting(false))
+            .accessibilityLabel("Custom color")
+            .accessibilityIdentifier(id)
+    }
+}
+
+/// The system color well at a full touch size. SwiftUI's ColorPicker can't be
+/// resized on iOS (it stays 28–36 pt, under the 44 pt minimum), so iOS wraps
+/// UIColorWell, which draws to whatever size it's given.
+private struct ColorWell: View {
+    let color: SRGBColor
+    let onChange: (SRGBColor) -> Void
+
+    var body: some View {
+        #if os(iOS)
+        Well(color: color, onChange: onChange)
+            .frame(width: Theme.minTouch, height: Theme.minTouch)
+        #else
         ColorPicker("Custom color", selection: Binding(
             get: { Color(.sRGB, red: color.red, green: color.green, blue: color.blue) },
             set: { newColor in
                 let resolved = newColor.resolve(in: EnvironmentValues())
                 onChange(SRGBColor(red: Double(resolved.red), green: Double(resolved.green), blue: Double(resolved.blue)))
-                colorCommit?.cancel()
-                colorCommit = Task {
-                    try? await Task.sleep(for: .milliseconds(500))
-                    if !Task.isCancelled { onEnd() }
-                }
             }
         ), supportsOpacity: false)
         .labelsHidden()
-        .padding(2)
-        .overlay(Circle().strokeBorder(isCustom ? Theme.accent : .clear, lineWidth: 2))
-        .accessibilityIdentifier(id)
+        .frame(minWidth: Theme.minTouch, minHeight: Theme.minTouch)
+        #endif
     }
+
+    #if os(iOS)
+    private struct Well: UIViewRepresentable {
+        let color: SRGBColor
+        let onChange: (SRGBColor) -> Void
+
+        func makeCoordinator() -> Coordinator { Coordinator() }
+
+        func makeUIView(context: Context) -> UIColorWell {
+            let well = UIColorWell()
+            well.supportsAlpha = false
+            well.title = "Custom color"
+            well.addAction(UIAction { [coordinator = context.coordinator] action in
+                guard let well = action.sender as? UIColorWell, let picked = well.selectedColor else { return }
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                // Photo-pipeline colors are sRGB; extended values are clamped.
+                let srgb = picked.cgColor.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil)
+                    .map(UIColor.init(cgColor:)) ?? picked
+                srgb.getRed(&r, green: &g, blue: &b, alpha: &a)
+                coordinator.onChange?(SRGBColor(red: min(max(r, 0), 1), green: min(max(g, 0), 1), blue: min(max(b, 0), 1)))
+            }, for: .valueChanged)
+            return well
+        }
+
+        func updateUIView(_ well: UIColorWell, context: Context) {
+            context.coordinator.onChange = onChange
+            let wanted = UIColor(red: color.red, green: color.green, blue: color.blue, alpha: 1)
+            if well.selectedColor != wanted { well.selectedColor = wanted }
+        }
+
+        func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIColorWell, context: Context) -> CGSize? {
+            CGSize(width: Theme.minTouch, height: Theme.minTouch)
+        }
+
+        final class Coordinator {
+            var onChange: ((SRGBColor) -> Void)?
+        }
+    }
+    #endif
 }
 
 /// Settings › Watermark: the text new watermarks start with.

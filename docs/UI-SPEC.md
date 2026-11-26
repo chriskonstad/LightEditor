@@ -78,7 +78,7 @@ From top to bottom:
    - **Masks:**
      - With no masks yet, a grid to create one: Subject, Sky, People, Background, Object (tap to select), Brush, Linear gradient, Radial gradient, Luminance range, Color range. AI masks are amber.
      - Otherwise:
-       - The mask list. Each row shows its icon, name, adjustment count and a show/hide eye, with a menu for Duplicate and Delete; "+ New" adds a mask.
+       - The mask list. Each row shows its icon, name, adjustment count and a show/hide eye, with a menu for Duplicate and Delete; "+ New" adds a mask. Press and hold a row to see that mask's overlay until release, whatever the "Show overlay" toggle says.
        - The selected mask's parts. Each part shows its operation (+ add, − subtract, ∩ intersect), name and AI status (Analyzing…, or why nothing was found), with a menu for Combine, Invert and Delete; "+ Add" adds a part with any operation.
        - The selected part's settings:
          - Brush: Paint/Erase, Size, Feather, Flow.
@@ -86,6 +86,7 @@ From top to bottom:
          - Luminance: a gradient bar plus Dark end, Bright end, Smoothness.
          - Color: a picked-color swatch plus Range.
        - A "Show overlay" toggle, Amount, and the local sliders: Temperature, Tint, Exposure, Contrast, Highlights, Shadows, Whites, Blacks, Clarity, Texture, Dehaze, Saturation, Vibrance.
+       - The overlay hides itself while you adjust, as in Lightroom. It shows while the selection is made or refined, and the first change to Amount or a local slider hides it so the effect is visible; the toggle turns off to match. It comes back when you go back to the selection: a brush stroke or tap, moving a gradient, a part or brush setting, adding, deleting, inverting or combining a part, or picking a mask or part. Turning the toggle on by hand keeps the overlay on while you adjust, until you refine the selection again; turning it off keeps it off until you turn it back on. This is view state, not part of the recipe.
      - On the photo, which shows uncropped while this tab is open. It zooms and pans as in the other tabs, for detailed masks and to judge local adjustments up close; the zoom carries over between tabs unless a crop or perspective changes the frame:
        - Linear gradient: lines at the start (solid), middle (dashed) and end (dotted), with handles to move either end or both. Drag the photo away from the handles to pan; pinch or double-tap to zoom.
        - Radial gradient: the ellipse and its feather ring, with center and edge handles. Panning and zooming as for the linear gradient.

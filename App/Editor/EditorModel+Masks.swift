@@ -44,6 +44,7 @@ extension EditorModel {
         selectedMaskID = layer.id
         selectedComponentID = component.id
         tab = .masks
+        maskOverlay.refineSelection()
         computeAIIfNeeded(shape)
     }
 
@@ -53,6 +54,7 @@ extension EditorModel {
         layer.components.append(component)
         updateRecipe("\(operation.displayName) \(shape.displayName)") { recipe, stamp in recipe.setMask(layer, at: stamp) }
         selectedComponentID = component.id
+        maskOverlay.refineSelection()
         computeAIIfNeeded(shape)
     }
 
@@ -63,16 +65,19 @@ extension EditorModel {
         updateRecipe(label) { recipe, stamp in recipe.setMask(layer, at: stamp) }
     }
 
-    /// Edits the selected component's shape.
+    /// Edits the selected component's shape, which refines the selection.
     func editSelectedShape(_ label: String? = nil, _ change: (inout MaskShape) -> Void) {
         guard let id = selectedComponent?.id else { return }
+        maskOverlay.refineSelection()
         editSelectedMask(label) { layer in
             guard let index = layer.components.firstIndex(where: { $0.id == id }) else { return }
             change(&layer.components[index].shape)
         }
     }
 
+    /// Changes a part (invert, combine), which refines the selection.
     func editComponent(_ id: UUID, label: String, _ change: (inout MaskComponent) -> Void) {
+        maskOverlay.refineSelection()
         editSelectedMask(label) { layer in
             guard let index = layer.components.firstIndex(where: { $0.id == id }) else { return }
             change(&layer.components[index])
@@ -82,6 +87,7 @@ extension EditorModel {
     func deleteComponent(_ id: UUID) {
         guard let layer = selectedMask else { return }
         if layer.components.count <= 1 { return deleteMask(layer.id) }
+        maskOverlay.refineSelection()
         editSelectedMask("Remove part of \(layer.name)") { $0.components.removeAll { $0.id == id } }
         if selectedComponentID == id { selectedComponentID = selectedMask?.components.last?.id }
     }
@@ -105,11 +111,25 @@ extension EditorModel {
         updateRecipe("Duplicate \(layer.name)") { recipe, stamp in recipe.setMask(layer, at: stamp) }
         selectedMaskID = layer.id
         selectedComponentID = layer.components.last?.id
+        maskOverlay.refineSelection()
     }
 
+    /// Picking a mask shows its overlay, so it's clear what it covers.
     func selectMask(_ id: UUID?) {
         selectedMaskID = id
         selectedComponentID = masks.first { $0.id == id }?.components.last?.id
+        maskOverlay.refineSelection()
+    }
+
+    /// Picking a part goes back to refining the selection.
+    func selectComponent(_ id: UUID) {
+        selectedComponentID = id
+        maskOverlay.refineSelection()
+    }
+
+    /// Shows a mask's overlay while its row is held, whatever the toggle says.
+    func peekMask(_ id: UUID?) {
+        maskOverlay.peek(id)
     }
 
     func setMaskEnabled(_ id: UUID, _ enabled: Bool) {
@@ -131,12 +151,19 @@ extension EditorModel {
 
     func maskValue(_ key: ParamKey) -> Double { selectedMask?.adjustments[key] ?? 0 }
 
+    /// A local slider moved. The first adjustment hides the overlay so its effect shows.
     func setMaskValueLive(_ key: ParamKey, _ value: Double) {
+        maskOverlay.adjust()
         editSelectedMask { layer in
             let range = MaskLayer.range(for: key)
             let clamped = min(max(value, range.lowerBound), range.upperBound)
             layer.adjustments[key] = abs(clamped) < 1e-9 ? nil : clamped
         }
+    }
+
+    func setMaskAmountLive(_ amount: Double, label: String? = nil) {
+        maskOverlay.adjust()
+        editSelectedMask(label) { $0.amount = amount }
     }
 
     func commitMaskValue(_ key: ParamKey) {

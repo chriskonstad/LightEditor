@@ -37,7 +37,7 @@ struct LightEditorApp: App {
                 .tint(Theme.accent)
                 .task {
                     await app.start()
-                    #if os(macOS) && DEBUG
+                    #if DEBUG
                     DebugAutomation.start(app: app)
                     #elseif os(iOS) && DEBUG
                     DebugEditorHooks.start(app: app)

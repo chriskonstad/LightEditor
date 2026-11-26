@@ -93,10 +93,12 @@ struct NewMaskGrid: View {
     }
 }
 
-/// One mask in the list: select, show or hide, and a menu.
+/// One mask in the list: select, show or hide, and a menu. Press and hold
+/// the row to see the mask's overlay until release.
 struct MaskRow: View {
     let model: EditorModel
     let layer: MaskLayer
+    @State private var holdTask: Task<Void, Never>?
 
     var body: some View {
         let selected = layer.id == model.selectedMaskID
@@ -135,6 +137,19 @@ struct MaskRow: View {
         .opacity(layer.isEnabled ? 1 : 0.6)
         .contentShape(Rectangle())
         .onTapGesture { model.selectMask(layer.id) }
+        .onLongPressGesture(minimumDuration: 0.3, maximumDistance: 20) {
+        } onPressingChanged: { pressing in
+            holdTask?.cancel()
+            if pressing {
+                holdTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    model.peekMask(layer.id)
+                }
+            } else {
+                model.peekMask(nil)
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mask.row.\(layer.name)")
     }
@@ -194,9 +209,9 @@ private struct AmountSlider: View {
             .font(.subheadline)
             FineSlider(
                 position: layer.amount,
-                onChange: { value in model.editSelectedMask { $0.amount = value } },
+                onChange: { model.setMaskAmountLive($0) },
                 onEditingChanged: { if !$0 { model.pushHistory(label: "\(layer.name): amount") } },
-                onReset: { model.editSelectedMask("\(layer.name): amount") { $0.amount = 1 } }
+                onReset: { model.setMaskAmountLive(1, label: "\(layer.name): amount") }
             )
             .accessibilityLabel("Mask amount")
         }
@@ -295,7 +310,7 @@ struct ComponentRow: View {
         .background(selected ? Theme.panelRaised : .clear, in: RoundedRectangle(cornerRadius: 6))
         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(selected ? Theme.accent.opacity(0.7) : .clear))
         .contentShape(Rectangle())
-        .onTapGesture { model.selectedComponentID = component.id }
+        .onTapGesture { model.selectComponent(component.id) }
         .accessibilityIdentifier("mask.part.\(component.shape.displayName)")
     }
 

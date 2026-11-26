@@ -24,6 +24,8 @@ axe 1.5.2 looks for `SimulatorKit.framework` in `Xcode.app/Contents/Developer/Li
 
 With that, `describe-ui` and `screenshot` work. `tap`, `swipe` and `touch` worked on the iPad simulator. On the iPhone simulator they didn't register while the Claude simulator panel was attached to it; the panel's own tap and swipe worked there.
 
+On a fresh iPad Pro 13-inch (M5) simulator (iOS 27.0, 2026-11-26) axe's `tap` and `touch` reported success but never reached the app. Debug builds can drive the editor without touches instead: `-OpenFirstAsset YES` (or `-OpenAsset <id>`), `-EditorTab <tab>` and `-DemoMaskOverlay YES` (see `App/Mac/DebugAutomation.swift`, which now runs in the simulator too); take screenshots with `xcrun simctl io <udid> screenshot`.
+
 Taps on buttons inside a `ScrollView` need the element's hit area to match its frame. `.contentShape(Rectangle())` on tiles fixed thumbnails whose `scaledToFill` images made their hit areas spill into the neighbors.
 
 ## Mac

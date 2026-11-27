@@ -23,6 +23,7 @@ struct FinishPanel: View {
                 .font(.caption).foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             PanelHeader(title: "Border", model: model, group: .finishing)
+            lastUsedButton(.border)
             ParamSlider(model: model, key: .borderWidth, label: "Width")
             ParamSlider(model: model, key: .borderBottom)
             Text("Sizes are a share of the photo's short edge, so the border looks the same at any export size.")
@@ -53,6 +54,28 @@ struct FinishPanel: View {
 
             watermarkSection
         }
+        // What's on the photo when the tab opens, and each change after, becomes
+        // what "Last used" offers on the next photo.
+        .onChange(of: LastUsedFinishing.Part.allCases.map { $0.values(in: model.recipe) }, initial: true) {
+            LastUsedFinishing.remember(model.recipe)
+        }
+    }
+
+    /// Applies the border or watermark last used on any photo, when it differs from this one's.
+    @ViewBuilder private func lastUsedButton(_ part: LastUsedFinishing.Part) -> some View {
+        if let saved = part.saved, saved != part.values(in: model.recipe), let changes = part.changes {
+            Button {
+                model.set(changes, label: part.label)
+                wantsLogo = false
+            } label: {
+                Label(part.label, systemImage: "clock.arrow.circlepath")
+                    .font(.subheadline)
+                    .frame(minHeight: Theme.minTouch)
+            }
+            .buttonStyle(.bordered)
+            .tint(Theme.accent)
+            .accessibilityIdentifier("lastUsed.\(part.rawValue)")
+        }
     }
 
     // MARK: Watermark
@@ -78,6 +101,7 @@ struct FinishPanel: View {
         .tint(Theme.accent)
         .padding(.top, 16)
         .accessibilityIdentifier("toggle.watermark")
+        lastUsedButton(.watermark)
 
         if let mark = watermark {
             let isLogo = mark.logo != nil || wantsLogo

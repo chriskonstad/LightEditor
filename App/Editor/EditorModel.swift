@@ -798,6 +798,14 @@ final class EditorModel: Identifiable {
         pushHistory(label: Self.label(for: key, in: recipe, defaults: defaults))
     }
 
+    /// Sets several parameters as one history step (nil clears one).
+    func set(_ values: [ParamKey: ParamValue?], label: String) {
+        clearPresetPreview()
+        let stamp = app.clock.now()
+        for (key, value) in values { recipe.set(key, value, at: stamp) }
+        pushHistory(label: label)
+    }
+
     /// Lens correction moves pixels, so AI masks and fills are recomputed for the new geometry.
     func setLensCorrection(_ on: Bool) {
         set(.lensCorrection, on ? nil : .scalar(0))

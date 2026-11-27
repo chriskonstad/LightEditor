@@ -89,6 +89,7 @@ final class AppModel {
                 try? FileManager.default.removeItem(at: drafts)
             }
             UserDefaults.standard.removeObject(forKey: "clipboard")
+            for part in LastUsedFinishing.Part.allCases { part.clear() }
         }
         #endif
         if let path = UserDefaults.standard.string(forKey: "FixtureLibrary"), !path.isEmpty {

@@ -70,7 +70,7 @@ extension Recipe {
                     let length = (nx * nx + ny * ny).squareRoot()
                     if length > 1 { nx /= length; ny /= length }
                     result.set(key, .point(x: nx, y: ny), at: stamp)
-                case .curve, .lut, .crop, .mask, .retouch, .color, .aspect, .watermark:
+                case .curve, .lut, .crop, .mask, .retouch, .color, .aspect, .watermark, .quad:
                     // These have no meaningful delta; paste them only when the source has one.
                     if let source { result.set(key, source, at: stamp) }
                 }

@@ -62,7 +62,7 @@ extension Recipe {
             case .color, .aspect, .watermark:
                 // A border or watermark has no strength; it applies as saved.
                 result.set(key, value, at: stamp)
-            case .crop, .mask, .retouch:
+            case .crop, .mask, .retouch, .quad:
                 continue
             }
         }

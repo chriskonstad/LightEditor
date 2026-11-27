@@ -263,14 +263,37 @@ public enum GradeGraph {
     /// Lens distortion and fringing, perspective, straighten, then crop. The crop
     /// rect is normalized to the corrected, straightened frame, which is scaled up
     /// just enough that no empty corners show.
-    static func geometry(_ image: CIImage, _ recipe: Recipe) -> CIImage {
+    public static func geometry(_ image: CIImage, _ recipe: Recipe) -> CIImage {
+        var warped = LensCorrection.warp(image, recipe)
+        if case .quad(let quad)? = recipe[.perspectiveCorners] { warped = corners(warped, quad) }
         let corrected = perspective(
-            LensCorrection.warp(image, recipe),
+            warped,
             vertical: (recipe.scalar(.perspectiveVertical) ?? 0) / 100,
             horizontal: (recipe.scalar(.perspectiveHorizontal) ?? 0) / 100
         )
         guard case .crop(let geometry)? = recipe[.crop] else { return corrected }
         return applyGeometry(geometry, to: corrected)
+    }
+
+    /// Four-corner correction: the quad becomes a rectangle filling the frame. Its
+    /// size follows the quad's edges (the average of opposite sides), so the result
+    /// keeps roughly the subject's real proportions. The result starts at the origin.
+    public static func corners(_ image: CIImage, _ quad: PerspectiveQuad) -> CIImage {
+        guard quad.isValid else { return image }
+        let e = image.extent
+        func point(_ p: NormalizedPoint) -> CGPoint { CGPoint(x: e.minX + p.x * e.width, y: e.minY + (1 - p.y) * e.height) }
+        let corrected = image.applyingFilter("CIPerspectiveCorrection", parameters: [
+            "inputTopLeft": CIVector(cgPoint: point(quad.topLeft)),
+            "inputTopRight": CIVector(cgPoint: point(quad.topRight)),
+            "inputBottomRight": CIVector(cgPoint: point(quad.bottomRight)),
+            "inputBottomLeft": CIVector(cgPoint: point(quad.bottomLeft)),
+            "inputCrop": true,
+        ])
+        let out = corrected.extent
+        guard out.width.isFinite, out.height.isFinite, out.width >= 1, out.height >= 1 else { return image }
+        // Whole pixels from the origin, like every other stage's output.
+        return corrected.transformed(by: CGAffineTransform(translationX: -out.minX, y: -out.minY))
+            .cropped(to: CGRect(x: 0, y: 0, width: out.width.rounded(.down), height: out.height.rounded(.down)))
     }
 
     /// Keystone correction. Positive vertical widens the top (fixing verticals that

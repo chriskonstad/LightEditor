@@ -134,6 +134,7 @@ On the photo (uncropped):
 - aspect chips: Free, Original, 1:1, 4:5, 3:2, 4:3, 16:9, 65:24 XPan, Custom… (enter any width and height) and swap orientation;
 - Straighten (±45°) with an **Auto** button and, once used, an "Auto · Camera level" or "Auto · Horizon" badge. The slider then fine-tunes the found angle. Double-tap resets to 0 and turns Auto off;
 - Vertical perspective and Horizontal perspective;
+- **Four corners** ("On" when set) with "Set Corners…" / "Edit Corners…": the photo switches to how it was shot (no perspective, straighten or crop), with four handles joined by an amber outline, a grid that follows the shape's perspective, and the outside dimmed. Drag the corners onto something that should be rectangular; a handle can't fold the shape over itself. "Apply" goes back to the crop tool with the shape made rectangular (its size follows the shape's sides); "Remove Corners" turns it off. The keystone sliders, straighten and crop then apply on top;
 - Reset and Done.
 
 The photo shows the corrected, straightened frame with the crop rectangle, corner handles, a fine square grid and the thirds, and the area outside the crop is dimmed.

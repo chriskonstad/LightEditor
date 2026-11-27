@@ -70,7 +70,11 @@ struct PhotoCanvas: View {
                     .accessibilityIdentifier("photoCanvas")
 
                 if model.isCropping, model.phase == .ready {
-                    CropOverlay(model: model, viewSize: proxy.size)
+                    if model.editingCorners {
+                        CornersOverlay(model: model, viewSize: proxy.size)
+                    } else {
+                        CropOverlay(model: model, viewSize: proxy.size)
+                    }
                 }
 
                 if model.isEditingMasks, model.phase == .ready {

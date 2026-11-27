@@ -70,6 +70,14 @@ struct RecipeGenerator {
             case .watermark:
                 let positions = WatermarkPosition.allCases
                 recipe.set(spec.key, .watermark(Watermark(text: "© Test \(rng.next() % 100)", logo: coin() ? WatermarkLogo(hash: "h\(rng.next() % 100)", name: "Logo", format: coin() ? "pdf" : "png") : nil, position: positions[Int(rng.next() % UInt64(positions.count))])), at: stamp())
+            case .quad:
+                // Points are stored to 1/10 000, so generate them at that precision.
+                let d = (0..<8).map { _ in 0.05 + unit() * 0.15 }
+                func q(_ v: Double) -> Double { (v * 10_000).rounded() / 10_000 }
+                recipe.set(spec.key, .quad(PerspectiveQuad(
+                    topLeft: NormalizedPoint(x: q(d[0]), y: q(d[1])), topRight: NormalizedPoint(x: q(1 - d[2]), y: q(d[3])),
+                    bottomRight: NormalizedPoint(x: q(1 - d[4]), y: q(1 - d[5])), bottomLeft: NormalizedPoint(x: q(d[6]), y: q(1 - d[7]))
+                )), at: stamp())
             case .mask, .retouch:
                 break
             }

@@ -10,6 +10,39 @@ struct CropTools: View {
     @State private var customHeight = ""
 
     var body: some View {
+        if model.editingCorners {
+            cornerTools
+        } else {
+            cropTools
+        }
+    }
+
+    /// While placing the four perspective corners.
+    private var cornerTools: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Drag the four corners onto something that should be rectangular, like a building, a sign or a painting. The grid helps line them up.")
+                .font(.caption).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("Remove Corners") {
+                    model.set(.perspectiveCorners, nil)
+                    model.editingCorners = false
+                }
+                .disabled(model.perspectiveCorners == nil)
+                .accessibilityIdentifier("corners.remove")
+                Spacer()
+                Button("Apply") {
+                    // Untouched handles still mean the starting shape.
+                    if model.perspectiveCorners == nil { model.set(.perspectiveCorners, .quad(CornersOverlay.startingQuad)) }
+                    model.editingCorners = false
+                }
+                .buttonStyle(AccentButtonStyle())
+                .accessibilityIdentifier("corners.apply")
+            }
+        }
+    }
+
+    private var cropTools: some View {
         VStack(alignment: .leading, spacing: 6) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -91,8 +124,25 @@ struct CropTools: View {
             ParamSlider(model: model, key: .perspectiveVertical, label: "Vertical perspective")
             ParamSlider(model: model, key: .perspectiveHorizontal, label: "Horizontal perspective")
             HStack {
+                Text("Four corners").foregroundStyle(model.perspectiveCorners != nil ? Theme.textPrimary : Theme.textSecondary)
+                if model.perspectiveCorners != nil {
+                    Text("On").font(.caption.weight(.medium))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Theme.accent.opacity(0.18), in: Capsule())
+                        .foregroundStyle(Theme.accent)
+                }
+                Spacer()
+                Button(model.perspectiveCorners == nil ? "Set Corners…" : "Edit Corners…") { model.editingCorners = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .accessibilityHint("Drag four corners onto a rectangle in the photo to correct its perspective")
+                    .accessibilityIdentifier("corners.edit")
+            }
+            .font(.subheadline)
+            HStack {
                 Button("Reset") {
                     model.reset(.crop)
+                    model.reset(.perspectiveCorners)
                     model.reset(.perspectiveVertical)
                     model.reset(.perspectiveHorizontal)
                 }

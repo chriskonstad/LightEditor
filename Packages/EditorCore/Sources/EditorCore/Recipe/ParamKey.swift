@@ -131,6 +131,8 @@ extension ParamKey {
     // Crop and perspective
     public static let crop = ParamKey("crop.geometry")
     public static let perspectiveVertical = ParamKey("crop.perspective.vertical")
+    /// `.quad`: four points that become a rectangle, before the keystone sliders.
+    public static let perspectiveCorners = ParamKey("crop.perspective.corners")
     public static let perspectiveHorizontal = ParamKey("crop.perspective.horizontal")
 
     // The image saved to Photos with the edit (see `PhotosCopy`)

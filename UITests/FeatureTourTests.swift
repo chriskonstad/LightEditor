@@ -115,18 +115,8 @@ final class FeatureTourTests: XCTestCase {
             let bottom = element("slider.finish.border.bottom")
             if bottom.exists { drag(bottom, from: 0.0, to: 0.4) }
             shot("border-white-polaroid")
-            // The custom color swatch opens the system color picker.
-            if tapIfPresent("border.custom") {
-                pause(1)
-                // Close the picker only if it opened: a swipe down on the editor itself closes the editor.
-                let picker = app.sheets.firstMatch.exists || app.otherElements["UIColorPickerViewController"].exists
-                    || app.navigationBars.firstMatch.buttons["Close"].exists || app.buttons["Close"].exists
-                if picker {
-                    shot("border-custom-color-picker")
-                    if app.buttons["Close"].exists { app.buttons["Close"].firstMatch.tap() } else { app.swipeDown(velocity: .fast) }
-                    pause(0.8)
-                }
-            }
+            // (The custom color swatch opens the system picker, which runs out of process:
+            // XCUITest can't see it to close it, so the tour leaves it alone.)
             XCTAssertTrue(element("editor.export").exists, "the editor closed")
             if !reveal(element("toggle.watermark"), label: "Watermark") { XCTFail("couldn't find the watermark switch") }
             if element("toggle.watermark").exists {
@@ -231,6 +221,41 @@ final class FeatureTourTests: XCTestCase {
         } else {
             XCTFail("couldn't find the mask's exposure slider")
         }
+    }
+
+    /// Four-corner perspective: drag the corners onto the window frame, apply, and
+    /// the photo is redrawn as if shot straight on.
+    func testFourCornerPerspective() throws {
+        let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
+        app = XCUIApplication()
+        app.launchArguments = [
+            "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
+            "-OpenAsset", "DSC04921.ARW",
+        ]
+        app.launch()
+        XCTAssertTrue(waitUntilEnabled("editor.export", timeout: 120), "the editor never finished decoding")
+        XCTAssertTrue(tapIfPresent("editor.crop") || tapIfPresent("Crop"), "no crop tool")
+        pause(1)
+        let edit = element("corners.edit")
+        XCTAssertTrue(reveal(edit, label: "Four corners"), "no Set Corners button")
+        edit.tap()
+        pause(1)
+        shot("corners-start")
+        // Pull the top corners in and the bottom ones out: a keystone like a tilted-up shot.
+        let moves: [(Int, CGVector)] = [(0, CGVector(dx: 40, dy: 0)), (1, CGVector(dx: -40, dy: 0)), (2, CGVector(dx: 15, dy: 10)), (3, CGVector(dx: -15, dy: 10))]
+        for (index, offset) in moves {
+            let handle = element("corner.\(index)")
+            XCTAssertTrue(handle.waitForExistence(timeout: 3), "no corner \(index)")
+            let grip = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            grip.press(forDuration: 0.1, thenDragTo: grip.withOffset(offset))
+            pause(0.4)
+        }
+        shot("corners-placed")
+        XCTAssertTrue(tapIfPresent("corners.apply"), "no Apply button")
+        pause(1.5)
+        shot("corners-applied")
+        XCTAssertTrue(element("corners.edit").label.contains("Edit"), "the corners weren't kept")
     }
 
     // MARK: Helpers

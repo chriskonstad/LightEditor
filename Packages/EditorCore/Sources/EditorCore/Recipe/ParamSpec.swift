@@ -78,6 +78,7 @@ public struct ParamSpec: Sendable, Identifiable {
         case color
         case aspect
         case watermark
+        case quad
     }
 
     public let key: ParamKey
@@ -168,6 +169,7 @@ public enum ParamCatalog {
             scalar(.lensVignetteMidpoint, "Lens vignetting midpoint", .detail, range: 0...100, defaultValue: 50),
 
             ParamSpec(key: .crop, label: "Crop", kind: .crop, group: .crop, stage: .grade),
+            ParamSpec(key: .perspectiveCorners, label: "Corners", kind: .quad, group: .crop, stage: .grade),
             scalar(.perspectiveVertical, "Vertical", .crop),
             scalar(.perspectiveHorizontal, "Horizontal", .crop),
             scalar(.borderWidth, "Border", .finishing, range: 0...25, stage: .finishing),

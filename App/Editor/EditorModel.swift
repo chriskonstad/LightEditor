@@ -144,7 +144,17 @@ final class EditorModel: Identifiable {
     var isEditingMasks: Bool { tab == .masks && !isCropping && !isRetouching }
     /// Masks and retouch work on the uncropped original.
     var showsOriginalFrame: Bool { isEditingMasks || isRetouching }
-    var isCropping = false { didSet { if isCropping != oldValue { keepZoomIfSameFrame() }; render() } }
+    var isCropping = false {
+        didSet {
+            if isCropping != oldValue { keepZoomIfSameFrame() }
+            if !isCropping { editingCorners = false }
+            render()
+        }
+    }
+    /// Placing the four perspective corners, inside the crop tool. The canvas then
+    /// shows the photo before any perspective, straighten or crop, which is what the
+    /// corners are placed on.
+    var editingCorners = false { didSet { if editingCorners != oldValue { keepZoomIfSameFrame(); render() } } }
     /// `.actual(scale:)` is relative to the original's full resolution: 1 is 100%,
     /// one original pixel per screen pixel.
     var zoom: PreviewZoom = .fit {
@@ -173,6 +183,7 @@ final class EditorModel: Identifiable {
     private var hasFrameGeometry: Bool {
         if case .crop(let geometry)? = recipe[.crop], !geometry.isIdentity { return true }
         if Finishing.hasFrame(recipe) { return true }
+        if perspectiveCorners != nil { return true }
         return ([.perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys).contains { (recipe.scalar($0) ?? 0) != 0 }
     }
     var showExport = false
@@ -360,6 +371,9 @@ final class EditorModel: Identifiable {
             geometry.rect = .full
             copy.set(.crop, .crop(geometry), at: stamp)
         }
+        if isCropping, editingCorners {
+            for key in [ParamKey.perspectiveCorners, .perspectiveVertical, .perspectiveHorizontal, .crop] { copy.set(key, nil, at: stamp) }
+        }
         return copy
     }
 
@@ -517,7 +531,7 @@ final class EditorModel: Identifiable {
             // how on-screen pixels map back to tiles.
             var geometryOnly = Recipe()
             let stamp = HLCStamp(millis: 0, node: "display")
-            for key in [ParamKey.crop, .perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys + Finishing.frameKeys {
+            for key in [ParamKey.crop, .perspectiveCorners, .perspectiveVertical, .perspectiveHorizontal] + LensCorrection.geometryKeys + Finishing.frameKeys {
                 if let value = displayRecipe[key] { geometryOnly.set(key, value, at: stamp) }
             }
             geometry = GradeGraph.apply(geometryOnly, to: source, inputs: GradeInputs(defaults: defaults, applyGeometry: !showsOriginalFrame))
@@ -1024,6 +1038,12 @@ final class EditorModel: Identifiable {
     }
 
     func setCropLive(_ geometry: CropGeometry) { setLive(.crop, .crop(geometry)) }
+
+    /// The four perspective corners, or nil when they aren't set.
+    var perspectiveCorners: PerspectiveQuad? {
+        if case .quad(let quad)? = recipe[.perspectiveCorners] { return quad }
+        return nil
+    }
     func commitCrop() { commit(.crop) }
 
     /// Aspect ratio of the straightened, uncropped frame, from the decoded image.
@@ -1184,6 +1204,12 @@ final class EditorModel: Identifiable {
     /// has the border, which is an output setting for exports.
     var savedImageFullSize: CGSize? {
         guard let native = info?.nativeSize, native.width > 0, native.height > 0 else { return nil }
+        if perspectiveCorners != nil {
+            // Corners change the frame's shape; measure it through the real geometry
+            // (extents only, nothing is rendered).
+            let frame = GradeGraph.geometry(CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: native)), recipe).extent.size
+            if frame.width.isFinite, frame.width >= 1 { return CGSize(width: frame.width.rounded(), height: frame.height.rounded()) }
+        }
         let rect = crop.rect
         return CGSize(width: (native.width * rect.width).rounded(), height: (native.height * rect.height).rounded())
     }

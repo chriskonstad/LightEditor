@@ -128,6 +128,60 @@ public struct CropGeometry: Codable, Sendable, Hashable {
     }
 }
 
+/// Four points on the photo that should be the corners of a rectangle, e.g. a
+/// building's facade or a painting shot at an angle. Normalized to the photo after
+/// lens corrections, from the top left. Encoded as four `[x, y]` pairs, clockwise
+/// from the top left.
+public struct PerspectiveQuad: Codable, Sendable, Hashable {
+    public var topLeft: NormalizedPoint
+    public var topRight: NormalizedPoint
+    public var bottomRight: NormalizedPoint
+    public var bottomLeft: NormalizedPoint
+
+    public init(topLeft: NormalizedPoint, topRight: NormalizedPoint, bottomRight: NormalizedPoint, bottomLeft: NormalizedPoint) {
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomRight = bottomRight
+        self.bottomLeft = bottomLeft
+    }
+
+    /// A rectangle inset from the photo's edges, to start dragging from.
+    public static func inset(_ fraction: Double) -> PerspectiveQuad {
+        PerspectiveQuad(topLeft: NormalizedPoint(x: fraction, y: fraction), topRight: NormalizedPoint(x: 1 - fraction, y: fraction),
+                        bottomRight: NormalizedPoint(x: 1 - fraction, y: 1 - fraction), bottomLeft: NormalizedPoint(x: fraction, y: 1 - fraction))
+    }
+
+    public var corners: [NormalizedPoint] { [topLeft, topRight, bottomRight, bottomLeft] }
+
+    /// Whether the corners make a usable shape: convex, clockwise, not tiny.
+    public var isValid: Bool {
+        let p = corners
+        var sign = 0.0
+        for i in 0..<4 {
+            let a = p[i], b = p[(i + 1) % 4], c = p[(i + 2) % 4]
+            let cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+            if abs(cross) < 1e-6 { return false }
+            if sign == 0 { sign = cross } else if (cross > 0) != (sign > 0) { return false }
+        }
+        let area = abs((p[0].x * p[1].y - p[1].x * p[0].y) + (p[1].x * p[2].y - p[2].x * p[1].y)
+                       + (p[2].x * p[3].y - p[3].x * p[2].y) + (p[3].x * p[0].y - p[0].x * p[3].y)) / 2
+        return area > 0.01
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let points = try decoder.singleValueContainer().decode([NormalizedPoint].self)
+        guard points.count == 4 else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "A perspective quad has four corners"))
+        }
+        self.init(topLeft: points[0], topRight: points[1], bottomRight: points[2], bottomLeft: points[3])
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(corners)
+    }
+}
+
 /// How a straighten angle was found automatically.
 public struct AutoStraighten: Codable, Sendable, Hashable {
     public enum Method: String, Codable, Sendable {
@@ -172,6 +226,8 @@ public enum ParamValue: Sendable, Hashable {
     /// An aspect ratio on its own, e.g. a border's canvas.
     case aspect(AspectRatio)
     case watermark(Watermark)
+    /// Four-corner perspective correction.
+    case quad(PerspectiveQuad)
 
     public var scalarValue: Double? {
         if case .scalar(let value) = self { return value }
@@ -186,7 +242,7 @@ public enum ParamValue: Sendable, Hashable {
 
 extension ParamValue: Codable {
     private enum CodingKeys: String, CodingKey {
-        case x, y, curve, lut, name, amount, crop, angle, aspect, level, mask, retouch, rgb, canvas, watermark
+        case x, y, curve, lut, name, amount, crop, angle, aspect, level, mask, retouch, rgb, canvas, watermark, quad
     }
 
     public init(from decoder: any Decoder) throws {
@@ -220,6 +276,8 @@ extension ParamValue: Codable {
             self = .aspect(try container.decode(AspectRatio.self, forKey: .canvas))
         } else if container.contains(.watermark) {
             self = .watermark(try container.decode(Watermark.self, forKey: .watermark))
+        } else if container.contains(.quad) {
+            self = .quad(try container.decode(PerspectiveQuad.self, forKey: .quad))
         } else if container.contains(.x) {
             self = .point(x: try container.decode(Double.self, forKey: .x), y: try container.decode(Double.self, forKey: .y))
         } else {
@@ -265,6 +323,9 @@ extension ParamValue: Codable {
         case .watermark(let mark):
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(mark, forKey: .watermark)
+        case .quad(let quad):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(quad, forKey: .quad)
         }
     }
 }

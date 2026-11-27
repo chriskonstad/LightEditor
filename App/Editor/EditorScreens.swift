@@ -71,7 +71,7 @@ struct CompactEditorView: View {
                     }
                 } else {
                     tabPicker
-                    ScrollView {
+                    PanelScroller(model: model) {
                         if let notice = model.foreignEdit {
                             Label(notice, systemImage: "exclamationmark.triangle")
                                 .font(.footnote).foregroundStyle(Theme.textSecondary)
@@ -86,7 +86,6 @@ struct CompactEditorView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .scrollDismissesKeyboard(.immediately)
-                    .id(model.tab)  // Each tab opens at its top.
                     bottomBar
                 }
             }
@@ -518,7 +517,7 @@ struct EditorInspector: View {
                 .frame(height: 70)
                 .padding(.horizontal)
             #endif
-            ScrollView {
+            PanelScroller(model: model) {
                 if let notice = model.foreignEdit {
                     Label(notice, systemImage: "exclamationmark.triangle")
                         .font(.footnote).foregroundStyle(Theme.textSecondary)
@@ -528,10 +527,32 @@ struct EditorInspector: View {
                 EditorPanel(model: model, tab: model.tab)
                     .padding(.bottom)
             }
-            .id(model.tab)  // Each tab opens at its top.
             .padding(.horizontal)
         }
         .background(Theme.panel)
+    }
+}
+
+/// The control panel's scroll view. Each tab opens at its top, and it scrolls to
+/// `EditorModel.panelScrollTarget` when one is set.
+struct PanelScroller<Content: View>: View {
+    let model: EditorModel
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView { content }
+                .onChange(of: model.panelScrollTarget, initial: true) { _, target in
+                    guard let target else { return }
+                    Task {
+                        // After the tab's content has laid out.
+                        try? await Task.sleep(for: .milliseconds(300))
+                        proxy.scrollTo(target, anchor: .top)
+                        model.panelScrollTarget = nil
+                    }
+                }
+        }
+        .id(model.tab)  // Each tab opens at its top.
     }
 }
 

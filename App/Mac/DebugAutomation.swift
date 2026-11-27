@@ -14,6 +14,8 @@ import SwiftUI
 /// - then `-SetParams "effects.vignette.amount=100,light.exposure=0.5"` sets scalar
 ///   parameters, as if each slider had been moved;
 /// - then `-AutoTone YES`, `-ApplyPreset <name>` and `-EditorTab <presets|light|color|effects|detail|masks|finish>`;
+/// - `-OpenWheel <shadows|midtones|highlights|global>` opens that color wheel, and
+///   `-ScrollTo <view id>` scrolls the panel to a section (`section.grading`);
 /// - `-HideSidebar YES` collapses the sidebar;
 /// - `-SnapshotTo <dir>` writes a PNG of the window every two seconds, with the photo
 ///   painted in (window snapshots leave Metal content blank);
@@ -64,7 +66,9 @@ enum DebugAutomation {
                     editor.setLive(key, value)
                     editor.commit(key)
                 }
+                if let range = defaults.string(forKey: "OpenWheel").flatMap(ToneRange.init(rawValue:)) { editor.wheelToOpen = range }
                 if let tab = defaults.string(forKey: "EditorTab").flatMap(EditorModel.Tab.init(rawValue:)) { editor.tab = tab }
+                if let target = defaults.string(forKey: "ScrollTo") { editor.panelScrollTarget = target }
                 if let path = defaults.string(forKey: "WatermarkLogo") { await setWatermarkLogo(path, editor: editor) }
                 if defaults.bool(forKey: "DemoMaskOverlay") { await demoMaskOverlay(editor) }
             }

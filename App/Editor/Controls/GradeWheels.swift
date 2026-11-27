@@ -34,6 +34,12 @@ struct GradeWheelsSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onAppear {
+            if let range = model.wheelToOpen {
+                open = range
+                model.wheelToOpen = nil
+            }
+        }
     }
 
     // MARK: Overview

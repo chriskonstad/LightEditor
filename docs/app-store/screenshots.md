@@ -1,5 +1,7 @@
 # Screenshot plan
 
+`just screenshots` (`scripts/app-store-screenshots.sh`) captures the current set into `build/screenshots/{iphone,ipad,mac}/`: iPhone 6.9" and iPad 13" (landscape) from `UITests/AppStoreScreenshotTests.swift` in throwaway simulators with a clean status bar, and the Mac from one Debug launch per shot with `-SnapshotTo`. `--ios` or `--mac` captures one platform; `--no-build` reuses the last builds. The shots are a fixed list of launch arguments (photo, preset, parameters, tab, scroll position, open wheel), so the set comes out the same each run; change the list in both the test and the script. The Mac half copies the photos into the app's sandbox container, which needs the terminal to have App Management or Full Disk Access.
+
 Capture everything from simulators (iPhone, iPad) and a Debug Mac build with a folder library, using sample photos, **never a real Photos library**. See `docs/spikes/simulator-tooling.md` for importing RAWs (`-ImportFolder`) and the Mac folder library (`-FixtureLibrary`).
 
 ## Photos to use
@@ -73,3 +75,7 @@ open -n LightEditor.app --args -FixtureLibrary $C/Shots -SnapshotTo $C/tmp/snaps
 
 The snapshots are 2880 × 1800 (a 1440 × 900 window on a Retina display). Saved in `build/screenshots/mac/`: Light (sunset, Auto), Presets (Velvia + Auto), Grade wheels, Color/HSL on the cat.
 
+
+## Captured 2026-11-27 (`just screenshots`)
+
+After colored slider tracks and the Lightroom-style tabs (color grading in Color, a new Effects tab). Seven shots per device, all from the sunset (DSCF2030.raf) and the cat (DSC04921.ARW), the only fixtures without people: Light (Auto), Color (HSL mixer), Color grading (a wheel open, Teal & orange), Presets (Velvia), Effects (B&W with vignette and grain), Masks (the mask picker), Finish (a white border). iPhone 1320 × 2868; iPad 2752 × 2064 landscape. The Mac set wasn't recaptured: this session couldn't write into the app's container.

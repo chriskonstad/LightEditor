@@ -180,6 +180,12 @@ link-models from="":
 
 # --- release (maintainers) ---
 
+# Flags: --ios, --mac (one platform only), --no-build. See docs/app-store/screenshots.md.
+[doc("App Store screenshots (iPhone 6.9\", iPad 13\", Mac) into build/screenshots/.")]
+[group('release')]
+screenshots *flags:
+    scripts/app-store-screenshots.sh "$@"
+
 # Build a Release build and install it on a paired iPhone or iPad (default: the first connected iPhone).
 [group('release')]
 install-device udid="":

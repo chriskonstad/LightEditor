@@ -77,6 +77,11 @@ final class EditorModel: Identifiable {
     private(set) var hiddenKeys: Set<ParamKey> = [] { didSet { render() } }
     /// "Without Exposure", shown on the photo while a control is held.
     private(set) var hiddenLabel: String?
+    /// A section of the control panel to scroll to, by view id (e.g. "section.grading");
+    /// the panel clears it once it has scrolled.
+    var panelScrollTarget: String?
+    /// A color wheel to open the next time the wheels appear (debug automation).
+    var wheelToOpen: ToneRange?
     /// While an HSL swatch or slider is held: show which colors that band affects.
     var hslSelection: HueBand? {
         didSet {

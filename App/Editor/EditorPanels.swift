@@ -79,6 +79,7 @@ struct ColorPanel: View {
             ParamSlider(model: model, key: .saturation)
 
             PanelHeader(title: "HSL mixer")
+                .id("section.hsl")
             Picker("Mixer view", selection: $mixerMode) {
                 Text("Color").tag(MixerMode.byColor)
                 ForEach(HSLComponent.allCases, id: \.self) { Text($0.displayName).tag(MixerMode.byProperty($0)) }
@@ -101,6 +102,7 @@ struct ColorPanel: View {
             }
 
             PanelHeader(title: "Color grading", model: model, group: .grade)
+                .id("section.grading")
             GradeWheelsSection(model: model)
             ParamSlider(model: model, key: .gradeBlending)
             ParamSlider(model: model, key: .gradeBalance)

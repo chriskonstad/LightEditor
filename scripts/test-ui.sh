@@ -104,8 +104,9 @@ fi
 
 destinations=()
 for device in $devices; do destinations+=(-destination "id=${udids[$device]}"); done
-# FeatureTourTests is a demo for scripts/ui-tour.sh, not an audit.
-filter=(-skip-testing:LightEditorUITests/FeatureTourTests)
+# FeatureTourTests (scripts/ui-tour.sh) and AppStoreScreenshotTests
+# (scripts/app-store-screenshots.sh) make pictures; they aren't audits.
+filter=(-skip-testing:LightEditorUITests/FeatureTourTests -skip-testing:LightEditorUITests/AppStoreScreenshotTests)
 # --only takes a ScreenAuditTests method, or Class/method for another class.
 if [[ -n $only ]]; then
     [[ $only == */* ]] && filter=(-only-testing:"LightEditorUITests/$only") || filter=(-only-testing:"LightEditorUITests/ScreenAuditTests/$only")

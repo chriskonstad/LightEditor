@@ -79,8 +79,11 @@ struct NewMaskGrid: View {
                 Button { model.addMask(shape) } label: {
                     VStack(spacing: 6) {
                         Image(systemName: shape.systemImage).font(.title3)
-                        Text(shape.displayName).font(.caption).lineLimit(1).minimumScaleFactor(0.8)
+                        // Two lines rather than shrinking: "Luminance range" doesn't fit one in a narrow grid.
+                        Text(shape.displayName).font(.caption).lineLimit(2).multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, minHeight: 64)
                     .background(Theme.panelRaised, in: RoundedRectangle(cornerRadius: 10))
                     .foregroundStyle(shape.isAI ? Theme.accent : Theme.textPrimary)

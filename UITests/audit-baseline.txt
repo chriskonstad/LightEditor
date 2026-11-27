@@ -43,20 +43,6 @@ iPad mini (A17 Pro) | landscape-L | mask-radial | hit target under 44 pt | mask.
 iPad mini (A17 Pro) | landscape-L | mask-radial | hit target under 44 pt | unlabeled (button)
 iPad mini (A17 Pro) | landscape-L | mask-radial | hit target under 44 pt | view.history (button)
 iPad mini (A17 Pro) | landscape-L | mask-radial | hit target under 44 pt | view.retouch (button)
-iPad mini (A17 Pro) | landscape-L | retouch | clipped text | "ADJUSTMENTS"
-iPad mini (A17 Pro) | landscape-L | retouch | clipped text | "Clear all"
-iPad mini (A17 Pro) | landscape-L | retouch | clipped text | "LaMa · full resolution"
-iPad mini (A17 Pro) | landscape-L | retouch | clipped text | "New removals:"
-iPad mini (A17 Pro) | landscape-L | retouch | clipped text | "Paint over what to remove. AI fills it from the surroundings, on this device."
-iPad mini (A17 Pro) | landscape-L | retouch | clipped text | "Show spots"
-iPad mini (A17 Pro) | landscape-L | retouch | hit region | mask.addPart
-iPad mini (A17 Pro) | landscape-L | retouch | hit region | mask.new
-iPad mini (A17 Pro) | landscape-L | retouch | hit region | retouch.engine
-iPad mini (A17 Pro) | landscape-L | retouch | hit target under 44 pt | mask.addPart (button)
-iPad mini (A17 Pro) | landscape-L | retouch | hit target under 44 pt | mask.new (button)
-iPad mini (A17 Pro) | landscape-L | retouch | hit target under 44 pt | mask.part.Radial gradient (button)
-iPad mini (A17 Pro) | landscape-L | retouch | hit target under 44 pt | retouch.engine (button)
-iPad mini (A17 Pro) | landscape-L | retouch | hit target under 44 pt | unlabeled (button)
 iPad mini (A17 Pro) | landscape-L | settings | clipped text | "Report a Problem"
 iPad mini (A17 Pro) | landscape-L | settings | clipped text | "Source Code on GitHub"
 iPad mini (A17 Pro) | landscape-L | tab-color | hit region | crop.rotate
@@ -135,12 +121,10 @@ iPad mini (A17 Pro) | landscape-L | tab-light | hit target under 44 pt | view.hi
 iPad mini (A17 Pro) | landscape-L | tab-light | hit target under 44 pt | view.retouch (button)
 iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Background"
 iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Color range"
+iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Depth range"
 iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Linear gradient"
 iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Luminance range"
-iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Object"
-iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "People"
 iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Radial gradient"
-iPad mini (A17 Pro) | landscape-L | tab-masks | clipped text | "Subject"
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | crop.rotate
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | view.clipping
 iPad mini (A17 Pro) | landscape-L | tab-masks | hit region | view.history
@@ -165,12 +149,6 @@ iPad mini (A17 Pro) | landscape-L | tab-presets | hit target under 44 pt | crop.
 iPad mini (A17 Pro) | landscape-L | tab-presets | hit target under 44 pt | preset.shotAs (button)
 iPad mini (A17 Pro) | landscape-L | tab-presets | hit target under 44 pt | view.history (button)
 iPad mini (A17 Pro) | landscape-L | tab-presets | hit target under 44 pt | view.retouch (button)
-iPad mini (A17 Pro) | portrait-AX5 | mask-radial | hit target under 44 pt | mask.part.Radial gradient (button)
-iPad mini (A17 Pro) | portrait-AX5 | mask-radial | hit target under 44 pt | unlabeled (button)
-iPad mini (A17 Pro) | portrait-AX5 | mask-radial-scrolled | hit target under 44 pt | mask.part.Radial gradient (button)
-iPad mini (A17 Pro) | portrait-AX5 | mask-radial-scrolled | hit target under 44 pt | unlabeled (button)
-iPad mini (A17 Pro) | portrait-AX5 | tab-masks | clipped text | "Background"
-iPad mini (A17 Pro) | portrait-AX5 | tab-masks | clipped text | "Subject"
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.16:9 (button)
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.1:1 (button)
 iPad mini (A17 Pro) | portrait-L | crop | hit target under 44 pt | aspect.3:2 (button)
@@ -201,11 +179,10 @@ iPad mini (A17 Pro) | portrait-L | settings | clipped text | "Source Code on Git
 iPad mini (A17 Pro) | portrait-L | tab-light | hit target under 44 pt | light.auto (button)
 iPad mini (A17 Pro) | portrait-L | tab-light-scrolled | hit target under 44 pt | light.auto (button)
 iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Background"
-iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Color range"
+iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Depth range"
 iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Linear gradient"
 iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Luminance range"
 iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Radial gradient"
-iPad mini (A17 Pro) | portrait-L | tab-masks | clipped text | "Subject"
 iPad mini (A17 Pro) | portrait-L | tab-presets | clipped text | "Warm travel"
 iPad mini (A17 Pro) | portrait-L | tab-presets | hit target under 44 pt | preset.shotAs (button)
 iPad mini (A17 Pro) | portrait-L | tab-presets-scrolled | clipped text | "Teal & orange"
@@ -378,6 +355,11 @@ iPhone SE (3rd generation) | portrait-L | mask-radial | hit target under 44 pt |
 iPhone SE (3rd generation) | portrait-L | mask-radial | hit target under 44 pt | mask.new (button)
 iPhone SE (3rd generation) | portrait-L | mask-radial | hit target under 44 pt | mask.part.Radial gradient (button)
 iPhone SE (3rd generation) | portrait-L | mask-radial | hit target under 44 pt | unlabeled (button)
+iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | clipped text | "Copy edits"
+iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | clipped text | "Export"
+iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | clipped text | "Library"
+iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | clipped text | "Retouch"
+iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | clipped text | editor.title
 iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | hit target under 44 pt | mask.addPart (button)
 iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | hit target under 44 pt | mask.part.Radial gradient (button)
 iPhone SE (3rd generation) | portrait-L | mask-radial-scrolled | hit target under 44 pt | unlabeled (button)
@@ -461,14 +443,11 @@ iPhone SE (3rd generation) | portrait-L | tab-light-scrolled | clipped text | "L
 iPhone SE (3rd generation) | portrait-L | tab-light-scrolled | clipped text | "Retouch"
 iPhone SE (3rd generation) | portrait-L | tab-light-scrolled | clipped text | editor.title
 iPhone SE (3rd generation) | portrait-L | tab-light-scrolled | hit target under 44 pt | light.auto (button)
-iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | "Background"
 iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | "Copy edits"
 iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | "Export"
 iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | "Library"
 iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | "Retouch"
-iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | "Subject"
 iPhone SE (3rd generation) | portrait-L | tab-masks | clipped text | editor.title
-iPhone SE (3rd generation) | portrait-L | tab-masks-scrolled | clipped text | "Color range"
 iPhone SE (3rd generation) | portrait-L | tab-masks-scrolled | clipped text | "Copy edits"
 iPhone SE (3rd generation) | portrait-L | tab-masks-scrolled | clipped text | "Export"
 iPhone SE (3rd generation) | portrait-L | tab-masks-scrolled | clipped text | "Library"

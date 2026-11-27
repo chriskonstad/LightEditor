@@ -89,7 +89,9 @@ struct WatermarkOverlay: View {
                     .shadow(color: .black.opacity(0.5), radius: 2)
                     .frame(width: Theme.minTouch, height: Theme.minTouch)
                     .contentShape(Circle())
-                    .position(x: g.center.x + corner.x, y: g.center.y + corner.y)
+                    // Kept on screen when the watermark sits at the edge of the view.
+                    .position(x: min(max(g.center.x + corner.x, Theme.minTouch / 2), viewSize.width - Theme.minTouch / 2),
+                              y: min(max(g.center.y + corner.y, Theme.minTouch / 2), viewSize.height - Theme.minTouch / 2))
                     .gesture(resizeGesture(mark, g))
                     .accessibilityLabel("Resize and rotate watermark")
                     .accessibilityIdentifier("watermark.handle")

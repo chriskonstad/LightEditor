@@ -7,6 +7,7 @@
 #   scripts/app-store-screenshots.sh --ios        iPhone and iPad only
 #   scripts/app-store-screenshots.sh --mac        Mac only
 #   scripts/app-store-screenshots.sh --no-build   reuse the last builds
+#   scripts/app-store-screenshots.sh --duo        iPhone Duo too (asks you to unfold it)
 #
 # Output: build/screenshots/{iphone,ipad,mac}/NN-<screen>.png. iOS shots come from
 # AppStoreScreenshotTests in throwaway simulators with a clean status bar; Mac shots
@@ -15,13 +16,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$PWD
 
-ios=1 mac=1 build=1
+ios=1 mac=1 build=1 duo=0
 while (( $# )); do
     case $1 in
         --ios) mac=0 ;;
         --mac) ios=0 ;;
+        --duo) duo=1 ;;
         --no-build) build=0 ;;
-        -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
         *) echo "Unknown option $1" >&2; exit 2 ;;
     esac
     shift
@@ -35,6 +37,9 @@ rm -rf $work && mkdir -p $work
 if (( ios )); then
     devices=("iPhone 18 Pro Max" "iPad Pro 13-inch (M5)")
     folders=(iphone ipad)
+    # The Duo boots folded, and nothing scriptable unfolds it (no simctl or XCTest
+    # command): it needs Device Hub's Open pose button, once per simulator.
+    if (( duo )); then devices+=("iPhone Duo"); folders+=(duo); fi
     derived=build/UITests
     library=$work/library
     mkdir -p $library && cp -c $photos $library/
@@ -77,6 +82,11 @@ print(max(runtimes, key=lambda r: [int(p) for p in r['version'].split('.')])['id
             --cellularBars 4 --wifiBars 3 --dataNetwork wifi
         destinations+=(-destination "id=$udid")
     done
+    if (( duo )); then
+        open -a DeviceHub --args -CurrentDeviceUDID ${udids[iPhone Duo]} 2>/dev/null || open -a DeviceHub
+        echo "In Device Hub, unfold \"LightEditor UITest iPhone Duo\" with the Open pose button, then press Return."
+        read -r
+    fi
 
     echo "Capturing on: ${(j:, :)devices}"
     set +e

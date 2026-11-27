@@ -46,9 +46,9 @@ final class FeatureTourTests: XCTestCase {
         pause(1)
 
         // 1. Vignette stays inside the photo, on each canvas background.
-        tab("Grade")
+        tab("Effects")
         let vignette = element("slider.effects.vignette.amount")
-        if reveal(vignette, label: "Vignette") {
+        if reveal(vignette, label: "VIGNETTE") {
             drag(vignette, from: 0.5, to: 0.98)
             shot("vignette-plus-dark-background")
             for background in ["White", "Mid gray (18%)", "Black"] {
@@ -61,8 +61,8 @@ final class FeatureTourTests: XCTestCase {
             XCTFail("couldn't find the vignette slider")
         }
 
-        // 2. Color wheels: overview, then one wheel open with exact sliders.
-        tab("Grade")
+        // 2. Color wheels (the end of the Color tab): overview, then one wheel open.
+        tab("Color")
         _ = reveal(element("wheel.open.shadows"), label: "COLOR GRADING")
         shot("wheels-overview")
         let shadows = element("wheel.open.shadows")

@@ -13,8 +13,8 @@ A free, open-source RAW photo editor for iPhone, iPad and Mac, built for quick, 
 
 - **RAW 9 decoding** (`CIRAWFilter`) for supported cameras, such as Sony ARW, Fujifilm RAF and iPhone ProRAW. JPEG and HEIC work too.
 - **Light:** exposure, contrast, highlights, shadows, whites, blacks, Auto, plus Clarity, Texture and Dehaze.
-- **Color:** white balance, vibrance, saturation, and an 8-band HSL mixer by color or by property.
-- **Grade:** shadow, midtone, highlight and global color wheels, film LUTs, vignette and grain.
+- **Color:** white balance, vibrance, saturation, an 8-band HSL mixer by color or by property, and shadow, midtone, highlight and global color grading wheels.
+- **Effects:** film LUTs, vignette and grain.
 - **Detail:** RAW-stage noise reduction and sharpening, from Apple's RAW engine.
 - **Tone curve, crop and straighten**, with perspective, auto-straighten, 65:24 and custom ratios.
 - **Masks:** linear and radial gradients, brush, luminance and color ranges, and AI subject, sky, people and tap-to-select masks (Apple Vision).

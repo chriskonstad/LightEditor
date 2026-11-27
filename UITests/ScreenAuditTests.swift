@@ -85,17 +85,11 @@ final class ScreenAuditTests: XCTestCase {
         XCTAssertTrue(waitUntilEnabled(["editor.export", "toolbar.export"], timeout: 120), "the editor never finished decoding")
         auditor.capture("editor")
 
-        for tab in ["Presets", "Light", "Color", "Grade", "Detail", "Finish", "Masks"] {
+        for tab in ["Presets", "Light", "Color", "Effects", "Detail", "Finish", "Masks"] {
             let segment = app.segmentedControls.buttons[tab].firstMatch
             guard segment.exists else { continue }
             segment.tap()
             auditor.capture("tab-\(tab.lowercased())")
-            if tab == "Grade", tap(["wheel.open.shadows"]) {
-                // One wheel open, with its Hue, Saturation and Luminance sliders.
-                Thread.sleep(forTimeInterval: 0.6)
-                auditor.capture("wheel-open")
-                _ = tap(["wheel.overview"])
-            }
             if tab == "Finish", tap(["toggle.watermark"]) {
                 // The watermark's settings appear once it's on. Its text field takes
                 // focus; type something and dismiss the keyboard before auditing.
@@ -121,6 +115,20 @@ final class ScreenAuditTests: XCTestCase {
                 auditor.capture("tab-finish-watermark")
             }
             if scrollPanel() { auditor.capture("tab-\(tab.lowercased())-scrolled") }
+            if tab == "Color" {
+                // Color grading closes the Color tab, below the HSL mixer.
+                let wheel = app.descendants(matching: .any)["wheel.open.shadows"].firstMatch
+                for _ in 0..<4 where !(wheel.exists && wheel.isHittable) {
+                    guard scrollPanel() else { break }
+                }
+                auditor.capture("tab-color-grading")
+                if tap(["wheel.open.shadows"]) {
+                    // One wheel open, with its Hue, Saturation and Luminance sliders.
+                    Thread.sleep(forTimeInterval: 0.6)
+                    auditor.capture("wheel-open")
+                    _ = tap(["wheel.overview"])
+                }
+            }
         }
 
         // Still on Masks: make a radial mask, which shows its settings.

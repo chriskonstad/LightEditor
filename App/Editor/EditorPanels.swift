@@ -11,7 +11,7 @@ struct EditorPanel: View {
         switch tab {
         case .light: LightPanel(model: model)
         case .color: ColorPanel(model: model)
-        case .grade: GradePanel(model: model)
+        case .effects: EffectsPanel(model: model)
         case .detail: DetailPanel(model: model)
         case .masks: MasksPanel(model: model)
         case .presets: PresetsPanel(model: model)
@@ -99,21 +99,23 @@ struct ColorPanel: View {
                     ParamSlider(model: model, key: .hsl(band, component), label: band.displayName)
                 }
             }
+
+            PanelHeader(title: "Color grading", model: model, group: .grade)
+            GradeWheelsSection(model: model)
+            ParamSlider(model: model, key: .gradeBlending)
+            ParamSlider(model: model, key: .gradeBalance)
         }
     }
 }
 
-struct GradePanel: View {
+/// Creative effects, in the order they're applied: the film LUT, then the
+/// post-crop vignette, then grain.
+struct EffectsPanel: View {
     let model: EditorModel
     @State private var importingLUT = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            PanelHeader(title: "Color grading", model: model, group: .grade)
-            GradeWheelsSection(model: model)
-            ParamSlider(model: model, key: .gradeBlending)
-            ParamSlider(model: model, key: .gradeBalance)
-
             PanelHeader(title: "Film LUT", model: model, group: .filmLUT)
             lutPicker
             if case .lut(let ref, let amount)? = model.recipe[.lut] {
@@ -140,11 +142,12 @@ struct GradePanel: View {
                 }
             }
 
-            PanelHeader(title: "Effects", model: model, group: .effects)
-            ParamSlider(model: model, key: .vignetteAmount)
+            PanelHeader(title: "Vignette", model: model, group: .effects)
+            ParamSlider(model: model, key: .vignetteAmount, label: "Amount")
             ParamSlider(model: model, key: .vignetteMidpoint)
-            ParamSlider(model: model, key: .grainAmount)
-            ParamSlider(model: model, key: .grainSize)
+            PanelHeader(title: "Grain")
+            ParamSlider(model: model, key: .grainAmount, label: "Amount")
+            ParamSlider(model: model, key: .grainSize, label: "Size")
         }
         .fileImporter(isPresented: $importingLUT, allowedContentTypes: [.item]) { result in
             if case .success(let url) = result, let ref = model.app.importLUT(url) {
@@ -334,7 +337,7 @@ struct PresetsPanel: View {
                     .accessibilityLabel("Preset amount")
                     Text(preset.params.keys.contains(.lut)
                          ? "Applies its LUT; the strength is under Color › Film LUT."
-                         : "Sets the sliders in Light, Color and Grade. Fine-tune them there; this amount goes away once you do.")
+                         : "Sets the sliders in Light, Color and Effects. Fine-tune them there; this amount goes away once you do.")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                         .padding(.top, 4)

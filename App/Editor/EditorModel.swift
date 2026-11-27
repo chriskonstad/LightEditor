@@ -22,7 +22,7 @@ final class EditorModel: Identifiable {
     /// In picker order. Presets come first: they set the sliders the other tabs
     /// then fine-tune. The editor still opens on Light.
     enum Tab: String, CaseIterable, Identifiable {
-        case presets, light, color, grade, detail, masks, finish
+        case presets, light, color, effects, detail, masks, finish
         var id: String { rawValue }
         var title: String { rawValue.capitalized }
 
@@ -30,7 +30,7 @@ final class EditorModel: Identifiable {
             switch self {
             case .light: "sun.max"
             case .color: "drop.halffull"
-            case .grade: "circle.lefthalf.filled"
+            case .effects: "camera.filters"
             case .detail: "camera.aperture"
             case .masks: "circle.dashed.inset.filled"
             case .presets: "square.grid.2x2"

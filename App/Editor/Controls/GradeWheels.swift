@@ -1,7 +1,7 @@
 import EditorCore
 import SwiftUI
 
-/// The Grade tab's color wheels, in two states:
+/// The Color tab's color wheels, in two states:
 ///
 /// - **Overview:** all four wheels, small. Drag one for a quick change; tap it (or
 ///   its name) to open it.

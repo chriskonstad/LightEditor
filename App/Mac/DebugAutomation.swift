@@ -13,7 +13,7 @@ import SwiftUI
 ///   `-OpenAssetIndex <n>` the n-th;
 /// - then `-SetParams "effects.vignette.amount=100,light.exposure=0.5"` sets scalar
 ///   parameters, as if each slider had been moved;
-/// - then `-AutoTone YES`, `-ApplyPreset <name>` and `-EditorTab <presets|light|color|grade|detail|masks>`;
+/// - then `-AutoTone YES`, `-ApplyPreset <name>` and `-EditorTab <presets|light|color|effects|detail|masks|finish>`;
 /// - `-HideSidebar YES` collapses the sidebar;
 /// - `-SnapshotTo <dir>` writes a PNG of the window every two seconds, with the photo
 ///   painted in (window snapshots leave Metal content blank);

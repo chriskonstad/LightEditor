@@ -256,3 +256,19 @@ The first bullet is iPhone and iPad only, so it says so: the Mac version uses th
 • Photos you save or export now keep the original's capture date, camera, lens and exposure details. Where the photo was taken is still left out.
 • Fixed: an edit saved to your library had no capture date or camera details of its own, so other apps could sort it by the day you edited it.
 ```
+
+## What's New (1.0.6)
+
+Everything here works on the Mac too, so the notes are shared as they are.
+
+```
+• Borders and watermarks for exports and shares: a border in any color, padding to shapes like 4:5, and a text or logo watermark (PNG, PDF or SVG) you can drag, resize and turn right on the photo. The photo saved in your library stays clean. "Last used" puts back the border or watermark from your last photo.
+• Depth masks: select by distance from the camera, measured on your device. Tap the photo to pick a distance, a tone or a color for range masks.
+• Four-corner perspective: drag four corners onto a building, sign or painting to straighten it.
+• Tabs in a more familiar order: color grading now sits in Color, and the new Effects tab holds film LUTs, vignette and grain.
+• Colored sliders show what they do, like which way a hue shifts.
+• Color wheels open large, with exact Hue, Saturation and Luminance sliders.
+• Choose the background behind the photo: dark, black, gray or white.
+• The mask overlay hides while you adjust, so you can see the effect.
+• Fixed: vignette and grain could show outside the photo.
+```

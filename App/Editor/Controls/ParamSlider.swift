@@ -55,6 +55,8 @@ struct ParamSlider: View {
     let key: ParamKey
     var label: String?
     var trackTint: Color = Theme.accent
+    /// A colored track showing what the slider does; see `SliderTracks`.
+    var trackGradient: Gradient? = nil
 
     var body: some View {
         let spec = ParamCatalog.spec(for: key)
@@ -79,6 +81,7 @@ struct ParamSlider: View {
                 position: SliderScale.position(key, value: value),
                 origin: SliderScale.position(key, value: model.defaults.value(for: key)),
                 tint: trackTint,
+                trackGradient: trackGradient ?? SliderTracks.gradient(for: key),
                 onChange: { model.setLive(key, SliderScale.value(key, position: $0)) },
                 onEditingChanged: { editing in if !editing { model.commit(key) } },
                 onReset: { model.reset(key) },

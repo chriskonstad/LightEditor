@@ -71,8 +71,8 @@ struct ColorPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             PanelHeader(title: "White balance", model: model, group: .whiteBalance)
-            ParamSlider(model: model, key: .temperature, trackTint: Color(hue: 0.1, saturation: 0.7, brightness: 0.9))
-            ParamSlider(model: model, key: .tint, trackTint: Color(hue: 0.85, saturation: 0.6, brightness: 0.9))
+            ParamSlider(model: model, key: .temperature)
+            ParamSlider(model: model, key: .tint)
 
             PanelHeader(title: "Color", model: model, group: .color)
             ParamSlider(model: model, key: .vibrance)
@@ -90,15 +90,13 @@ struct ColorPanel: View {
             case .byColor:
                 HueSwatches(selection: $model.selectedBand, model: model)
                 let band = model.selectedBand
-                let tint = Color(hue: band.swatchHue / 360, saturation: 0.75, brightness: 0.9)
                 ForEach(HSLComponent.allCases, id: \.self) { component in
-                    ParamSlider(model: model, key: .hsl(band, component), label: "\(band.displayName) \(component.displayName.lowercased())", trackTint: tint)
+                    ParamSlider(model: model, key: .hsl(band, component), label: "\(band.displayName) \(component.displayName.lowercased())")
                 }
             case .byProperty(let component):
                 // Lightroom's layout: one property, all eight colors.
                 ForEach(HueBand.allCases) { band in
-                    ParamSlider(model: model, key: .hsl(band, component), label: band.displayName,
-                                trackTint: Color(hue: band.swatchHue / 360, saturation: 0.75, brightness: 0.9))
+                    ParamSlider(model: model, key: .hsl(band, component), label: band.displayName)
                 }
             }
         }

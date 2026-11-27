@@ -229,11 +229,6 @@ struct LocalAdjustmentSlider: View {
         let value = model.maskValue(key)
         let title = key == .localTemperature ? "Temperature" : key == .localTint ? "Tint" : ParamCatalog.spec(for: key)?.label ?? key.rawValue
         let formatted = key == .exposure ? ValueFormat.signed(value, decimals: 2) : ValueFormat.signed(value, decimals: 0)
-        let tint: Color = switch key {
-        case .localTemperature: Color(hue: 0.1, saturation: 0.7, brightness: 0.9)
-        case .localTint: Color(hue: 0.85, saturation: 0.6, brightness: 0.9)
-        default: Theme.accent
-        }
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(title).foregroundStyle(value != 0 ? Theme.textPrimary : Theme.textSecondary)
@@ -244,7 +239,7 @@ struct LocalAdjustmentSlider: View {
             FineSlider(
                 position: (value - range.lowerBound) / (range.upperBound - range.lowerBound),
                 origin: 0.5,
-                tint: tint,
+                trackGradient: SliderTracks.gradient(for: key),
                 onChange: { position in
                     var raw = range.lowerBound + position * (range.upperBound - range.lowerBound)
                     if abs(raw) < (range.upperBound - range.lowerBound) * 0.006 { raw = 0 }

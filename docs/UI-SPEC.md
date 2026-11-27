@@ -41,6 +41,7 @@ Every editing slider and color wheel behaves the same way:
 - **Double-tap** a slider or wheel to reset it to its default.
 - **Press and hold** a slider or wheel to see the photo without that setting. A "Without exposure" badge shows until release.
 - Bipolar sliders fill from their default position (a small tick), not from the left end.
+- **Colored tracks** show what moving a slider does, where the effect has a color: Temperature runs blue to amber, Tint green to magenta, Saturation and Vibrance gray to the full spectrum, Exposure, Highlights, Shadows, Whites, Blacks and grade Luminance dark to light. In the HSL mixer, Hue runs from the band's neighbor on one side, through its own color, to the neighbor on the other (Green: yellow, green, aqua), Saturation from gray to the band's color, and Luminance from a dark to a light shade of it. Mask sliders use the same tracks. A colored track shows the default as a tick and no fill; other sliders keep the amber fill.
 - Only horizontal drags start on a slider; vertical swipes scroll the panel.
 
 ## Zoom
@@ -70,7 +71,7 @@ From top to bottom:
 5. **Tab content:**
    - **Light:** an Auto button, then Exposure, Contrast, Highlights, Shadows, Whites, Blacks; a Presence section (Clarity, Texture, Dehaze); and the tone curve.
    - **Color:** Temperature (shown in K) and Tint, Vibrance and Saturation, then the HSL mixer with a Color · Hue · Saturation · Luminance picker:
-     - **Color:** a row of 8 hue swatches (Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta). The selected swatch drives three sliders: hue, saturation and luminance, tinted with that hue.
+     - **Color:** a row of 8 hue swatches (Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta). The selected swatch drives three sliders: hue, saturation and luminance, on colored tracks (see "Adjusting values").
      - **Press and hold** a swatch, or any HSL slider, to see which parts of the photo that band affects: its colors stay and the rest turns dim gray, with a "Showing blues" badge.
      - **Hue, Saturation or Luminance:** Lightroom's layout, with all 8 colors for that one property.
    - **Grade:** four color wheels (Shadows, Midtones, Highlights, Global): a 2×2 grid, or one row of four when the panel is at least 560 pt wide. Under each wheel, its name with a chevron and a readout ("211° · 29 · L −8", or "Neutral"). Drag a wheel for a quick change. Tap it, or its name, to **open** it:

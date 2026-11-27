@@ -51,8 +51,11 @@ struct FineSlider: View {
                         .frame(width: max(abs(x - originX), 0), height: 4)
                         .position(x: (x + originX) / 2, y: midY)
                 }
-                if trackGradient == nil && origin > 0.001 && origin < 0.999 {
-                    Capsule().fill(Color.white.opacity(0.5)).frame(width: 2, height: 10).position(x: originX, y: midY)
+                if origin > 0.001 && origin < 0.999 {
+                    // On a colored track the mark needs an outline to show against light colors.
+                    Capsule().fill(Color.white.opacity(trackGradient == nil ? 0.5 : 0.9))
+                        .overlay(Capsule().strokeBorder(Color.black.opacity(trackGradient == nil ? 0 : 0.4), lineWidth: 0.5))
+                        .frame(width: 2, height: 12).position(x: originX, y: midY)
                 }
                 Circle()
                     .fill(thumbColor)

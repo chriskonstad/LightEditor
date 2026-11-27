@@ -41,6 +41,7 @@ public final class PeerLink: @unchecked Sendable {
         var closed = false
         var endReason: EndReason = .lost
         var frozen = false
+        var timing = Timing.standard
         var onClose: [@Sendable (EndReason) -> Void] = []
     }
     private let state = Mutex(State())
@@ -109,10 +110,20 @@ public final class PeerLink: @unchecked Sendable {
         return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
     }
 
-    /// Sends this side's decision. Declining closes the link.
+    /// Sends this side's decision. Declining closes the link: the other side closes
+    /// it once it reads the decision, and this side does after a few seconds if it
+    /// hasn't. Closing at once could lose the decision: the other side's own
+    /// approval arriving at a closed socket resets the connection, and a reset
+    /// throws away data not yet read, so the other side saw "Connection reset by
+    /// peer" instead of "declined" (found by the Thread Sanitizer run's timing).
     public func approve(_ allowed: Bool) async throws {
         try await channel.send(RemoteProtocol.encode(.approval(allowed)))
-        if !allowed { close() }
+        if !allowed {
+            Task.detached { [weak self] in
+                try? await Task.sleep(for: .seconds(5))
+                self?.close()
+            }
+        }
     }
 
     /// Waits for the other side's decision, then starts handling messages.
@@ -130,14 +141,25 @@ public final class PeerLink: @unchecked Sendable {
     /// How often each side pings, and how long without hearing anything before
     /// the link counts as lost. A suspended iPhone can leave its socket open
     /// while the app is frozen, so silence is the only reliable sign.
-    nonisolated(unsafe) static var pingInterval: Duration = .seconds(3)
-    nonisolated(unsafe) static var silenceLimit: Duration = .seconds(15)
+    struct Timing: Sendable {
+        var pingInterval: Duration
+        var silenceLimit: Duration
+        static let standard = Timing(pingInterval: .seconds(3), silenceLimit: .seconds(15))
+    }
+
+    /// This link's timing. Per link, so a test can speed one up without touching
+    /// any other; set it before `waitForPeer` starts the heartbeat.
+    var timing: Timing {
+        get { state.withLock { $0.timing } }
+        set { state.withLock { $0.timing = newValue } }
+    }
 
     private func heartbeat() async {
         while !isClosed {
-            try? await Task.sleep(for: Self.pingInterval)
+            let timing = self.timing
+            try? await Task.sleep(for: timing.pingInterval)
             guard !isClosed, !state.withLock({ $0.frozen }) else { continue }
-            if ContinuousClock.now - channel.lastActivity > Self.silenceLimit {
+            if ContinuousClock.now - channel.lastActivity > timing.silenceLimit {
                 channel.close()
                 finish(.lost)
                 return

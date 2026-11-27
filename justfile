@@ -48,6 +48,16 @@ test-fast *flags:
 test-ui *flags:
     scripts/test-ui.sh "$@"
 
+# EditorCore under the Thread, Address and UB Sanitizers; `--models` adds the AI-model tests.
+[group('test')]
+test-sanitizers *flags:
+    scripts/test-sanitizers.sh "$@"
+
+# The app under the Main Thread Checker and Thread Performance Checker while UI tests drive it.
+[group('test')]
+test-checkers *flags:
+    scripts/test-checkers.sh "$@"
+
 # Use it to look at a UI change, e.g. `just ui-tour --device "iPad Pro 13-inch (M5)"`.
 [doc("Scripted tour of recent features, with screenshots and a video in build/ui-tour/.")]
 [group('test')]

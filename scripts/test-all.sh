@@ -3,8 +3,11 @@
 #
 #   1. EditorCore unit tests, the real-RAW tests on Fixtures/ (decode, Vision, camera
 #      looks, RAW goldens) and the performance budgets
-#   2. app builds for macOS, the iOS simulator and iOS devices (scripts/build.sh)
-#   3. UI tests: screen audits and screenshots in fresh simulators (scripts/test-ui.sh)
+#   2. the same tests under the Thread, Address and Undefined Behavior Sanitizers
+#   3. app builds for macOS, the iOS simulator and iOS devices (scripts/build.sh)
+#   4. UI tests: screen audits and screenshots in fresh simulators (scripts/test-ui.sh),
+#      the behavior, interruption and tour tests under the Main Thread Checker and the
+#      Thread Performance Checker (scripts/test-checkers.sh), and the Mac UI tests
 #
 #   scripts/test-all.sh            all of it
 #   scripts/test-all.sh --no-ui    skip the UI tests (no simulators)
@@ -48,8 +51,10 @@ stage "unit and RAW" env EDITORCORE_RAW_FIXTURES=$PWD/Fixtures scripts/test-fast
 # Alone, after the rest: in the parallel run above the AI-model and RAW tests share the
 # GPU, which slowed a 5 ms preview frame to 500 ms and failed its budget.
 stage "performance budgets" env EDITORCORE_RAW_FIXTURES=$PWD/Fixtures EDITORCORE_PERF_BUDGETS=1 scripts/test-fast.sh --filter PerformanceBudget
+stage "sanitizers" scripts/test-sanitizers.sh
 stage "builds" scripts/build.sh
 (( ui )) && stage "UI audits" scripts/test-ui.sh $ui_args
+(( ui )) && stage "thread checkers" scripts/test-checkers.sh --no-build
 
 echo
 printf '%s\n' $results

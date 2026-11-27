@@ -41,7 +41,7 @@ final class ScreenAuditTests: XCTestCase {
         } catch {
             XCTFail("Couldn't copy the fixture library from \(UITestConfig.libraryPath): \(error). Run scripts/test-ui.sh, which prepares it.")
         }
-        let app = XCUIApplication()
+        let app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path,
             "-UIPreferredContentSizeCategoryName", contentSize.rawValue,

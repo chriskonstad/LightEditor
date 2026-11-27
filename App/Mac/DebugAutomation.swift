@@ -21,6 +21,8 @@ import SwiftUI
 ///   painted in (window snapshots leave Metal content blank);
 /// - `-WatermarkLogo <file>` imports a logo (an SVG goes through `SVGToPDF`, as
 ///   in the Finish tab) and makes it the photo's watermark;
+/// - `-DebugCheckerViolation YES` makes one UI call off the main thread, to test the checkers;
+/// - on iOS, the Darwin notification `memoryWarningNotification` simulates a memory warning;
 /// - `-DemoMaskOverlay YES` walks through the mask overlay's auto-hide (add a radial
 ///   mask, raise its exposure, then move it), four seconds per step, for snapshots.
 enum DebugAutomation {
@@ -41,9 +43,51 @@ enum DebugAutomation {
         }
     }
 
+    /// Calls a UI method off the main thread once and makes the main thread wait on
+    /// lower-priority work, on purpose, so the checker run (`scripts/test-checkers.sh`)
+    /// can prove both checkers report what they should.
+    static func checkerViolation() {
+        #if os(macOS)
+        let box = UncheckedSendableBox(NSView())
+        DispatchQueue.global().async { box.value.needsLayout = true }
+        #else
+        let box = UncheckedSendableBox(UIView())
+        DispatchQueue.global().async { box.value.setNeedsLayout() }
+        #endif
+        // And a priority inversion for the Thread Performance Checker: the main
+        // thread waits on work running at a lower quality of service.
+        let done = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .utility).async { done.signal() }
+        done.wait()
+    }
+
+    #if os(iOS)
+    /// UI tests (InterruptionTests) post this Darwin notification to simulate a
+    /// memory warning; the app passes it on as the real notification, so every
+    /// handler that frees memory runs.
+    static let memoryWarningNotification = "com.chriskonstad.lighteditor.debug.memoryWarning"
+
+    static func listenForSimulatedMemoryWarnings() {
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), nil, { _, _, _, _, _ in
+            Task { @MainActor in
+                NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: UIApplication.shared)
+            }
+        }, memoryWarningNotification as CFString, nil, .deliverImmediately)
+    }
+    #endif
+
+    private final class UncheckedSendableBox<T>: @unchecked Sendable {
+        let value: T
+        init(_ value: T) { self.value = value }
+    }
+
     @MainActor
     static func start(app: AppModel) {
         let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "DebugCheckerViolation") { checkerViolation() }
+        #if os(iOS)
+        listenForSimulatedMemoryWarnings()
+        #endif
         let name = defaults.string(forKey: "OpenAsset")
         let index = defaults.object(forKey: "OpenAssetIndex") != nil ? defaults.integer(forKey: "OpenAssetIndex") : nil
         if defaults.bool(forKey: "OpenFirstAsset") || name != nil || index != nil {

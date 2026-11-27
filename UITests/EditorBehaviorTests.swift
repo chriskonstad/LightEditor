@@ -15,7 +15,7 @@ final class EditorBehaviorTests: XCTestCase {
     func testTypingAWatermarkKeepsEveryCharacter() throws {
         let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
-        app = XCUIApplication()
+        app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
             "-OpenAssetIndex", "0", "-EditorTab", "finish",
@@ -50,7 +50,7 @@ final class EditorBehaviorTests: XCTestCase {
     func testLastUsedBorderComesBack() throws {
         let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
-        app = XCUIApplication()
+        app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
             "-OpenAssetIndex", "0", "-EditorTab", "finish", "-SetParams", "finish.border.width=6,finish.border.bottom=10",

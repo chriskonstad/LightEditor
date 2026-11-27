@@ -54,7 +54,8 @@ extension RemoteSuites {
         let error = Mutex<(any Error)?>(nil)
     }
 
-    func pair(hostApproves: Bool = true, hostIdentity: PeerIdentity = .ephemeral(), clientIdentity: PeerIdentity = .ephemeral()) async throws -> (host: PeerLink, client: PeerLink) {
+    func pair(hostApproves: Bool = true, hostIdentity: PeerIdentity = .ephemeral(), clientIdentity: PeerIdentity = .ephemeral(),
+              timing: PeerLink.Timing = .standard) async throws -> (host: PeerLink, client: PeerLink) {
         let accepted = Accepted()
         let ready = Mutex<UInt16?>(nil)
         let listener = try PeerListener(name: "Test Host \(UUID().uuidString.prefix(4))", onConnection: { connection in
@@ -80,6 +81,8 @@ extension RemoteSuites {
         #expect(hostLink.peerIdentity == clientIdentity.publicKey && client.peerIdentity == hostIdentity.publicKey, "identities are proven")
         try await hostLink.approve(hostApproves)
         try await client.approve(true)
+        hostLink.timing = timing
+        client.timing = timing
         if hostApproves {
             async let hostWait: Void = hostLink.waitForPeer()
             try await client.waitForPeer()
@@ -290,11 +293,8 @@ extension RemoteSuites {
 @Suite struct PeerHeartbeatTests {
     /// A frozen phone (its app suspended, socket still open) is noticed by silence.
     @Test func aFrozenPeerCountsAsLost() async throws {
-        let (interval, limit) = (PeerLink.pingInterval, PeerLink.silenceLimit)
-        PeerLink.pingInterval = .milliseconds(100)
-        PeerLink.silenceLimit = .milliseconds(600)
-        defer { PeerLink.pingInterval = interval; PeerLink.silenceLimit = limit }
-        let (host, client) = try await PeerLinkTests().pair()
+        // Fast timing for these two links only; other tests' links keep theirs.
+        let (host, client) = try await PeerLinkTests().pair(timing: PeerLink.Timing(pingInterval: .milliseconds(100), silenceLimit: .milliseconds(600)))
         let reason = Mutex<PeerLink.EndReason?>(nil)
         client.onClose { ended in reason.withLock { $0 = ended } }
         try await Task.sleep(for: .milliseconds(400))

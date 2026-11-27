@@ -23,7 +23,7 @@ final class FeatureTourTests: XCTestCase {
     func testFeatureTour() throws {
         let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
-        app = XCUIApplication()
+        app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path,
             "-ResetState", "YES",
@@ -168,7 +168,7 @@ final class FeatureTourTests: XCTestCase {
         let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
         let logo = UITestConfig.repoRoot.appending(path: "UITests/Fixtures/watermark-logo.svg").path
-        app = XCUIApplication()
+        app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
             "-OpenAssetIndex", "0", "-EditorTab", "finish", "-WatermarkLogo", logo,
@@ -188,7 +188,7 @@ final class FeatureTourTests: XCTestCase {
     func testDepthMask() throws {
         let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
-        app = XCUIApplication()
+        app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
             "-OpenAsset", "DSC04921.ARW", "-EditorTab", "masks",
@@ -241,7 +241,7 @@ final class FeatureTourTests: XCTestCase {
     func testFourCornerPerspective() throws {
         let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
-        app = XCUIApplication()
+        app = UITestConfig.makeApp()
         app.launchArguments = [
             "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
             "-OpenAsset", "DSC04921.ARW",

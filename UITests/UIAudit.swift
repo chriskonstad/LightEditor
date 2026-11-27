@@ -32,6 +32,23 @@ enum UITestConfig {
 
     /// Known findings that don't fail the run (see `AuditBaseline`).
     static var baselineFile: URL { repoRoot.appending(path: "UITests/audit-baseline.txt") }
+
+    /// Set by scripts/test-checkers.sh: launch the app with the Main Thread Checker
+    /// and the Thread Performance Checker loaded, reporting to the system log, which
+    /// the script reads after the run.
+    static var checkers: Bool { environment["UITEST_CHECKERS"] == "1" }
+
+    /// The app under test, with the checkers when this run wants them.
+    @MainActor static func makeApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        if checkers {
+            app.launchEnvironment["DYLD_INSERT_LIBRARIES"] = "/usr/lib/libMainThreadChecker.dylib:/usr/lib/libRPAC.dylib"
+            app.launchEnvironment["MTC_LOG_REPORTS_TO_OS_LOG"] = "1"
+            app.launchEnvironment["MTC_SUPPRESS_SYSTEM_REPORTS"] = "1"
+            app.launchEnvironment["PERFC_SUPPRESS_SYSTEM_REPORTS"] = "1"
+        }
+        return app
+    }
 }
 
 /// Dynamic Type sizes, as the launch argument `-UIPreferredContentSizeCategoryName` takes them.

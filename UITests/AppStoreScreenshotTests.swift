@@ -55,7 +55,7 @@ final class AppStoreScreenshotTests: XCTestCase {
         let library = FileManager.default.temporaryDirectory.appending(path: "shots-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
         for shot in Self.shots {
-            let app = XCUIApplication()
+            let app = UITestConfig.makeApp()
             app.launchArguments = [
                 "-FixtureLibrary", library.path,
                 "-ResetState", "YES",

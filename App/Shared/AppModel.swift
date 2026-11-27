@@ -93,7 +93,23 @@ final class AppModel {
         }
         #endif
         if let path = UserDefaults.standard.string(forKey: "FixtureLibrary"), !path.isEmpty {
-            return FolderLibrary(directory: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+            var directory = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+            #if DEBUG
+            // Mac UI tests (`-FixtureLibraryCopy <name>`): the sandboxed test runner can't
+            // write anywhere the app can read, so the app makes each test's fresh copy
+            // of the sample folder itself, in its own temporary folder. The same name
+            // on a later launch reuses the copy (edits and all) unless -ResetState.
+            if let name = UserDefaults.standard.string(forKey: "FixtureLibraryCopy"), !name.isEmpty {
+                let copy = FileManager.default.temporaryDirectory.appending(path: "FixtureLibraries/\(name)", directoryHint: .isDirectory)
+                if UserDefaults.standard.bool(forKey: "ResetState") || !FileManager.default.fileExists(atPath: copy.path) {
+                    try? FileManager.default.removeItem(at: copy)
+                    try? FileManager.default.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? FileManager.default.copyItem(at: directory, to: copy)
+                }
+                directory = copy
+            }
+            #endif
+            return FolderLibrary(directory: directory)
         }
         return PhotoKitLibrary()
     }

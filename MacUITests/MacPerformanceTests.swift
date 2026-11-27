@@ -18,7 +18,6 @@ final class MacPerformanceTests: XCTestCase {
     }
 
     override func tearDown() async throws {
-        try? FileManager.default.removeItem(at: library)
     }
 
     private var options: XCTMeasureOptions {

@@ -38,7 +38,10 @@ fi
 
 derived=build/MacUITests
 out=$root/build/mac-ui
-rm -rf $out && mkdir -p $out /private/tmp/LightEditorUITests
+rm -rf $out && mkdir -p $out
+# The sample library each test's copy is made from (MacUITest.template).
+rm -rf /private/tmp/LightEditorUITests && mkdir -p /private/tmp/LightEditorUITests/template
+cp -c Fixtures/DSC04921.ARW Fixtures/DSCF2030.raf /private/tmp/LightEditorUITests/template/
 
 if (( build )); then
     echo "Building for testing…"
@@ -82,8 +85,10 @@ filter=()
 since=$(date "+%Y-%m-%d %H:%M:%S")
 echo "Testing the Mac app (it takes over the mouse and keyboard)…"
 set +e
-MAC_UITEST_OUTPUT=$out MAC_UITEST_CHECKERS=1 MAC_UITEST_RECORD=$record \
-TEST_RUNNER_MAC_UITEST_OUTPUT=$out TEST_RUNNER_MAC_UITEST_CHECKERS=1 TEST_RUNNER_MAC_UITEST_RECORD=$record \
+# The runner's sandbox can't read the repo, so the audit baseline goes in by value.
+baseline=$(cat MacUITests/audit-baseline.txt 2>/dev/null || true)
+MAC_UITEST_CHECKERS=1 MAC_UITEST_RECORD=$record MAC_UITEST_BASELINE=$baseline \
+TEST_RUNNER_MAC_UITEST_CHECKERS=1 TEST_RUNNER_MAC_UITEST_RECORD=$record TEST_RUNNER_MAC_UITEST_BASELINE=$baseline \
 xcodebuild test-without-building -scheme LightEditorMacUITests -destination 'platform=macOS' -derivedDataPath $derived \
     $filter -resultBundlePath $out/mac-ui.xcresult -collect-test-diagnostics never > $out/test.log 2>&1
 rc=$?
@@ -95,7 +100,31 @@ xcrun xcresulttool get test-results summary --path $out/mac-ui.xcresult 2>/dev/n
 import json, sys
 s = json.load(sys.stdin)
 print(f\"  {s.get('passedTests', 0)} passed, {s.get('failedTests', 0)} failed, {s.get('skippedTests', 0)} skipped\")" || true
+# Screenshots and the audit report come out as attachments (the runner can't write files).
+xcrun xcresulttool export attachments --path $out/mac-ui.xcresult --output-path $out/attachments >/dev/null 2>&1 || true
+if [[ -f $out/attachments/manifest.json ]]; then
+    mkdir -p $out/screens
+    python3 - "$out" <<'PY'
+import json, os, shutil, sys
+out = sys.argv[1]
+for test in json.load(open(f"{out}/attachments/manifest.json")):
+    for a in test.get("attachments", []):
+        name = a.get("suggestedHumanReadableName", "")
+        src = f"{out}/attachments/{a['exportedFileName']}"
+        base = name.rsplit("_", 2)[0] if "_" in name else name
+        if base.startswith("audit"):
+            shutil.copy(src, f"{out}/{base.split('.')[0]}.txt")
+        elif src.endswith(".png"):
+            shutil.copy(src, f"{out}/screens/{base.split('.')[0]}.png")
+PY
+fi
 [[ -f $out/audit.txt ]] && echo "  Audit: $(head -1 $out/audit.txt)"
+if (( record )) && [[ -f $out/audit-findings.txt ]]; then
+    { echo "# Known Mac accessibility audit findings (MacEditorTests.testEveryTabAudits)."
+      echo "# One per line: screen | kind | element. Fix the layout and delete the line; never add one to silence a regression."
+      cat $out/audit-findings.txt; } > MacUITests/audit-baseline.txt
+    echo "  Recorded $(grep -vc '^#' MacUITests/audit-baseline.txt) known findings in MacUITests/audit-baseline.txt"
+fi
 
 if (( perf )); then
     # The measured averages, from the result bundle.
@@ -112,8 +141,13 @@ for test in data:
 " || echo "  (no performance metrics in the result bundle)"
 fi
 
-found=$(reports "$since")
-echo "$found" > $out/checker-reports.txt
+all=$(reports "$since")
+echo "$all" > $out/checker-reports.txt
+# "[Internal]" reports are waits inside Apple's frameworks (ImageIO waiting on its
+# own threads, AppKit's run loop): listed, but only reports in our code fail.
+internal=$(grep -c "\[Internal\]" <<< "$all" || true)
+found=$(grep -v "\[Internal\]" <<< "$all" | grep . || true)
+(( internal > 0 )) && echo "  $internal checker reports inside Apple's frameworks (build/mac-ui/checker-reports.txt), not failing"
 if [[ -n $found ]]; then
     echo "Checker reports (build/mac-ui/checker-reports.txt; run the app from Xcode with the checkers on for details):"
     sed -E 's/^.*\[(com\.apple\.[^]]*)\].*$/\1/' <<< "$found" | sort | uniq -c | sort -rn

@@ -472,6 +472,9 @@ struct WorkspaceEditorView: View {
                 PreviewStatusIndicator(model: model, showsLabel: true)
                 JobTrayPill(jobs: model.app.jobs, alwaysVisible: true)
             }
+            // macOS 27 draws a glass capsule behind toolbar items and clips to it; without
+            // room inside, the title's first letters and the pill's edge were cut off.
+            .padding(.horizontal, 10)
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button("Copy", systemImage: "doc.on.doc") { model.copyEdits() }
@@ -627,6 +630,7 @@ struct Filmstrip: View {
             }
             .buttonStyle(.plain)
             .id(asset.id)
+            .accessibilityLabel(asset.id == current ? "\(asset.id), open" : asset.id)
             .accessibilityIdentifier("filmstrip.\(index)")
         }
     }

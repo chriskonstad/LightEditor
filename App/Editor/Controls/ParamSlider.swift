@@ -72,6 +72,8 @@ struct ParamSlider: View {
                 Text(formatted)
                     .valueStyle()
                     .foregroundStyle(edited ? Theme.accent : Theme.textSecondary)
+                    // macOS UI tests can't read the slider's accessibility value; they read this.
+                    .accessibilityIdentifier("value.\(key.rawValue)")
             }
             .font(.subheadline)
             .contentShape(Rectangle())

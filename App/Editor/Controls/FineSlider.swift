@@ -99,12 +99,21 @@ struct FineSlider: View {
         }
         .frame(height: Theme.minTouch)
         .sensoryFeedback(.selection, trigger: precision)
+        #if os(macOS)
+        // On the Mac a custom view is only a generic element to accessibility (no
+        // slider role, no value), so VoiceOver gets a real slider in its place. Labels
+        // and values set on this view apply to it.
+        .accessibilityRepresentation {
+            Slider(value: Binding(get: { position }, set: { onChange($0); onEditingChanged(false) }), in: 0...1)
+        }
+        #else
         .accessibilityElement()
         .accessibilityAddTraits(.allowsDirectInteraction)
         .accessibilityAdjustableAction { direction in
             onChange(min(max(position + (direction == .increment ? 0.01 : -0.01), 0), 1))
             onEditingChanged(false)
         }
+        #endif
         .accessibilityAction(named: "Reset", onReset)
     }
 

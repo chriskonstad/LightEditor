@@ -8,19 +8,16 @@ enum MacUITest {
     static let environment = ProcessInfo.processInfo.environment
     static let repoRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
 
-    /// Where screenshots and the audit report go.
-    static var outputFolder: URL {
-        environment["MAC_UITEST_OUTPUT"].map { URL(fileURLWithPath: $0) } ?? repoRoot.appending(path: "build/mac-ui")
-    }
+    /// The sample library: two fixtures (no people in them) that scripts/test-mac-ui.sh
+    /// puts here. The sandboxed test runner can't write anywhere the app can read, so
+    /// each test names a copy and the Debug app makes it (`-FixtureLibraryCopy`).
+    static let template = URL(fileURLWithPath: "/private/tmp/LightEditorUITests/template")
 
-    /// A fresh copy of two fixtures (no people in them), so each test starts clean.
+    /// A new name for a test's own copy of the library.
+    /// (The runner's sandbox can't even look at the template, so a missing one shows
+    /// up as the editor never opening.)
     static func makeLibrary() throws -> URL {
-        let folder = URL(fileURLWithPath: "/private/tmp/LightEditorUITests").appending(path: UUID().uuidString)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        for name in ["DSC04921.ARW", "DSCF2030.raf"] {
-            try FileManager.default.copyItem(at: repoRoot.appending(path: "Fixtures/\(name)"), to: folder.appending(path: name))
-        }
-        return folder
+        URL(fileURLWithPath: UUID().uuidString)
     }
 
     /// The app, with the Main Thread Checker and the Thread Performance Checker
@@ -28,7 +25,8 @@ enum MacUITest {
     /// the script reads).
     @MainActor static func makeApp(library: URL, _ arguments: [String] = [], reset: Bool = true) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-FixtureLibrary", library.path, "-ApplePersistenceIgnoreState", "YES", "-HideSidebar", "YES"]
+        app.launchArguments = ["-FixtureLibrary", template.path, "-FixtureLibraryCopy", library.lastPathComponent,
+                               "-ApplePersistenceIgnoreState", "YES", "-HideSidebar", "YES"]
             + (reset ? ["-ResetState", "YES"] : []) + arguments
         if environment["MAC_UITEST_CHECKERS"] == "1" {
             let developer = environment["DEVELOPER_DIR"] ?? "/Applications/Xcode.app/Contents/Developer"
@@ -57,6 +55,14 @@ extension XCUIApplication {
         return false
     }
 
+    /// A slider's shown value ("+0.50"), from its value label: on macOS the slider's
+    /// own accessibility value doesn't reach UI tests.
+    func sliderValue(_ key: String) -> String? {
+        let label = element("value.\(key)")
+        guard label.exists else { return nil }
+        return (label.value as? String).flatMap { $0.isEmpty ? nil : $0 } ?? label.label
+    }
+
     /// Drags a slider by a fraction of its width with the mouse.
     func drag(_ slider: XCUIElement, from: CGFloat = 0.5, to: CGFloat) {
         let start = slider.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.5))
@@ -65,14 +71,21 @@ extension XCUIApplication {
     }
 }
 
-/// Saves a screenshot of the app's window as a PNG and an attachment.
+/// A screenshot of the app's window, kept as an attachment. The test runner's sandbox
+/// can't write files to the repo, so scripts/test-mac-ui.sh exports attachments from
+/// the result bundle into build/mac-ui/.
 @MainActor func saveScreenshot(_ app: XCUIApplication, _ name: String, test: XCTestCase) {
     let shot = app.windows.firstMatch.exists ? app.windows.firstMatch.screenshot() : app.screenshot()
     let attachment = XCTAttachment(screenshot: shot)
     attachment.name = name
     attachment.lifetime = .keepAlways
     test.add(attachment)
-    let folder = MacUITest.outputFolder.appending(path: "screens")
-    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-    try? shot.pngRepresentation.write(to: folder.appending(path: "\(name).png"))
+}
+
+/// Text kept as an attachment, e.g. the audit report (see `saveScreenshot`).
+@MainActor func attach(_ text: String, named name: String, test: XCTestCase) {
+    let attachment = XCTAttachment(string: text)
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    test.add(attachment)
 }

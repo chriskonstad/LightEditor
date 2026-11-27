@@ -102,8 +102,12 @@ import json, sys
 s = json.load(sys.stdin)
 print(f\"  {s.get('passedTests', 0)} passed, {s.get('failedTests', 0)} failed, {s.get('skippedTests', 0)} skipped\")" || true
 
-found=$(reports "$since")
-echo "$found" > $out/reports.txt
+all=$(reports "$since")
+echo "$all" > $out/reports.txt
+# "[Internal]" reports are waits inside Apple's frameworks: listed, not failing.
+internal=$(grep -c "\[Internal\]" <<< "$all" || true)
+found=$(grep -v "\[Internal\]" <<< "$all" | grep . || true)
+(( internal > 0 )) && echo "  $internal checker reports inside Apple's frameworks (build/checkers/reports.txt), not failing"
 if [[ -n $found ]]; then
     echo "Checker reports (build/checkers/reports.txt):"
     # Each report's first line, once.

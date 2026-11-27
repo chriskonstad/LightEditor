@@ -15,7 +15,6 @@ final class MacEditorTests: XCTestCase {
 
     override func tearDown() async throws {
         app?.terminate()
-        try? FileManager.default.removeItem(at: library)
     }
 
     private func open(_ photo: String = "DSC04921.ARW", tab: String = "light") {
@@ -28,16 +27,18 @@ final class MacEditorTests: XCTestCase {
         open()
         let exposure = app.element("slider.light.exposure")
         XCTAssertTrue(exposure.waitForExistence(timeout: 5), "no exposure slider")
-        XCTAssertEqual(exposure.value as? String, "0.00")
+        let key = "light.exposure"
+        XCTAssertEqual(app.sliderValue(key), "0.00")
         app.drag(exposure, to: 0.7)
-        let raised = exposure.value as? String
+        let raised = app.sliderValue(key)
+        XCTAssertNotNil(raised)
         XCTAssertNotEqual(raised, "0.00", "dragging with the mouse didn't change exposure")
         app.typeKey("z", modifierFlags: .command)
         Thread.sleep(forTimeInterval: 0.5)
-        XCTAssertEqual(exposure.value as? String, "0.00", "⌘Z didn't undo")
+        XCTAssertEqual(app.sliderValue(key), "0.00", "⌘Z didn't undo")
         app.typeKey("z", modifierFlags: [.command, .shift])
         Thread.sleep(forTimeInterval: 0.5)
-        XCTAssertEqual(exposure.value as? String, raised, "⇧⌘Z didn't redo")
+        XCTAssertEqual(app.sliderValue(key), raised, "⇧⌘Z didn't redo")
     }
 
     /// Each tab: a screenshot to look at, and Apple's audit. Known findings are in
@@ -93,20 +94,19 @@ final class MacEditorTests: XCTestCase {
         }
     }
 
+    /// The baseline comes in through MAC_UITEST_BASELINE (the runner's sandbox can't
+    /// read the repo), and the report goes out as attachments; scripts/test-mac-ui.sh
+    /// handles both, and `--record` writes MacUITests/audit-baseline.txt from them.
     private func compareWithBaseline(_ findings: Set<String>) throws {
-        let file = MacUITest.repoRoot.appending(path: "MacUITests/audit-baseline.txt")
-        let header = "# Known Mac accessibility audit findings (MacEditorTests.testEveryTabAudits).\n# One per line: screen | kind | element. Fix the layout and delete the line; never add one to silence a regression.\n"
-        if MacUITest.environment["MAC_UITEST_RECORD"] == "1" {
-            try (header + findings.sorted().joined(separator: "\n") + "\n").write(to: file, atomically: true, encoding: .utf8)
-            return
-        }
-        let known = Set((try? String(contentsOf: file, encoding: .utf8))?.split(separator: "\n").map(String.init).filter { !$0.hasPrefix("#") } ?? [])
+        attach(findings.sorted().joined(separator: "\n") + "\n", named: "audit-findings", test: self)
+        if MacUITest.environment["MAC_UITEST_RECORD"] == "1" { return }
+        let baseline = MacUITest.environment["MAC_UITEST_BASELINE"] ?? ""
+        let known = Set(baseline.split(separator: "\n").map(String.init).filter { !$0.hasPrefix("#") && !$0.isEmpty })
         let new = findings.subtracting(known).sorted()
         let fixed = known.subtracting(findings).sorted()
         let report = "\(findings.count) findings, \(new.count) new, \(fixed.count) fixed\n"
             + new.map { "[NEW] \($0)" }.joined(separator: "\n") + "\n" + fixed.map { "[fixed] \($0)" }.joined(separator: "\n")
-        try? FileManager.default.createDirectory(at: MacUITest.outputFolder, withIntermediateDirectories: true)
-        try? report.write(to: MacUITest.outputFolder.appending(path: "audit.txt"), atomically: true, encoding: .utf8)
+        attach(report, named: "audit", test: self)
         XCTAssertTrue(new.isEmpty, "New Mac audit findings:\n" + new.joined(separator: "\n"))
     }
 }
@@ -124,7 +124,6 @@ final class MacInterruptionTests: XCTestCase {
 
     override func tearDown() async throws {
         app?.terminate()
-        try? FileManager.default.removeItem(at: library)
     }
 
     private func launch(reset: Bool) {
@@ -138,24 +137,26 @@ final class MacInterruptionTests: XCTestCase {
     func testHidingAndComingBackKeepsTheEdit() throws {
         launch(reset: true)
         app.drag(exposure, to: 0.7)
-        let value = exposure.value as? String
+        let value = app.sliderValue("light.exposure")
+        XCTAssertNotEqual(value, "0.00", "dragging didn't change exposure")
         app.typeKey("h", modifierFlags: .command)
         Thread.sleep(forTimeInterval: 1.5)
         app.activate()
         XCTAssertTrue(exposure.waitForExistence(timeout: 10))
-        XCTAssertEqual(exposure.value as? String, value)
+        XCTAssertEqual(app.sliderValue("light.exposure"), value)
         app.drag(exposure, from: 0.7, to: 0.4)
-        XCTAssertNotEqual(exposure.value as? String, value, "the editor stopped responding after coming back")
+        XCTAssertNotEqual(app.sliderValue("light.exposure"), value, "the editor stopped responding after coming back")
     }
 
     func testAnEditSurvivesQuitting() throws {
         launch(reset: true)
         app.drag(exposure, to: 0.7)
-        let value = exposure.value as? String
+        let value = app.sliderValue("light.exposure")
+        XCTAssertNotEqual(value, "0.00", "dragging didn't change exposure")
         Thread.sleep(forTimeInterval: 2)  // Drafts are written within a moment of each change.
         app.terminate()
         launch(reset: false)
         XCTAssertTrue(exposure.waitForExistence(timeout: 10))
-        XCTAssertEqual(exposure.value as? String, value, "the edit was lost when the app quit")
+        XCTAssertEqual(app.sliderValue("light.exposure"), value, "the edit was lost when the app quit")
     }
 }

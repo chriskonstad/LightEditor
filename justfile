@@ -191,6 +191,11 @@ link-models from="":
 screenshots *flags:
     scripts/app-store-screenshots.sh "$@"
 
+# Replace a version's App Store screenshots with build/screenshots/: `just upload-screenshots ios [version] [--only iphone]`.
+[group('release')]
+upload-screenshots platform *args:
+    python3 scripts/upload-screenshots.py "$@"
+
 # Build a Release build and install it on a paired iPhone or iPad (default: the first connected iPhone).
 [group('release')]
 install-device udid="":

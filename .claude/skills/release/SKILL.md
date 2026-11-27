@@ -60,7 +60,18 @@ work again, because the profile and certificate now exist.
 Don't use `--internal-only` for a build meant for the App Store: TestFlight-internal builds
 can't be attached to a version.
 
-## 4. Submit to the App Store
+## 4. Screenshots, when the UI changed
+
+```sh
+just screenshots --ios          # or plain `just screenshots` from a terminal for the Mac too; --duo asks for one unfold
+just upload-screenshots ios     # replaces each display type that has a folder in build/screenshots/
+just upload-screenshots macos
+```
+
+Upload before submitting: a version in review can't change its screenshots. Look at
+the images first (`docs/app-store/screenshots.md` says which photos are allowed).
+
+## 5. Submit to the App Store
 
 ```sh
 scripts/submit-app-store.py ios 2611221339
@@ -72,7 +83,7 @@ Each run waits for processing, creates that platform's version if needed, sets i
 "after approval", so an approved version goes live on its own. The script is safe to
 re-run and refuses a version that is already in review or on sale.
 
-## 5. Tag it on GitHub
+## 6. Tag it on GitHub
 
 ```sh
 scripts/tag-release.sh <version> <commit> "iOS build <n>, Mac build <n>"
@@ -82,7 +93,7 @@ scripts/tag-release.sh <version> <commit> "iOS build <n>, Mac build <n>"
 the GitHub release with the same notes. The maintainer asked for this on every release, so
 it needs no separate yes.
 
-## 6. Finish up
+## 7. Finish up
 
 - Add a line to the release checklist at the end of `docs/app-store/review-risks.md`
   saying what was submitted, with both build numbers and the date.

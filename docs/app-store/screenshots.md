@@ -76,6 +76,10 @@ open -n LightEditor.app --args -FixtureLibrary $C/Shots -SnapshotTo $C/tmp/snaps
 The snapshots are 2880 × 1800 (a 1440 × 900 window on a Retina display). Saved in `build/screenshots/mac/`: Light (sunset, Auto), Presets (Velvia + Auto), Grade wheels, Color/HSL on the cat.
 
 
+## Uploading
+
+`just upload-screenshots ios [version]` (`scripts/upload-screenshots.py`) replaces the version's screenshots, one display type per folder of `build/screenshots/`: `iphone` → 6.9", `ipad` → 13", `duo` → iPhone Duo, and `macos` takes `mac` → Mac. `--only <folder>` limits it to one. It creates the version if needed (the submit script then reuses it), so run it before `scripts/submit-app-store.py`. A display type it doesn't touch keeps the previous version's screenshots.
+
 ## Captured 2026-11-27 (`just screenshots`)
 
 After colored slider tracks and the Lightroom-style tabs (color grading in Color, a new Effects tab). Seven shots per device, all from the sunset (DSCF2030.raf) and the cat (DSC04921.ARW), the only fixtures without people: Light (Auto), Color (HSL mixer), Color grading (a wheel open, Teal & orange), Presets (Velvia), Effects (B&W with vignette and grain), Masks (the mask picker), Finish (a white border). iPhone 1320 × 2868; iPad 2752 × 2064 landscape. The Mac set wasn't recaptured: this session couldn't write into the app's container.

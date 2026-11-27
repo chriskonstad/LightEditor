@@ -121,7 +121,7 @@ struct FinishPanel: View {
             // Grid beside its name and the text colors; in a narrow inspector (iPad
             // landscape, Mac) the colors go below, so the chips never wrap.
             let colors = watermarkColors(mark, isLogo: isLogo)
-            let name = Text(mark.position.displayName).font(.subheadline).foregroundStyle(Theme.textPrimary)
+            let name = Text(mark.center == nil ? mark.position.displayName : "Placed by hand").font(.subheadline).foregroundStyle(Theme.textPrimary)
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 16) {
                     positionGrid(mark.position)
@@ -134,9 +134,45 @@ struct FinishPanel: View {
             }
             .padding(.vertical, 8)
 
+            Text("Drag it on the photo to move it, or its corner to resize and turn it. Double-tap it to straighten.")
+                .font(.caption).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             ParamSlider(model: model, key: .watermarkSize, label: isLogo ? "Height" : "Size")
+            rotationSlider(mark)
             ParamSlider(model: model, key: .watermarkOpacity, label: "Opacity")
-            ParamSlider(model: model, key: .watermarkMargin, label: "Margin")
+            if mark.center == nil {
+                ParamSlider(model: model, key: .watermarkMargin, label: "Margin")
+            }
+        }
+    }
+
+    /// The angle, -180°...180°, with the same gestures as every slider (double-tap resets).
+    private func rotationSlider(_ mark: Watermark) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Angle").foregroundStyle(mark.rotation != 0 ? Theme.textPrimary : Theme.textSecondary)
+                Spacer()
+                Text(ValueFormat.signed(mark.rotation, decimals: 0) + "°").valueStyle()
+                    .foregroundStyle(mark.rotation != 0 ? Theme.accent : Theme.textSecondary)
+            }
+            .font(.subheadline)
+            FineSlider(
+                position: (mark.rotation + 180) / 360,
+                origin: 0.5,
+                onChange: { position in
+                    var updated = mark
+                    var degrees = (position * 360 - 180)
+                    // Snap to right angles.
+                    if abs(degrees - (degrees / 90).rounded() * 90) < 1.5 { degrees = (degrees / 90).rounded() * 90 }
+                    updated.rotation = (degrees * 10).rounded() / 10
+                    model.setLive(.watermark, .watermark(updated))
+                },
+                onEditingChanged: { if !$0 { model.commit(.watermark) } },
+                onReset: { update { $0.rotation = 0 } }
+            )
+            .accessibilityLabel("Watermark angle")
+            .accessibilityValue("\(Int(mark.rotation.rounded())) degrees")
+            .accessibilityIdentifier("slider.finish.watermark.rotation")
         }
     }
 
@@ -226,9 +262,9 @@ struct FinishPanel: View {
                 GridRow {
                     ForEach(0..<3) { column in
                         let position = WatermarkPosition.allCases[row * 3 + column]
-                        Button { update { $0.position = position } } label: {
+                        Button { update { $0.position = position; $0.center = nil } } label: {
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(position == selected ? Theme.accent : Theme.panelRaised)
+                                .fill(position == selected && watermark?.center == nil ? Theme.accent : Theme.panelRaised)
                                 .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.divider))
                                 .frame(width: 28, height: 22)
                                 .touchTarget()

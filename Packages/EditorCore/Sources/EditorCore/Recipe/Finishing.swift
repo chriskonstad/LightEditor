@@ -56,6 +56,9 @@ public enum WatermarkPosition: String, Codable, Sendable, CaseIterable, Identifi
 /// A watermark: text the user typed, or a logo image they imported. There's no
 /// default text: a watermark with neither draws nothing. Its size, opacity and
 /// margin are scalar parameters of their own, so they get the usual sliders.
+///
+/// It sits at one of nine grid positions inside the margin, or, once dragged on the
+/// photo, wherever `center` puts it. It can be turned by `rotation`.
 public struct Watermark: Codable, Sendable, Hashable {
     public var text: String
     /// A logo in place of the text. When set, the text and color are unused.
@@ -63,16 +66,48 @@ public struct Watermark: Codable, Sendable, Hashable {
     public var position: WatermarkPosition
     /// The text's color. A logo keeps its own colors.
     public var color: SRGBColor
+    /// Where the watermark's center is on the photo (0...1 from the top left), set
+    /// by dragging it. Nil uses `position` and the margin.
+    public var center: NormalizedPoint?
+    /// Degrees, clockwise.
+    public var rotation: Double
 
-    public init(text: String = "", logo: WatermarkLogo? = nil, position: WatermarkPosition = .bottomRight, color: SRGBColor = .white) {
+    public init(text: String = "", logo: WatermarkLogo? = nil, position: WatermarkPosition = .bottomRight, color: SRGBColor = .white,
+                center: NormalizedPoint? = nil, rotation: Double = 0) {
         self.text = text
         self.logo = logo
         self.position = position
         self.color = color
+        self.center = center
+        self.rotation = rotation
     }
 
     /// Whether there's anything to draw.
     public var isEmpty: Bool { logo == nil && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    // A watermark that was never dragged or turned encodes as it did before
+    // `center` and `rotation` existed.
+    private enum CodingKeys: String, CodingKey { case text, logo, position, color, center, rotation }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(String.self, forKey: .text)
+        logo = try container.decodeIfPresent(WatermarkLogo.self, forKey: .logo)
+        position = try container.decode(WatermarkPosition.self, forKey: .position)
+        color = try container.decode(SRGBColor.self, forKey: .color)
+        center = try container.decodeIfPresent(NormalizedPoint.self, forKey: .center)
+        rotation = try container.decodeIfPresent(Double.self, forKey: .rotation) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(text, forKey: .text)
+        try container.encodeIfPresent(logo, forKey: .logo)
+        try container.encode(position, forKey: .position)
+        try container.encode(color, forKey: .color)
+        try container.encodeIfPresent(center, forKey: .center)
+        if rotation != 0 { try container.encode((rotation * 100).rounded() / 100, forKey: .rotation) }
+    }
 }
 
 /// A logo image the recipe refers to by content hash, like a film LUT: the file

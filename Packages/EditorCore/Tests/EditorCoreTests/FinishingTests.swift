@@ -251,4 +251,56 @@ import Testing
         #expect(abs(full.width / preview.width - 4) < 0.01)
         #expect(abs(full.height / preview.height - 4) < 0.01)
     }
+
+    // MARK: Dragged and turned watermarks
+
+    @Test func aWatermarkThatWasNeverMovedEncodesAsBefore() throws {
+        let plain = try JSONEncoder().encode(Watermark(text: "© Me"))
+        #expect(!String(decoding: plain, as: UTF8.self).contains("center"))
+        #expect(!String(decoding: plain, as: UTF8.self).contains("rotation"))
+        let moved = Watermark(text: "© Me", center: NormalizedPoint(x: 0.3, y: 0.7), rotation: -12.5)
+        #expect(try JSONDecoder().decode(Watermark.self, from: JSONEncoder().encode(moved)) == moved)
+        // Watermarks saved before dragging existed still decode.
+        let old = Data(#"{"color":[1,1,1],"position":"bottomRight","text":"© Me"}"#.utf8)
+        #expect(try JSONDecoder().decode(Watermark.self, from: old) == Watermark(text: "© Me"))
+    }
+
+    static func brightBounds(_ image: CIImage, size: Int) -> CGRect? {
+        let all = pixels(image, rect: CGRect(x: 0, y: 0, width: size, height: size))
+        var minX = Int.max, minY = Int.max, maxX = -1, maxY = -1
+        for (index, p) in all.enumerated() where p.x > 0.5 {
+            let x = index % size, y = size - 1 - index / size
+            minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+        }
+        guard maxX >= 0 else { return nil }
+        return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+    }
+
+    @Test func aDraggedWatermarkIsCenteredWhereItWasDropped() throws {
+        var recipe = Recipe()
+        recipe.set(.watermark, .watermark(Watermark(text: "WWW", center: NormalizedPoint(x: 0.25, y: 0.25))), at: testClock.now())
+        recipe.setScalar(.watermarkSize, 10, at: testClock.now())
+        recipe.setScalar(.watermarkOpacity, 100, at: testClock.now())
+        let image = FinishingRenderer.apply(recipe, to: solid(0, 0, 0, size: 400))
+        let bounds = try #require(Self.brightBounds(image, size: 400))
+        // A quarter in from the left and from the top (y = 300 from the bottom).
+        #expect(abs(bounds.midX - 100) < 6, "\(bounds)")
+        #expect(abs(bounds.midY - 300) < 6, "\(bounds)")
+        let placement = try #require(FinishingRenderer.watermarkPlacement(recipe, photo: CGSize(width: 400, height: 400), files: nil))
+        #expect(placement.center == CGPoint(x: 100, y: 100))
+    }
+
+    @Test func aTurnedWatermarkRotatesAboutItsCenter() throws {
+        var recipe = Recipe()
+        recipe.set(.watermark, .watermark(Watermark(text: "WWWWWW", center: NormalizedPoint(x: 0.5, y: 0.5), rotation: 90)), at: testClock.now())
+        recipe.setScalar(.watermarkSize, 8, at: testClock.now())
+        recipe.setScalar(.watermarkOpacity, 100, at: testClock.now())
+        let image = FinishingRenderer.apply(recipe, to: solid(0, 0, 0, size: 400))
+        let bounds = try #require(Self.brightBounds(image, size: 400))
+        // Wide text turned a quarter: now taller than wide, still centered.
+        #expect(bounds.height > bounds.width * 2, "\(bounds)")
+        #expect(abs(bounds.midX - 200) < 4 && abs(bounds.midY - 200) < 4, "\(bounds)")
+        let unturned = try #require(FinishingRenderer.watermarkPlacement(recipe, photo: CGSize(width: 400, height: 400), files: nil))
+        #expect(abs(bounds.height - unturned.size.width) < unturned.size.width * 0.15, "\(bounds) vs \(unturned.size)")
+    }
 }

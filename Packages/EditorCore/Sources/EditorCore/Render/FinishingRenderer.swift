@@ -28,49 +28,102 @@ public enum FinishingRenderer {
             .composited(over: background)
     }
 
-    /// The watermark over a photo whose extent starts at the origin.
-    static func watermark(_ mark: Watermark, _ recipe: Recipe, on photo: CIImage, files: (any LUTProvider)?) -> CIImage {
-        let size = photo.extent.size
+    /// Where the watermark goes on a photo of `size` pixels: its center (from the
+    /// top left), its size before rotation, and its rotation. Nil when there's no
+    /// watermark or it can't be drawn (a logo whose file is missing). The on-photo
+    /// handles use the same placement as the render.
+    public static func watermarkPlacement(_ recipe: Recipe, photo size: CGSize, files: (any LUTProvider)?) -> WatermarkPlacement? {
+        guard let mark = Finishing.watermark(recipe) else { return nil }
+        return placement(mark, recipe, photo: size, files: files)?.placement
+    }
+
+    public struct WatermarkPlacement: Sendable, Equatable {
+        /// The center, in pixels from the photo's top left.
+        public var center: CGPoint
+        /// The watermark's size before rotation, in pixels.
+        public var size: CGSize
+        /// Degrees, clockwise.
+        public var rotation: Double
+    }
+
+    /// The placement, plus how to draw the art at a given scale (1 is the photo's pixels).
+    private static func placement(_ mark: Watermark, _ recipe: Recipe, photo size: CGSize, files: (any LUTProvider)?)
+        -> (placement: WatermarkPlacement, art: (Double) -> CGImage?)? {
         let metrics = Finishing.watermarkMetrics(photo: size, recipe: recipe)
         let maxWidth = Double(size.width) - 2 * metrics.margin
-        guard metrics.height >= 1, maxWidth > 1 else { return photo }
-        let art: CGImage?
+        guard metrics.height >= 1, maxWidth > 1 else { return nil }
+        let artSize: CGSize
+        let art: (Double) -> CGImage?
         if let logo = mark.logo {
             // Fit: the logo's height is the watermark size, its width follows its
             // aspect ratio, and a logo too wide for the margins shrinks to fit.
-            guard let aspect = files?.aspectRatio(of: logo), aspect > 0 else { return photo }
+            guard let aspect = files?.aspectRatio(of: logo), aspect > 0 else { return nil }
             var logoSize = CGSize(width: metrics.height * aspect, height: metrics.height)
             if logoSize.width > maxWidth { logoSize = CGSize(width: maxWidth, height: maxWidth / aspect) }
             logoSize = CGSize(width: logoSize.width.rounded(), height: logoSize.height.rounded())
-            guard logoSize.width >= 1, logoSize.height >= 1 else { return photo }
-            art = files?.image(for: logo, size: logoSize)
+            guard logoSize.width >= 1, logoSize.height >= 1 else { return nil }
+            artSize = logoSize
+            // A PDF logo is drawn as vectors at whatever size is asked for.
+            art = { scale in files?.image(for: logo, size: CGSize(width: (logoSize.width * scale).rounded(), height: (logoSize.height * scale).rounded())) }
         } else {
-            art = TextImages.shared.image(mark.text, height: metrics.height, maxWidth: maxWidth, color: mark.color)
+            // Text is set in the font at its final pixel size, never scaled as a bitmap.
+            guard let text = TextImages.shared.image(mark.text, height: metrics.height, maxWidth: maxWidth, color: mark.color) else { return nil }
+            artSize = CGSize(width: text.width, height: text.height)
+            art = { scale in
+                scale == 1 ? text : TextImages.shared.image(mark.text, height: metrics.height * scale, maxWidth: maxWidth * scale, color: mark.color)
+            }
         }
-        guard let text = art else { return photo }
-        let w = Double(text.width), h = Double(text.height)
-        let (column, row) = mark.position.cell
-        let x: Double = switch column {
-        case 0: metrics.margin
-        case 1: (Double(size.width) - w) / 2
-        default: Double(size.width) - metrics.margin - w
+        let w = Double(artSize.width), h = Double(artSize.height)
+        let center: CGPoint
+        if let free = mark.center {
+            center = CGPoint(x: free.x * Double(size.width), y: free.y * Double(size.height))
+        } else {
+            let (column, row) = mark.position.cell
+            let x: Double = switch column {
+            case 0: metrics.margin
+            case 1: (Double(size.width) - w) / 2
+            default: Double(size.width) - metrics.margin - w
+            }
+            let top: Double = switch row {
+            case 0: metrics.margin
+            case 1: (Double(size.height) - h) / 2
+            default: Double(size.height) - metrics.margin - h
+            }
+            center = CGPoint(x: x + w / 2, y: top + h / 2)
         }
-        // Rows count from the top; Core Image's origin is at the bottom.
-        let y: Double = switch row {
-        case 0: Double(size.height) - metrics.margin - h
-        case 1: (Double(size.height) - h) / 2
-        default: metrics.margin
+        return (WatermarkPlacement(center: center, size: artSize, rotation: mark.rotation), art)
+    }
+
+    /// The watermark over a photo whose extent starts at the origin.
+    static func watermark(_ mark: Watermark, _ recipe: Recipe, on photo: CIImage, files: (any LUTProvider)?) -> CIImage {
+        let size = photo.extent.size
+        guard let (placement, art) = placement(mark, recipe, photo: size, files: files) else { return photo }
+        let opacity = Finishing.watermarkMetrics(photo: size, recipe: recipe).opacity
+        // Core Image's origin is at the bottom left.
+        let center = CGPoint(x: placement.center.x, y: Double(size.height) - placement.center.y)
+        var overlay: CIImage
+        if placement.rotation == 0 {
+            guard let image = art(1) else { return photo }
+            // Whole pixels, so text stays as crisp as it was set.
+            let x = (center.x - placement.size.width / 2).rounded(), y = (center.y - placement.size.height / 2).rounded()
+            overlay = CIImage(cgImage: image).transformed(by: CGAffineTransform(translationX: x, y: y))
+        } else {
+            // Turned: set at twice the size, rotate, then scale down with Lanczos, so
+            // edges stay clean instead of picking up a bilinear blur.
+            guard let image = art(2) else { return photo }
+            let big = CIImage(cgImage: image)
+            overlay = big
+                .transformed(by: CGAffineTransform(translationX: -big.extent.width / 2, y: -big.extent.height / 2))
+                .transformed(by: CGAffineTransform(rotationAngle: -placement.rotation * .pi / 180))
+                .applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: 0.5, kCIInputAspectRatioKey: 1])
+                .transformed(by: CGAffineTransform(translationX: center.x, y: center.y))
         }
-        var overlay = CIImage(cgImage: text)
-        if metrics.opacity < 1 {
+        if opacity < 1 {
             overlay = overlay.applyingFilter("CIColorMatrix", parameters: [
-                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: metrics.opacity),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: opacity),
             ])
         }
-        return overlay
-            .transformed(by: CGAffineTransform(translationX: x.rounded(), y: y.rounded()))
-            .composited(over: photo)
-            .cropped(to: photo.extent)
+        return overlay.composited(over: photo).cropped(to: photo.extent)
     }
 }
 

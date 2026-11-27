@@ -118,11 +118,18 @@ final class FeatureTourTests: XCTestCase {
             // The custom color swatch opens the system color picker.
             if tapIfPresent("border.custom") {
                 pause(1)
-                shot("border-custom-color-picker")
-                app.swipeDown(velocity: .fast)
-                pause(0.8)
+                // Close the picker only if it opened: a swipe down on the editor itself closes the editor.
+                let picker = app.sheets.firstMatch.exists || app.otherElements["UIColorPickerViewController"].exists
+                    || app.navigationBars.firstMatch.buttons["Close"].exists || app.buttons["Close"].exists
+                if picker {
+                    shot("border-custom-color-picker")
+                    if app.buttons["Close"].exists { app.buttons["Close"].firstMatch.tap() } else { app.swipeDown(velocity: .fast) }
+                    pause(0.8)
+                }
             }
-            if reveal(element("toggle.watermark"), label: "Watermark") {
+            XCTAssertTrue(element("editor.export").exists, "the editor closed")
+            if !reveal(element("toggle.watermark"), label: "Watermark") { XCTFail("couldn't find the watermark switch") }
+            if element("toggle.watermark").exists {
                 element("toggle.watermark").tap()
                 pause(0.8)
                 // No default text: the empty field is focused, and nothing is drawn yet.
@@ -134,6 +141,25 @@ final class FeatureTourTests: XCTestCase {
                     pause(0.8)
                 }
                 shot("border-with-watermark")
+                // Drag the watermark toward the middle, then turn and enlarge it by its handle.
+                let box = element("watermark.box")
+                if box.waitForExistence(timeout: 3) {
+                    let from = box.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: -box.frame.minX * 0.6, dy: -60)))
+                    pause(0.8)
+                    shot("watermark-dragged")
+                    let handle = element("watermark.handle")
+                    if handle.exists {
+                        let grip = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                        grip.press(forDuration: 0.1, thenDragTo: grip.withOffset(CGVector(dx: 30, dy: 45)))
+                        pause(0.8)
+                        shot("watermark-turned-and-enlarged")
+                    } else {
+                        XCTFail("no resize handle on the watermark")
+                    }
+                } else {
+                    XCTFail("no watermark frame on the photo")
+                }
             }
             if reveal(element("canvas.4x5"), label: "Canvas") {
                 element("canvas.4x5").tap()

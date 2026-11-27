@@ -81,6 +81,11 @@ struct PhotoCanvas: View {
                     RetouchCanvasOverlay(model: model, viewSize: proxy.size)
                 }
 
+                if model.tab == .finish, model.phase == .ready, !model.isCropping, !model.isRetouching, !model.compare,
+                   !model.showsSplit, Finishing.watermark(model.recipe) != nil {
+                    WatermarkOverlay(model: model, viewSize: proxy.size)
+                }
+
                 if showOverlays {
                     overlays
                 }

@@ -175,7 +175,7 @@ public enum ParamCatalog {
             ParamSpec(key: .borderColor, label: "Border color", kind: .color, group: .finishing, stage: .finishing),
             ParamSpec(key: .borderCanvas, label: "Canvas", kind: .aspect, group: .finishing, stage: .finishing),
             ParamSpec(key: .watermark, label: "Watermark", kind: .watermark, group: .finishing, stage: .finishing),
-            scalar(.watermarkSize, "Watermark size", .finishing, range: 1...20, defaultValue: 4, stage: .finishing),
+            scalar(.watermarkSize, "Watermark size", .finishing, range: 1...40, defaultValue: 4, stage: .finishing),
             scalar(.watermarkOpacity, "Watermark opacity", .finishing, range: 5...100, defaultValue: 80, stage: .finishing),
             scalar(.watermarkMargin, "Watermark margin", .finishing, range: 0...20, defaultValue: 4, stage: .finishing),
 

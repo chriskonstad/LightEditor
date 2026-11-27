@@ -214,6 +214,19 @@ final class FeatureTourTests: XCTestCase {
             .tap()
         pause(1.5)
         shot("depth-mask-picked-cat")
+        // Drag the bar's far end out to take in more of the background.
+        let bar = element("mask.rangeBar")
+        if bar.waitForExistence(timeout: 3) {
+            let before = bar.value as? String
+            let far = (before?.split(separator: " ").last).flatMap { Double($0) } ?? 50
+            let grip = bar.coordinate(withNormalizedOffset: CGVector(dx: far / 100, dy: 0.5))
+            grip.press(forDuration: 0.1, thenDragTo: grip.withOffset(CGVector(dx: bar.frame.width * 0.15, dy: 0)))
+            pause(1)
+            XCTAssertNotEqual(bar.value as? String, before, "dragging the range bar's end didn't change the range")
+            shot("depth-mask-range-dragged")
+        } else {
+            XCTFail("no range bar")
+        }
         let exposure = element("mask.slider.light.exposure")
         if reveal(exposure, label: "Exposure") {
             drag(exposure, from: 0.5, to: 0.85)

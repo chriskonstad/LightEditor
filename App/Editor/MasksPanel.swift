@@ -352,7 +352,9 @@ struct ComponentSettings: View {
                 }
             case .luminance(let low, let high, let feather):
                 hint("Tap the photo to pick a tone, or set the range below.")
-                LuminanceRangeBar(low: low, high: high)
+                LuminanceRangeBar(low: low, high: high, onChange: { from, to in
+                    model.editSelectedShape { $0 = .luminance(low: from, high: to, feather: feather) }
+                }, onEnd: { commitRange("Luminance range") })
                 settingSlider("Dark end", value: low, range: 0...1, format: "\(Int((low * 100).rounded()))", commit: "Luminance range") { value in
                     model.editSelectedShape { $0 = .luminance(low: min(value, high - 0.02), high: high, feather: feather) }
                 }
@@ -374,7 +376,9 @@ struct ComponentSettings: View {
                 }
             case .depth(let near, let far, let feather):
                 hint("Tap the photo to pick a distance, or set the range below.")
-                LuminanceRangeBar(low: near, high: far, colors: [.white, Color(white: 0.15)], labels: ("Near", "Far"))
+                LuminanceRangeBar(low: near, high: far, colors: [.white, Color(white: 0.15)], labels: ("Near", "Far"), onChange: { from, to in
+                    model.editSelectedShape { $0 = .depth(near: from, far: to, feather: feather) }
+                }, onEnd: { commitRange("Depth range") })
                 settingSlider("Near", value: near, range: 0...1, format: "\(Int((near * 100).rounded()))", commit: "Depth range") { value in
                     model.editSelectedShape { $0 = .depth(near: min(value, far - 0.02), far: far, feather: feather) }
                 }
@@ -391,6 +395,10 @@ struct ComponentSettings: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private func commitRange(_ what: String) {
+        if let name = model.selectedMask?.name { model.pushHistory(label: "\(name): \(what.lowercased())") }
     }
 
     private func hint(_ text: String) -> some View {
@@ -431,26 +439,46 @@ struct ComponentSettings: View {
 }
 
 /// A gradient bar with the selected luminance band highlighted.
+/// A range on a gradient bar (dark to bright, or near to far). With `onChange`, its
+/// ends drag to set the range and its middle drags to move it.
 struct LuminanceRangeBar: View {
     let low: Double
     let high: Double
     var colors: [Color] = [.black, .white]
     /// Captions under the two ends, e.g. Near and Far.
     var labels: (String, String)?
+    var onChange: ((Double, Double) -> Void)?
+    var onEnd: () -> Void = {}
+
+    private enum Part { case low, high, both }
+    @State private var drag: (part: Part, low: Double, high: Double)?
 
     var body: some View {
         VStack(spacing: 2) {
             GeometryReader { proxy in
+                let width = proxy.size.width
                 ZStack(alignment: .leading) {
                     LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
+                        .frame(height: 14)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
                     Rectangle()
                         .strokeBorder(Theme.accent, lineWidth: 2)
-                        .frame(width: max((high - low) * proxy.size.width, 2))
-                        .offset(x: low * proxy.size.width)
+                        .frame(width: max((high - low) * width, 2), height: 14)
+                        .offset(x: low * width)
+                    if onChange != nil {
+                        ForEach([low, high], id: \.self) { end in
+                            Capsule().fill(.white)
+                                .overlay(Capsule().strokeBorder(.black.opacity(0.3), lineWidth: 0.5))
+                                .frame(width: 8, height: 24)
+                                .offset(x: end * width - 4)
+                        }
+                    }
                 }
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .gesture(onChange == nil ? nil : rangeDrag(width: width))
             }
-            .frame(height: 14)
-            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .frame(height: onChange == nil ? 14 : Theme.minTouch)
             if let labels {
                 HStack {
                     Text(labels.0)
@@ -461,6 +489,43 @@ struct LuminanceRangeBar: View {
                 .foregroundStyle(Theme.textSecondary)
             }
         }
-        .accessibilityHidden(true)
+        // Read-only, it's just a picture of the sliders below; draggable, it's a control.
+        .accessibilityHidden(onChange == nil)
+        .accessibilityElement()
+        .accessibilityLabel(labels.map { "\($0.0) to \($0.1) range" } ?? "Range")
+        .accessibilityValue("\(Int((low * 100).rounded())) to \(Int((high * 100).rounded()))")
+        .accessibilityIdentifier("mask.rangeBar")
+    }
+
+    /// Grabs whichever end is nearer the touch, or the middle to slide the range.
+    private func rangeDrag(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard width > 0, let onChange else { return }
+                if drag == nil {
+                    let x = value.startLocation.x / width
+                    let grab = 16 / width
+                    let part: Part = abs(x - low) <= grab && abs(x - low) <= abs(x - high) ? .low
+                        : abs(x - high) <= grab ? .high
+                        : x > low && x < high ? .both
+                        : (abs(x - low) < abs(x - high) ? .low : .high)
+                    drag = (part, low, high)
+                }
+                guard let drag else { return }
+                let dx = value.translation.width / width
+                let gap = 0.02
+                switch drag.part {
+                case .low: onChange(min(max(drag.low + dx, 0), drag.high - gap), drag.high)
+                case .high: onChange(drag.low, max(min(drag.high + dx, 1), drag.low + gap))
+                case .both:
+                    let span = drag.high - drag.low
+                    let from = min(max(drag.low + dx, 0), 1 - span)
+                    onChange(from, from + span)
+                }
+            }
+            .onEnded { _ in
+                drag = nil
+                onEnd()
+            }
     }
 }

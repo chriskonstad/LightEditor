@@ -65,10 +65,11 @@ struct NewMaskGrid: View {
         .linear(start: NormalizedPoint(x: 0.5, y: 0.1), end: NormalizedPoint(x: 0.5, y: 0.5)),
         .radial(center: NormalizedPoint(x: 0.5, y: 0.5), radiusX: 0.25, radiusY: 0.25, angle: 0, feather: 0.5),
     ]
-    static let rangeShapes: [MaskShape] = [
-        .luminance(low: 0.6, high: 1, feather: 0.1),
-        .color(l: 0.6, a: -0.03, b: -0.1, range: 0.4),
-    ]
+    static var rangeShapes: [MaskShape] {
+        [.luminance(low: 0.6, high: 1, feather: 0.1), .color(l: 0.6, a: -0.03, b: -0.1, range: 0.4)]
+            // Starts on the nearest third; a tap on the photo moves it.
+            + (DepthEstimator.shared.isAvailable ? [.depth(near: 0, far: 0.3, feather: 0.08)] : [])
+    }
 
     var body: some View {
         let shapes: [MaskShape] = [.ai(kind: .subject), .ai(kind: .sky), .ai(kind: .people), .ai(kind: .background), .object(seeds: [])]
@@ -279,7 +280,7 @@ struct ComponentRow: View {
                 .font(.subheadline)
             Spacer()
             if let status = model.aiStatus(component.shape) {
-                if model.computingAI.contains(component.shape) {
+                if model.computingAI.contains(AIMaskStore.canonical(component.shape)) {
                     ProgressView().controlSize(.small)
                 }
                 Text(status).font(.caption2).foregroundStyle(Theme.textSecondary).lineLimit(1)
@@ -350,6 +351,7 @@ struct ComponentSettings: View {
                     model.editSelectedShape { $0 = .radial(center: center, radiusX: rx, radiusY: ry, angle: value, feather: feather) }
                 }
             case .luminance(let low, let high, let feather):
+                hint("Tap the photo to pick a tone, or set the range below.")
                 LuminanceRangeBar(low: low, high: high)
                 settingSlider("Dark end", value: low, range: 0...1, format: "\(Int((low * 100).rounded()))", commit: "Luminance range") { value in
                     model.editSelectedShape { $0 = .luminance(low: min(value, high - 0.02), high: high, feather: feather) }
@@ -369,6 +371,18 @@ struct ComponentSettings: View {
                 }
                 settingSlider("Range", value: range, range: 0.05...1, format: "\(Int((range * 100).rounded()))", commit: "Color range") { value in
                     model.editSelectedShape { $0 = .color(l: l, a: a, b: b, range: value) }
+                }
+            case .depth(let near, let far, let feather):
+                hint("Tap the photo to pick a distance, or set the range below.")
+                LuminanceRangeBar(low: near, high: far, colors: [.white, Color(white: 0.15)], labels: ("Near", "Far"))
+                settingSlider("Near", value: near, range: 0...1, format: "\(Int((near * 100).rounded()))", commit: "Depth range") { value in
+                    model.editSelectedShape { $0 = .depth(near: min(value, far - 0.02), far: far, feather: feather) }
+                }
+                settingSlider("Far", value: far, range: 0...1, format: "\(Int((far * 100).rounded()))", commit: "Depth range") { value in
+                    model.editSelectedShape { $0 = .depth(near: near, far: max(value, near + 0.02), feather: feather) }
+                }
+                settingSlider("Smoothness", value: feather, range: 0.01...0.5, format: "\(Int((feather * 100).rounded()))", commit: "Depth smoothness") { value in
+                    model.editSelectedShape { $0 = .depth(near: near, far: far, feather: value) }
                 }
             case .object:
                 hint("Tap the photo to select an object. Tap again to add more of it.")
@@ -420,19 +434,33 @@ struct ComponentSettings: View {
 struct LuminanceRangeBar: View {
     let low: Double
     let high: Double
+    var colors: [Color] = [.black, .white]
+    /// Captions under the two ends, e.g. Near and Far.
+    var labels: (String, String)?
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                LinearGradient(colors: [.black, .white], startPoint: .leading, endPoint: .trailing)
-                Rectangle()
-                    .strokeBorder(Theme.accent, lineWidth: 2)
-                    .frame(width: max((high - low) * proxy.size.width, 2))
-                    .offset(x: low * proxy.size.width)
+        VStack(spacing: 2) {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
+                    Rectangle()
+                        .strokeBorder(Theme.accent, lineWidth: 2)
+                        .frame(width: max((high - low) * proxy.size.width, 2))
+                        .offset(x: low * proxy.size.width)
+                }
+            }
+            .frame(height: 14)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            if let labels {
+                HStack {
+                    Text(labels.0)
+                    Spacer()
+                    Text(labels.1)
+                }
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
             }
         }
-        .frame(height: 14)
-        .clipShape(RoundedRectangle(cornerRadius: 3))
         .accessibilityHidden(true)
     }
 }

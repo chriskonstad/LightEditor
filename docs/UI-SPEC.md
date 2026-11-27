@@ -84,12 +84,13 @@ From top to bottom:
    - **Effects:** the creative stages, in the order they're applied: a Film LUT picker and Amount; Vignette (Amount, Midpoint), applied after the crop; Grain (Amount, Size).
    - **Detail:** an info note ("Detail runs in the RAW 9 decoder…"), then Noise reduction, Color noise, Sharpness and Detail, Moiré reduction and the Lens corrections switch (the camera's lens profile). Below, **Manual Lens Corrections**: Distortion (positive fixes barrel, negative pincushion; the frame stays filled), Red/cyan fringe, Blue/yellow fringe (lateral chromatic aberration) and Lens vignetting, with its Midpoint once it's set. These grade without a re-decode; distortion and fringing show outside Masks and Retouch, like perspective.
    - **Masks:**
-     - With no masks yet, a grid to create one: Subject, Sky, People, Background, Object (tap to select), Brush, Linear gradient, Radial gradient, Luminance range, Color range. AI masks are amber.
+     - With no masks yet, a grid to create one: Subject, Sky, People, Background, Object (tap to select), Brush, Linear gradient, Radial gradient, Luminance range, Color range, Depth range (when the build bundles the depth model). AI masks are amber.
      - Otherwise:
        - The mask list. Each row shows its icon, name, adjustment count and a show/hide eye, with a menu for Duplicate and Delete; "+ New" adds a mask. Press and hold a row to see that mask's overlay until release, whatever the "Show overlay" toggle says.
        - The selected mask's parts. Each part shows its operation (+ add, − subtract, ∩ intersect), name and AI status (Analyzing…, or why nothing was found), with a menu for Combine, Invert and Delete; "+ Add" adds a part with any operation.
        - The selected part's settings:
          - Brush: Paint/Erase, Size, Feather, Flow.
+         - Luminance range, Color range and Depth range: **tap the photo to pick**. Luminance centers its range on the tapped tone, Depth on the tapped distance (keeping the range's width), and Color picks the tapped color. Luminance has Dark end, Bright end and Smoothness; Depth has Near, Far and Smoothness over a near-to-far bar. The depth map is measured once per photo ("Measuring depth" in the job tray, "Analyzing…" on the part); a tap before it's ready says so.
          - Radial: Feather, Angle.
          - Luminance: a gradient bar plus Dark end, Bright end, Smoothness.
          - Color: a picked-color swatch plus Range.

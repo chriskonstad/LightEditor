@@ -20,6 +20,7 @@ public enum Kernels {
         let grain: CIColorKernel
         let luminanceMask: CIColorKernel
         let colorMask: CIColorKernel
+        let depthMask: CIColorKernel
         let maskOverlay: CIColorKernel
         let hslSelection: CIColorKernel
         let heal: CIColorKernel
@@ -40,6 +41,7 @@ public enum Kernels {
             grain: compile("grainKernel", grainSource),
             luminanceMask: compile("luminanceMaskKernel", luminanceMaskSource),
             colorMask: compile("colorMaskKernel", colorMaskSource),
+            depthMask: compile("depthMaskKernel", depthMaskSource),
             maskOverlay: compile("maskOverlayKernel", maskOverlaySource),
             hslSelection: compile("hslSelectionKernel", hslSelectionSource),
             heal: compile("healKernel", healSource)
@@ -287,6 +289,16 @@ public enum Kernels {
     static let luminanceMaskSource = #"""
     extern "C" [[stitchable]] float4 luminanceMaskKernel(coreimage::sample_t s, float3 range) {
         float v = pow(clamp(dot(max(s.rgb, 0.0), kLuma), 0.0, 1.0), 1.0 / 2.2);
+        float f = max(range.z, 0.001);
+        float w = smoothstep(range.x - f, range.x, v) * (1.0 - smoothstep(range.y, range.y + f, v));
+        return float4(float3(w), 1.0);
+    }
+    """#
+
+    // A distance map (0 near, 1 far) between range.x and range.y, softened by range.z.
+    static let depthMaskSource = #"""
+    extern "C" [[stitchable]] float4 depthMaskKernel(coreimage::sample_t s, float3 range) {
+        float v = s.r;
         float f = max(range.z, 0.001);
         float w = smoothstep(range.x - f, range.x, v) * (1.0 - smoothstep(range.y, range.y + f, v));
         return float4(float3(w), 1.0);

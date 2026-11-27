@@ -18,7 +18,7 @@ mkdir -p build
 log=build/test-fast.log
 started=$(date +%s)
 
-args=() skip=(--skip "InpaintTests|DiffusionInpaintTests")
+args=() skip=(--skip "InpaintTests|DiffusionInpaintTests|DepthModelTests")
 for arg in "$@"; do
     if [[ $arg == --models ]]; then skip=(); else args+=("$arg"); fi
 done

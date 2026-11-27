@@ -34,6 +34,10 @@ targets:
       - path: Models/LaMa.mlpackage
         optional: true
         buildPhase: sources
+      # Depth Anything V2 Small for depth range masks, also from fetch-models.sh.
+      - path: Models/DepthAnything.mlpackage
+        optional: true
+        buildPhase: sources
       # Stable Diffusion 1.5 inpainting for "LaMa + diffusion", also from fetch-models.sh.
       - path: Models/SDInpaintUNet.mlpackage
         optional: true

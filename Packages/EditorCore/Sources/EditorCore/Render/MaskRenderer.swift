@@ -104,6 +104,9 @@ public enum MaskRenderer {
         case .ai, .object:
             guard let mask = ai?.mask(for: shape) else { return black(extent) }
             return fit(mask, to: extent)
+        case .depth(let near, let far, let feather):
+            guard let map = ai?.mask(for: .depthMap) else { return black(extent) }
+            return Kernels.compiled.depthMask.apply(extent: extent, arguments: [fit(map, to: extent), CIVector(x: near, y: far, z: feather)]) ?? black(extent)
         }
     }
 

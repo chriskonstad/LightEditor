@@ -32,7 +32,7 @@ A unit run that prints nothing for 5 minutes (`TEST_STALL_SECONDS`) is stopped a
 Tests that need something big are skipped unless it's there:
 
 - `EDITORCORE_RAW_FIXTURES=<folder>` (`scripts/test.sh --raw` sets it to `Fixtures/`) runs the decode, Vision, straighten, camera-look, RAW golden and RAW performance tests.
-- `Models/` (from `scripts/fetch-models.sh`) runs the real LaMa and diffusion tests. They take about 40 s, so `scripts/test-fast.sh` skips them unless you pass `--models`. A git worktree has no `Models/`; `scripts/test-ui.sh` links the main checkout's, or run `ln -s <main checkout>/Models Models`.
+- `Models/` (from `scripts/fetch-models.sh`) runs the real LaMa, diffusion and depth model tests (`DepthModelTests`; `DEPTH_CHECK=<folder>` also writes the fixtures' depth maps to look at). They take about 40 s, so `scripts/test-fast.sh` skips them unless you pass `--models`. A git worktree has no `Models/`; `scripts/test-ui.sh` links the main checkout's, or run `ln -s <main checkout>/Models Models`.
 
 ### Recipe format
 

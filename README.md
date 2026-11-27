@@ -17,7 +17,7 @@ A free, open-source RAW photo editor for iPhone, iPad and Mac, built for quick, 
 - **Effects:** film LUTs, vignette and grain.
 - **Detail:** RAW-stage noise reduction and sharpening, from Apple's RAW engine.
 - **Tone curve, crop and straighten**, with perspective, auto-straighten, 65:24 and custom ratios.
-- **Masks:** linear and radial gradients, brush, luminance and color ranges, and AI subject, sky, people and tap-to-select masks (Apple Vision).
+- **Masks:** linear and radial gradients, brush, luminance, color and depth ranges (tap the photo to pick), and AI subject, sky, people and tap-to-select masks (Apple Vision; depth from Depth Anything V2).
 - **Retouch:** heal and clone, plus AI object removal with LaMa, or LaMa followed by Stable Diffusion inpainting for a more photographic fill.
 - **Presets:** Fujifilm-style film looks and Sony Creative Looks (a Sony ARW offers the look and adjustments it was shot with), your own presets with an Amount slider, `.cube` LUTs, and Lightroom XMP preset import.
 - **Batch editing:** copy and paste edits with paste groups, bulk edits in "Set values" or "Adjust by" mode, and Match previous.

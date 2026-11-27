@@ -160,6 +160,11 @@ sim-grant device="booted":
 fetch-models:
     scripts/fetch-models.sh
 
+# Download only the depth model for depth range masks (about 50 MB).
+[group('models')]
+fetch-models-depth:
+    DEPTH_ONLY=1 scripts/fetch-models.sh
+
 # Build only the LaMa model (about 100 MB).
 [group('models')]
 fetch-models-lama:

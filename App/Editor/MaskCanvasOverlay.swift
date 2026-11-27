@@ -35,7 +35,7 @@ struct MaskCanvasOverlay: View {
             case .radial(let center, let rx, let ry, let angle, let feather): radialTool(center: center, rx: rx, ry: ry, angle: angle, feather: feather)
             case .brush: brushTool
             case .object(let seeds): tapTool(seeds: seeds)
-            case .color: tapTool(seeds: [])
+            case .color, .luminance, .depth: tapTool(seeds: [])
             default: EmptyView()
             }
         }

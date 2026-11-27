@@ -36,6 +36,11 @@ struct Acknowledgement: Identifiable {
         detail: "Apache License 2.0 · Samsung Research. Used for AI removal, converted to Core ML.",
         resource: "LaMa-Apache-2.0"
     )
+    static let depthAnything = Acknowledgement(
+        title: "Depth Anything V2 Small",
+        detail: "Apache License 2.0 · Depth Anything authors; Core ML conversion by Apple. Used for depth range masks.",
+        resource: "DepthAnything-Apache-2.0"
+    )
     static let stableDiffusion = Acknowledgement(
         title: "Stable Diffusion 1.5 inpainting",
         detail: "CreativeML Open RAIL-M · Runway and Stability AI. Used for “LaMa + diffusion”, converted to Core ML.",
@@ -46,6 +51,7 @@ struct Acknowledgement: Identifiable {
     static var all: [Acknowledgement] {
         var list = [lightEditor]
         if Inpainter.shared.isAvailable { list.append(lama) }
+        if DepthEstimator.shared.isAvailable { list.append(depthAnything) }
         if DiffusionInpainter.shared.isAvailable { list.append(stableDiffusion) }
         return list
     }

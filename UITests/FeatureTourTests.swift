@@ -167,6 +167,46 @@ final class FeatureTourTests: XCTestCase {
         shot("logo-watermark-svg")
     }
 
+    /// A depth range mask: the model measures depth, a tap on the cat picks its
+    /// distance, and an exposure change brightens only what's that far away.
+    func testDepthMask() throws {
+        let library = FileManager.default.temporaryDirectory.appending(path: "tour-\(UUID().uuidString)")
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: UITestConfig.libraryPath), to: library)
+        app = XCUIApplication()
+        app.launchArguments = [
+            "-FixtureLibrary", library.path, "-ResetState", "YES", "-ApplePersistenceIgnoreState", "YES",
+            "-OpenAsset", "DSC04921.ARW", "-EditorTab", "masks",
+        ]
+        app.launch()
+        XCTAssertTrue(waitUntilEnabled("editor.export", timeout: 120), "the editor never finished decoding")
+        guard tapIfPresent("mask.create.Depth range", timeout: 10) else {
+            XCTFail("no Depth range mask (is Models/DepthAnything.mlpackage in the build?)")
+            return
+        }
+        // The simulator runs the model on the CPU; give it time.
+        let analyzing = app.staticTexts["Analyzing…"].firstMatch
+        let deadline = Date().addingTimeInterval(90)
+        pause(1)
+        while analyzing.exists, Date() < deadline { pause(1) }
+        shot("depth-mask-created")
+        // The cat's head is in the right third of the frame, a little above the middle.
+        let canvas = element("mask.tapCanvas")
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5), "no tap target for picking a distance")
+        let photo = app.otherElements["editor.canvas"].exists ? app.otherElements["editor.canvas"].frame : canvas.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: photo.minX + photo.width * 0.72, dy: photo.minY + photo.height * 0.45))
+            .tap()
+        pause(1.5)
+        shot("depth-mask-picked-cat")
+        let exposure = element("mask.slider.light.exposure")
+        if reveal(exposure, label: "Exposure") {
+            drag(exposure, from: 0.5, to: 0.85)
+            shot("depth-mask-cat-brightened")
+        } else {
+            XCTFail("couldn't find the mask's exposure slider")
+        }
+    }
+
     // MARK: Helpers
 
     private func element(_ id: String) -> XCUIElement {

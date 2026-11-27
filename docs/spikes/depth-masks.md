@@ -1,6 +1,6 @@
 # Spike: depth range masks (and luminance masks)
 
-Status: research done 2026-11-27; nothing built yet. Question: can masks select by
+Status: built 2026-11-27 (model only: the user prefers computing every mask ourselves over depth or mattes stored by some iPhones, so all cameras behave alike). Question: can masks select by
 distance from the camera, as Lightroom's Depth Range does, and how should the mask
 tools improve generally?
 

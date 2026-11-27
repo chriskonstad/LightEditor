@@ -240,13 +240,40 @@ extension EditorModel {
         case .color(_, _, _, let range):
             guard let lab = sampleColor(at: point) else { return }
             editSelectedShape("Pick color") { $0 = .color(l: lab.L, a: lab.a, b: lab.b, range: range) }
+        case .luminance(let low, let high, let feather):
+            guard let rgb = sampleLinearRGB(at: point) else { return }
+            // The same gamma-encoded luminance the mask kernel measures.
+            let tone = pow(min(max(0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b, 0), 1), 1 / 2.2)
+            let (from, to) = Self.centered(on: tone, width: high - low)
+            editSelectedShape("Pick tone") { $0 = .luminance(low: from, high: to, feather: feather) }
+        case .depth(let near, let far, let feather):
+            guard let distance = aiStore?.distance(at: point) else {
+                app.showToast(computingAI.contains(.depthMap) ? "Still measuring depth. Tap again in a moment." : "This photo's depth isn't ready.")
+                computeAIIfNeeded(.depthMap)
+                return
+            }
+            let (from, to) = Self.centered(on: distance, width: far - near)
+            editSelectedShape("Pick distance") { $0 = .depth(near: from, far: to, feather: feather) }
         default:
             break
         }
     }
 
+    /// A range of `width` (at least 0.1) centered on `value`, kept inside 0...1.
+    static func centered(on value: Double, width: Double) -> (Double, Double) {
+        let width = min(max(width, 0.1), 1)
+        let low = min(max(value - width / 2, 0), 1 - width)
+        return (low, low + width)
+    }
+
     /// The color the mask stage sees at a point: the graded image before masks.
     func sampleColor(at point: NormalizedPoint) -> (L: Double, a: Double, b: Double)? {
+        guard let rgb = sampleLinearRGB(at: point) else { return nil }
+        return ColorMath.linearToOklab(max(rgb.r, 0), max(rgb.g, 0), max(rgb.b, 0))
+    }
+
+    /// Linear sRGB at a point of the graded image before masks, averaged over 5 × 5 pixels.
+    func sampleLinearRGB(at point: NormalizedPoint) -> (r: Double, g: Double, b: Double)? {
         guard let decoded = base else { return nil }
         var withoutMasks = recipe
         for layer in withoutMasks.masks { withoutMasks.removeMask(layer.id, at: HLCStamp(millis: 0, node: "sample")) }
@@ -261,7 +288,7 @@ extension EditorModel {
         let r = (0..<25).map { Double(pixels[$0 * 4]) }.reduce(0, +) / 25
         let g = (0..<25).map { Double(pixels[$0 * 4 + 1]) }.reduce(0, +) / 25
         let b = (0..<25).map { Double(pixels[$0 * 4 + 2]) }.reduce(0, +) / 25
-        return ColorMath.linearToOklab(max(r, 0), max(g, 0), max(b, 0))
+        return (r, g, b)
     }
 
     // MARK: AI
@@ -271,6 +298,8 @@ extension EditorModel {
     }
 
     func computeAIIfNeeded(_ shape: MaskShape) {
+        // Every depth range shares one depth map, so track the map, not the range.
+        let shape = AIMaskStore.canonical(shape)
         guard shape.isAI, let store = aiStore, !store.hasMask(for: shape), !computingAI.contains(shape) else { return }
         // Empty object selections wait for a tap.
         if case .object(let seeds) = shape, seeds.isEmpty { return }
@@ -279,7 +308,7 @@ extension EditorModel {
         aiFailures[shape] = nil
         let source = session.original
         let analysisStage = recipe.analysisStage
-        let label = shape.isAIKind ? "Finding \(shape.displayName.lowercased())" : "Selecting object"
+        let label = shape == .depthMap ? "Measuring depth" : shape.isAIKind ? "Finding \(shape.displayName.lowercased())" : "Selecting object"
         let remote = app.remoteLibrary, recipe = self.recipe
         let task = app.jobs.run(label, detail: remote.map { "On \($0.displayName)" } ?? filename) { _ in
             if let remote {
@@ -305,6 +334,7 @@ extension EditorModel {
 
     func aiStatus(_ shape: MaskShape) -> String? {
         guard shape.isAI else { return nil }
+        let shape = AIMaskStore.canonical(shape)
         if computingAI.contains(shape) { return "Analyzing…" }
         if let failure = aiFailures[shape] { return failure }
         if case .object(let seeds) = shape, seeds.isEmpty { return "Tap the photo to select an object" }

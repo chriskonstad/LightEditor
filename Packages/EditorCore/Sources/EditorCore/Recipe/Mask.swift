@@ -99,6 +99,13 @@ public enum MaskShape: Codable, Sendable, Hashable {
     case ai(kind: AIMaskKind)
     /// Tap-to-select: the object under the seed points, by Vision iterative segmentation.
     case object(seeds: [NormalizedPoint])
+    /// Distance from the camera between `near` and `far` (0 is the nearest part of
+    /// the photo, 1 the farthest), softened by `feather`. The depth map comes from a
+    /// model run on each device (`DepthEstimator`); only these numbers are stored.
+    case depth(near: Double, far: Double, feather: Double)
+
+    /// The whole depth map, the shape every depth range is cached under.
+    public static let depthMap = MaskShape.depth(near: 0, far: 1, feather: 0)
 
     public var displayName: String {
         switch self {
@@ -109,6 +116,7 @@ public enum MaskShape: Codable, Sendable, Hashable {
         case .color: "Color range"
         case .ai(let kind): kind.displayName
         case .object: "Object"
+        case .depth: "Depth range"
         }
     }
 
@@ -121,13 +129,14 @@ public enum MaskShape: Codable, Sendable, Hashable {
         case .color: "eyedropper"
         case .ai(let kind): kind.systemImage
         case .object: "hand.tap"
+        case .depth: "square.3.layers.3d.down.backward"
         }
     }
 
     /// Whether the shape is computed by a model (and so needs a cache and a job).
     public var isAI: Bool {
         switch self {
-        case .ai, .object: true
+        case .ai, .object, .depth: true
         default: false
         }
     }

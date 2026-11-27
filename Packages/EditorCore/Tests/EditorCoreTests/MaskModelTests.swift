@@ -15,6 +15,7 @@ func sampleMask(_ shape: MaskShape, order: Double = 1, exposure: Double = 0.5) -
         .color(l: 0.6, a: -0.05, b: -0.12, range: 0.3),
         .ai(kind: .sky),
         .object(seeds: [NormalizedPoint(x: 0.5, y: 0.5)]),
+        .depth(near: 0.1, far: 0.45, feather: 0.08),
     ]
 
     @Test(arguments: shapes)

@@ -11,6 +11,8 @@ struct LightEditorApp: App {
     init() {
         // AI removal is available when the build bundled LaMa (scripts/fetch-models.sh).
         Inpainter.shared.configure(modelURL: Bundle.main.url(forResource: "LaMa", withExtension: "mlmodelc"))
+        // Depth range masks when the build bundled Depth Anything V2 Small.
+        DepthEstimator.shared.configure(modelURL: Bundle.main.url(forResource: "DepthAnything", withExtension: "mlmodelc"))
         // "LaMa + diffusion" when the build bundled Stable Diffusion inpainting.
         DiffusionInpainter.shared.configure(.inBundle())
         #if os(iOS)

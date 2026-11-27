@@ -29,6 +29,7 @@ public enum AIMaskError: Error, LocalizedError {
 /// - People: `GeneratePersonInstanceMaskRequest`, all instances.
 /// - Background: the subject, inverted.
 /// - Object: `GenerateIterativeSegmentationRequest` from each tap, unioned.
+/// - Depth: `DepthEstimator`'s distance map, shared by every depth range.
 /// - Sky: iterative segmentation seeded at the brightest, smoothest points along the
 ///   top of the frame. If none looks like sky, there is no sky.
 public final class AIMaskStore: AIMaskProvider, @unchecked Sendable {
@@ -76,10 +77,30 @@ public final class AIMaskStore: AIMaskProvider, @unchecked Sendable {
 
     public func hasMask(for shape: MaskShape) -> Bool { mask(for: shape) != nil }
 
-    /// Background is the inverted subject, so they share one computation.
-    static func canonical(_ shape: MaskShape) -> MaskShape {
+    /// Background is the inverted subject, so they share one computation, and every
+    /// depth range reads the same depth map.
+    public static func canonical(_ shape: MaskShape) -> MaskShape {
         if case .ai(kind: .background) = shape { return .ai(kind: .subject) }
+        if case .depth = shape { return .depthMap }
         return shape
+    }
+
+    /// The distance (0 near, 1 far) at a point, averaged over a few pixels, or nil
+    /// before the depth map is computed. For tap-to-pick.
+    public func distance(at point: NormalizedPoint) -> Double? {
+        guard let map = mask(for: .depthMap) else { return nil }
+        return Self.sample(map, at: point)
+    }
+
+    /// The mean of a 5 × 5 patch of a gray image at a top-left normalized point.
+    static func sample(_ image: CIImage, at point: NormalizedPoint) -> Double {
+        let extent = image.extent
+        let rect = CGRect(x: extent.minX + point.x * extent.width - 2, y: extent.minY + (1 - point.y) * extent.height - 2, width: 5, height: 5)
+        var pixels = [Float](repeating: 0, count: 25 * 4)
+        pixels.withUnsafeMutableBytes { raw in
+            RenderContext.shared.render(image, toBitmap: raw.baseAddress!, rowBytes: 5 * 16, bounds: rect, format: .RGBAf, colorSpace: nil)
+        }
+        return (0..<25).map { Double(pixels[$0 * 4]) }.reduce(0, +) / 25
     }
 
     private func fileURL(_ shape: MaskShape) -> URL? {
@@ -126,13 +147,18 @@ public final class AIMaskStore: AIMaskProvider, @unchecked Sendable {
             mask = try await Self.sky(image)
         case .object(let seeds):
             mask = try await Self.objects(seeds, image: image)
+        case .depth:
+            guard DepthEstimator.shared.isAvailable else { throw AIMaskError.unsupported }
+            mask = try DepthEstimator.shared.distanceMap(for: image)
         default:
             return
         }
-        // Store as 8-bit gray: small on disk and cheap to sample.
+        // Store as 8-bit gray: small on disk and cheap to sample. Depth keeps 16
+        // bits, since narrow ranges of a smooth map would band at 8.
         let extent = CGRect(x: 0, y: 0, width: image.width, height: image.height)
         mask = MaskRenderer.fit(mask, to: extent)
-        guard let rendered = RenderContext.shared.createCGImage(mask, from: extent, format: .L8, colorSpace: CGColorSpace(name: CGColorSpace.linearGray)) else {
+        let format: CIFormat = key == .depthMap ? .L16 : .L8
+        guard let rendered = RenderContext.shared.createCGImage(mask, from: extent, format: format, colorSpace: CGColorSpace(name: CGColorSpace.linearGray)) else {
             throw DecodeError.renderFailed
         }
         let stored = CIImage(cgImage: rendered)

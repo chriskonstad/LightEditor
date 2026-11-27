@@ -10,11 +10,14 @@ How LightEditor is tested, which command to run for which change, and how to rea
 | `scripts/test-fast.sh --filter <regex>` | One suite or test, e.g. `--filter RenderGolden` | seconds |
 | `scripts/test.sh --raw` | Unit tests plus the real-RAW tests on `Fixtures/`: decode, Vision masks, camera looks, RAW goldens, XCTest performance runs | ~1.5 min |
 | `scripts/test-ui.sh` | UI audits and screenshots on iPhone SE and iPad mini simulators | ~8–12 min |
-| `scripts/test-all.sh` | All of the above with the AI-model tests, performance budgets and the app builds, with a summary | ~15 min |
+| `scripts/test-sanitizers.sh` | EditorCore tests under the Thread Sanitizer, then Address and Undefined Behavior Sanitizers (`--models` adds the AI-model tests) | ~1 min |
+| `scripts/test-checkers.sh` | Behavior, interruption and tour UI tests with the Main Thread Checker and Thread Performance Checker in the app | ~6 min |
+| `scripts/test-mac-ui.sh` | The Mac app's UI tests: editing, each tab's audit, the watermark, interruptions and performance, with the checkers | ~5 min |
+| `scripts/test-all.sh` | All of the above with the AI-model tests, performance budgets and the app builds, with a summary | ~25 min |
 
 A unit run that prints nothing for 5 minutes (`TEST_STALL_SECONDS`) is stopped as hung and lists the tests that started but never finished. Tests that set process-wide state (`RawDecoder.remote`, peer links) nest under the serialized `RemoteSuites`; put any new one there too, or it can deadlock other suites behind `RenderGate.fullSize`.
 
-**The inner loop is `scripts/test-fast.sh` (`just test-fast`).** Run `scripts/test-all.sh` (`just check`) before merging or shipping a feature. `just test-ui` wraps `scripts/test-ui.sh`.
+**The inner loop is `scripts/test-fast.sh` (`just test-fast`).** `just test-sanitizers`, `just test-checkers` and `just test-mac-ui` wrap the three scripts above. Run `scripts/test-all.sh` (`just check`) before merging or shipping a feature. `just test-ui` wraps `scripts/test-ui.sh`.
 
 | You changed… | Run |
 | --- | --- |
@@ -23,6 +26,8 @@ A unit run that prints nothing for 5 minutes (`TEST_STALL_SECONDS`) is stopped a
 | RAW decoding, `RawDecoder`, camera looks, lens corrections | `scripts/test.sh --raw` |
 | Anything on a hot path (decode, grade, display, export) | `EDITORCORE_PERF_BUDGETS=1 EDITORCORE_RAW_FIXTURES=$PWD/Fixtures scripts/test-fast.sh --filter PerformanceBudget`, and real-device timings |
 | SwiftUI views, layout, text, controls | `scripts/test-ui.sh`, then look at the screenshots |
+| Threads, locks, `@unchecked Sendable`, async code | `scripts/test-sanitizers.sh`; for the app's main thread, `scripts/test-checkers.sh` |
+| Mac-specific UI, menus, keyboard shortcuts | `scripts/test-mac-ui.sh` |
 | `project.yml`, entitlements, the app target | `scripts/build.sh` |
 
 ## EditorCore unit tests
@@ -63,6 +68,14 @@ Two layers, because the Simulator and the Mac aren't the devices that matter (CL
 - **`PerformanceTests`** (XCTest `measure`) times decode, grade and export. Their baselines are meant to be recorded per device in Xcode; on a Mac via `swift test` they only print numbers. Device baselines are still to record (M1.11).
 - **`PerformanceBudgetTests`** are coarse regression guards for local runs, enabled with `EDITORCORE_PERF_BUDGETS=1` (`scripts/test-all.sh` runs them as their own stage, after the parallel unit run, since GPU contention from the model tests made a 5 ms frame take 500 ms). Each prints a `BUDGET` line with the median of several runs and fails over a budget set at several times what an M4 Pro measures, with room for an M1: graph build on the slider path (0.2 ms, budget 5 ms), a 2560 px frame with a mask (7 ms, budget 60 ms), the recipe codec, and with RAW fixtures a cold preview decode (1.4 s idle, 6.5 s with the machine busy; budget 15 s) and a full-size HEIC export (7.3 s idle, 17 s busy; budget 40 s). They catch an accidental re-decode, a CPU fallback or a slow graph build, not a 10% slip; for that, measure on a device.
 
+Each measurement is also compared with this Mac model's baseline in `Packages/EditorCore/Tests/perf-baselines.json`: more than 1.5× the baseline plus 2 ms fails, which catches much smaller slips than the budgets. The budgets also cover depth (a 1536 px depth map, 140 ms on an M4 Pro), a frame with depth, luminance and color range masks, and a finished frame with four-corner perspective, a border and a turned watermark. `just record-perf` records this Mac's baselines; do it on a quiet machine, and only after a change meant to move the numbers. A Mac model with no baseline only checks the budgets.
+
+## Sanitizers and thread checkers
+
+**Sanitizers** (`scripts/test-sanitizers.sh`): the EditorCore tests built with the Thread Sanitizer, then with the Address and Undefined Behavior Sanitizers. Swift 6 catches most data races at compile time, but not inside `@unchecked Sendable` types, `Mutex`-guarded state, `nonisolated(unsafe)` globals or C callbacks; the Thread Sanitizer catches those at run time, and any report fails the run even when every test passes. Its first runs found a race on `PeerLink`'s global heartbeat timing, which a test changed while other links read it (now per link), and, through the slower timing, a decline that the iPad could see as "Connection reset by peer" (now the declined side closes the link). A race depends on timing, so a clean run is evidence, not proof; the script runs in every `scripts/test-all.sh`.
+
+**Thread checkers** (`scripts/test-checkers.sh`): the app with the Main Thread Checker (UI calls off the main thread) and the Thread Performance Checker (`libRPAC`: the main thread waiting on lower-priority work, a hang risk) loaded through `DYLD_INSERT_LIBRARIES` (`UITestConfig.makeApp` when `UITEST_CHECKERS=1`), while `EditorBehaviorTests`, `InterruptionTests` and `FeatureTourTests` drive it in a throwaway iPhone simulator. Both report to the system log, and the script reads the app's reports from the simulator's log afterwards and fails on any. First it launches the app with `-DebugCheckerViolation`, which breaks both rules once on purpose, and checks both reports arrive: a clean run means clean, not that the checkers never loaded. The Mac UI tests do the same on the Mac (`MAC_UITEST_CHECKERS=1`); macOS redacts the messages as `<private>`, so reports are counted by subsystem, and details need a run from Xcode with the checkers on.
+
 ## UI tests
 
 `UITests/` (target `LightEditorUITests`, scheme `LightEditorUITests`), run by `scripts/test-ui.sh`.
@@ -97,7 +110,17 @@ Only re-record the baseline when a finding is accepted on purpose (say so in the
 
 `FeatureTourTests` is a demo, not an audit: `scripts/ui-tour.sh` (`just ui-tour`) runs it in a throwaway simulator and records `build/ui-tour/<device>/tour.mp4` plus a screenshot per step: canvas backgrounds with a strong vignette, the color wheels opened with their sliders, the mask overlay hiding on adjust, and the Finish tab (border, the color picker, a typed watermark, a 4:5 canvas). `testLogoWatermark` imports an SVG logo through `-WatermarkLogo` (the same import the Finish tab runs, without the file picker) to check SVG conversion on iOS. Run it to look at a UI change; `scripts/test-ui.sh` skips it. It brings controls on screen by tapping their labels, since a scroll drag can grab a control (one moved a tone-curve point).
 
-Both scripts check `xcodebuild`'s own exit status before testing; a failed build used to fall through to testing the previous build.
+`InterruptionTests` checks that an edit survives the app being sent to the background, killed (the draft brings it back), warned about memory (simulated: the test posts a Darwin notification the Debug app turns into `UIApplication.didReceiveMemoryWarningNotification`, so every handler runs), and turned on iPad.
+
+### Mac UI tests
+
+`MacUITests/` (target and scheme `LightEditorMacUITests`), run by `scripts/test-mac-ui.sh`. The tests take over the mouse and keyboard, and macOS asks an administrator to allow UI automation unless it's been allowed once with `sudo automationmodetool enable-automationmode-without-authentication` (`scripts/test-all.sh` skips the stage until then, and says so). The sandboxed Debug app can read a sample library only under `/private/tmp/LightEditorUITests/` (a Debug-only entitlement), where each test makes a fresh copy of two fixtures.
+
+- `MacEditorTests`: editing with the mouse, ⌘Z and ⇧⌘Z, every tab with a screenshot and Apple's accessibility audit (known findings in `MacUITests/audit-baseline.txt`; `--record` rewrites it), and typing and dragging a watermark.
+- `MacInterruptionTests`: hiding the app and coming back, and quitting (the draft brings the edit back).
+- `MacPerformanceTests`: launch (`XCTApplicationLaunchMetric`), opening a 61 MP ARW until the editor is ready, and display frames while dragging a slider (`XCTOSSignpostMetric` on the app's `DisplayFrame` signpost). The script prints each average from the result bundle; `--no-perf` skips them.
+
+Both iOS scripts check `xcodebuild`'s own exit status before testing; a failed build used to fall through to testing the previous build.
 
 When you add a screen, add it to the walk and give its controls accessibility identifiers (`area.control`, as in `editor.export`). For anything the walk can't reach, the Mac's `-SnapshotTo` and the iOS tooling in `docs/spikes/simulator-tooling.md` still work.
 

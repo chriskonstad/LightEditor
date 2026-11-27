@@ -48,10 +48,20 @@ test-fast *flags:
 test-ui *flags:
     scripts/test-ui.sh "$@"
 
+# Record this Mac's performance baselines (Packages/EditorCore/Tests/perf-baselines.json); on a quiet machine.
+[group('test')]
+record-perf:
+    EDITORCORE_RAW_FIXTURES="$PWD/Fixtures" EDITORCORE_PERF_BUDGETS=1 EDITORCORE_PERF_RECORD=1 scripts/test-fast.sh --filter PerformanceBudget
+
 # EditorCore under the Thread, Address and UB Sanitizers; `--models` adds the AI-model tests.
 [group('test')]
 test-sanitizers *flags:
     scripts/test-sanitizers.sh "$@"
+
+# The Mac app's UI tests: editing, every tab's audit, interruptions and performance (takes over the mouse).
+[group('test')]
+test-mac-ui *flags:
+    scripts/test-mac-ui.sh "$@"
 
 # The app under the Main Thread Checker and Thread Performance Checker while UI tests drive it.
 [group('test')]

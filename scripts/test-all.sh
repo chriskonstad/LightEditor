@@ -55,6 +55,13 @@ stage "sanitizers" scripts/test-sanitizers.sh
 stage "builds" scripts/build.sh
 (( ui )) && stage "UI audits" scripts/test-ui.sh $ui_args
 (( ui )) && stage "thread checkers" scripts/test-checkers.sh --no-build
+if (( ui )); then
+    if automationmodetool 2>&1 | grep -q "requires user authentication"; then
+        results+=("SKIP          Mac UI tests   (allow UI automation once: sudo automationmodetool enable-automationmode-without-authentication)")
+    else
+        stage "Mac UI tests" scripts/test-mac-ui.sh
+    fi
+fi
 
 echo
 printf '%s\n' $results

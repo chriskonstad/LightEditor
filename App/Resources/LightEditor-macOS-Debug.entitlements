@@ -13,5 +13,15 @@
 	<key>com.apple.security.network.server</key>
 	<true/>
 	<!-- Debug builds are ad-hoc signed, which iCloud doesn't allow, so presets stay on this Mac. -->
+	<!-- Debug only, for the Mac UI tests (MacUITests): a sample library they create here, -->
+	<!-- since the sandbox otherwise reads only the app's own container... -->
+	<key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
+	<array>
+		<string>/private/tmp/LightEditorUITests/</string>
+	</array>
+	<!-- ...and the Main Thread Checker and Thread Performance Checker loaded through -->
+	<!-- DYLD_INSERT_LIBRARIES, which the hardened runtime otherwise refuses. -->
+	<key>com.apple.security.cs.allow-dyld-environment-variables</key>
+	<true/>
 </dict>
 </plist>

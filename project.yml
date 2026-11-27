@@ -141,6 +141,25 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.chriskonstad.lighteditor.uitests
         TEST_TARGET_NAME: LightEditor
 
+  # Mac UI tests: the editor, interruptions and performance on the Mac app, with a
+  # sample library in /private/tmp (the Debug app's sandbox allows only that). Run
+  # with scripts/test-mac-ui.sh; see docs/TESTING.md.
+  LightEditorMacUITests:
+    type: bundle.ui-testing
+    supportedDestinations: [macOS]
+    sources:
+      - path: MacUITests
+        excludes: ["*.txt", "*.json"]
+    dependencies:
+      - target: LightEditor
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+        PRODUCT_BUNDLE_IDENTIFIER: com.chriskonstad.lighteditor.macuitests
+        TEST_TARGET_NAME: LightEditor
+
 schemes:
   # Declaring any scheme stops Xcode from generating one for the app, so it's spelled
   # out here (scripts/build.sh, testflight.sh and install-device.sh use it).
@@ -167,3 +186,12 @@ schemes:
       config: Debug
       targets:
         - LightEditorUITests
+  LightEditorMacUITests:
+    build:
+      targets:
+        LightEditor: [test]
+        LightEditorMacUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - LightEditorMacUITests

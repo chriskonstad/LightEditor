@@ -13,6 +13,13 @@ import Testing
 /// seconds, so they run only with EDITORCORE_PERF_BUDGETS=1 (`scripts/test-all.sh`).
 ///
 /// Each prints a `BUDGET` line with the median of several runs.
+///
+/// On top of the coarse budgets, each measurement is compared with this Mac
+/// model's baseline in Tests/perf-baselines.json, when there is one: more than 1.5×
+/// the baseline (plus 2 ms, for the quick ones) fails, which catches regressions far
+/// smaller than the budgets allow. `EDITORCORE_PERF_RECORD=1` records this Mac's
+/// numbers (`just record-perf`); record on a quiet machine, and only after a change
+/// that's meant to move them.
 @Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["EDITORCORE_PERF_BUDGETS"] == "1"))
 struct PerformanceBudgetTests {
     /// The median wall time of `runs` calls after one warm-up call.
@@ -38,9 +45,51 @@ struct PerformanceBudgetTests {
     }
 
     static func check(_ name: String, _ time: Duration, budget: Duration) {
-        let ms = { (d: Duration) in String(format: "%.2f ms", Double(d.components.attoseconds) / 1e15 + Double(d.components.seconds) * 1000) }
-        print("BUDGET \(name): \(ms(time)) (budget \(ms(budget)))")
+        let milliseconds = { (d: Duration) in Double(d.components.attoseconds) / 1e15 + Double(d.components.seconds) * 1000 }
+        let ms = { (d: Duration) in String(format: "%.2f ms", milliseconds(d)) }
+        let measured = milliseconds(time)
+        if ProcessInfo.processInfo.environment["EDITORCORE_PERF_RECORD"] == "1" {
+            Baselines.record(name, measured)
+            print("BUDGET \(name): \(ms(time)) (budget \(ms(budget)); recorded as the \(Baselines.model) baseline)")
+            return
+        }
+        let baseline = Baselines.value(name)
+        let limit = baseline.map { $0 * 1.5 + 2 }
+        print("BUDGET \(name): \(ms(time)) (budget \(ms(budget))" + (baseline.map { String(format: "; %@ baseline %.2f ms", Baselines.model, $0) } ?? "") + ")")
         #expect(time <= budget, "\(name) took \(ms(time)), over its budget of \(ms(budget))")
+        if let baseline, let limit {
+            #expect(measured <= limit, "\(name) took \(ms(time)), more than 1.5× this Mac's baseline of \(String(format: "%.2f", baseline)) ms")
+        }
+    }
+
+    /// Per-model baselines in Tests/perf-baselines.json: `{ "Mac16,7": { "name": ms } }`.
+    enum Baselines {
+        static let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appending(path: "perf-baselines.json")
+
+        /// The hardware model, e.g. "Mac16,7" or "MacBookPro17,1".
+        static let model: String = {
+            var size = 0
+            sysctlbyname("hw.model", nil, &size, nil, 0)
+            var bytes = [CChar](repeating: 0, count: max(size, 1))
+            sysctlbyname("hw.model", &bytes, &size, nil, 0)
+            return String(decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+        }()
+
+        static func all() -> [String: [String: Double]] {
+            guard let data = try? Data(contentsOf: file) else { return [:] }
+            return (try? JSONDecoder().decode([String: [String: Double]].self, from: data)) ?? [:]
+        }
+
+        static func value(_ name: String) -> Double? { all()[model]?[name] }
+
+        static func record(_ name: String, _ milliseconds: Double) {
+            var all = all()
+            all[model, default: [:]][name] = (milliseconds * 100).rounded() / 100
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try? encoder.encode(all).write(to: file, options: .atomic)
+        }
     }
 
     static var heavyRecipe: Recipe {
@@ -80,6 +129,69 @@ struct PerformanceBudgetTests {
             _ = try RenderContext.shared.startTask(toRender: image, to: destination).waitUntilCompleted()
         }
         Self.check("preview frame 2560 px", time, budget: .milliseconds(60))
+    }
+
+    /// A preview frame with depth, luminance and color range masks, the kind of
+    /// recipe that tap-to-pick produces.
+    @Test func rangeMaskedFrame() throws {
+        Kernels.warmUp()
+        var recipe = Self.heavyRecipe
+        recipe.setMask(MaskLayer(name: "Ranges", order: 2, components: [
+            MaskComponent(shape: .depth(near: 0.2, far: 0.6, feather: 0.1)),
+            MaskComponent(operation: .intersect, shape: .luminance(low: 0.3, high: 0.9, feather: 0.1)),
+            MaskComponent(operation: .add, shape: .color(l: 0.6, a: -0.03, b: -0.1, range: 0.4)),
+        ], adjustments: [.exposure: 0.4, .clarity: 20]), at: testClock.now())
+        var inputs = GradeInputs(defaults: RenderGoldenTests.warmDefaults)
+        inputs.aiMasks = PreviewDepth(size: Self.previewSize)
+        let buffer = try #require(PixelBuffers.make(width: Int(Self.previewSize.width), height: Int(Self.previewSize.height)))
+        let destination = CIRenderDestination(pixelBuffer: buffer)
+        let base = Self.previewBase
+        let time = try Self.median {
+            _ = try RenderContext.shared.startTask(toRender: GradeGraph.apply(recipe, to: base, inputs: inputs), to: destination).waitUntilCompleted()
+        }
+        Self.check("range-masked frame 2560 px", time, budget: .milliseconds(80))
+    }
+
+    /// A depth map the size of the preview, for the masked frame above.
+    struct PreviewDepth: AIMaskProvider {
+        let size: CGSize
+        func mask(for shape: MaskShape) -> CIImage? {
+            CIFilter(name: "CILinearGradient", parameters: [
+                "inputPoint0": CIVector(x: 0, y: 0), "inputPoint1": CIVector(x: size.width, y: size.height),
+                "inputColor0": CIColor.black, "inputColor1": CIColor.white,
+            ])!.outputImage!.cropped(to: CGRect(origin: .zero, size: size))
+        }
+    }
+
+    /// The Finish tab's preview: four-corner perspective, a border, and a turned
+    /// text watermark (set at twice the size, rotated, then scaled with Lanczos).
+    @Test func finishedFrame() throws {
+        Kernels.warmUp()
+        var recipe = Self.heavyRecipe
+        recipe.set(.perspectiveCorners, .quad(PerspectiveQuad(
+            topLeft: NormalizedPoint(x: 0.1, y: 0.05), topRight: NormalizedPoint(x: 0.88, y: 0.1),
+            bottomRight: NormalizedPoint(x: 0.95, y: 0.95), bottomLeft: NormalizedPoint(x: 0.04, y: 0.9))), at: testClock.now())
+        recipe.setScalar(.borderWidth, 5, at: testClock.now())
+        recipe.setScalar(.borderBottom, 10, at: testClock.now())
+        recipe.set(.watermark, .watermark(Watermark(text: "© Performance", center: NormalizedPoint(x: 0.5, y: 0.7), rotation: -15)), at: testClock.now())
+        recipe.setScalar(.watermarkSize, 8, at: testClock.now())
+        let inputs = GradeInputs(defaults: RenderGoldenTests.warmDefaults)
+        let base = Self.previewBase
+        let size = GradeGraph.apply(recipe, to: base, inputs: inputs).extent.size
+        let buffer = try #require(PixelBuffers.make(width: Int(size.width), height: Int(size.height)))
+        let destination = CIRenderDestination(pixelBuffer: buffer)
+        let time = try Self.median {
+            _ = try RenderContext.shared.startTask(toRender: GradeGraph.apply(recipe, to: base, inputs: inputs), to: destination).waitUntilCompleted()
+        }
+        Self.check("finished frame 2560 px (corners, border, turned watermark)", time, budget: .milliseconds(80))
+    }
+
+    /// Measuring a photo's depth once, for depth range masks (Neural Engine on a Mac).
+    @Test(.enabled(if: DepthModelTests.modelURL != nil)) func depthMap() throws {
+        DepthEstimator.shared.configure(modelURL: DepthModelTests.modelURL)
+        let image = DepthModelTests.scene(width: 1536, height: 1024)
+        let time = try Self.median(runs: 5) { _ = try DepthEstimator.shared.distanceMap(for: image) }
+        Self.check("depth map 1536 px", time, budget: .seconds(2))
     }
 
     /// Recipes are encoded on every commit and decoded for every thumbnail.

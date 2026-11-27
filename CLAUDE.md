@@ -61,6 +61,10 @@ The `justfile` at the root holds the common tasks; `just` lists them by group. T
 just test-fast              # inner loop: EditorCore tests, failures only (~5 s)
 just test-ui                # UI audits + screenshots in throwaway simulators
 just check                  # everything before a merge or ship (scripts/test-all.sh, ~15 min)
+just test-sanitizers        # EditorCore under Thread, Address and UB Sanitizers (~1 min)
+just test-checkers          # UI tests with the Main Thread Checker and Thread Performance Checker
+just test-mac-ui            # Mac app UI, interruption and performance tests (takes over the mouse)
+just record-perf            # record this Mac's performance baselines
 just test-core [filter]     # plain swift test, optionally filtered
 just test                   # scripts/test.sh; also `just test-raw`, `just test-ios`
 just build                  # scripts/build.sh: macOS, iOS Simulator and iOS device builds

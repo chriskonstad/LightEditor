@@ -1,0 +1,12 @@
+{
+  "Mac16,7" : {
+    "RAW preview decode (cold)" : 970.41,
+    "depth map 1536 px" : 141.88,
+    "finished frame 2560 px (corners, border, turned watermark)" : 4.95,
+    "full-size HEIC export (cold)" : 4772.91,
+    "grade graph build" : 0.17,
+    "preview frame 2560 px" : 4.68,
+    "range-masked frame 2560 px" : 7.2,
+    "recipe encode+decode ×10" : 3.54
+  }
+}

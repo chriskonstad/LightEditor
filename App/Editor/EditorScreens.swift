@@ -56,12 +56,10 @@ struct CompactEditorView: View {
                     .frame(height: proxy.size.height * photoFraction)
                 ProgressLine(active: model.isRedecoding || model.phase == .decoding)
                 if model.isCropping {
-                    ScrollView {
-                        CropTools(model: model) { model.isCropping = false }
-                            .padding()
-                            .frame(maxWidth: roomy ? 680 : .infinity)
-                            .frame(maxWidth: .infinity)
-                    }
+                    CropTools(model: model) { model.isCropping = false }
+                        .padding()
+                        .frame(maxWidth: roomy ? 680 : .infinity)
+                        .frame(maxWidth: .infinity)
                 } else if model.isRetouching {
                     ScrollView {
                         RetouchTools(model: model) { model.isRetouching = false }
@@ -356,12 +354,11 @@ struct WorkspaceEditorView: View {
             PhotoCanvas(model: model)
             ProgressLine(active: model.isRedecoding || model.phase == .decoding)
             if model.isCropping {
-                ScrollView {
-                    CropTools(model: model) { model.isCropping = false }
-                        .padding()
-                        .frame(maxWidth: 640)
-                }
-                .frame(maxHeight: 300)
+                // CropTools scrolls its own controls and keeps Reset and Done in view.
+                CropTools(model: model) { model.isCropping = false }
+                    .padding()
+                    .frame(maxWidth: 640)
+                    .frame(maxHeight: 340)
             } else if model.isRetouching {
                 RetouchTools(model: model) { model.isRetouching = false }
                     .padding()

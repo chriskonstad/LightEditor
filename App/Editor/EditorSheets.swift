@@ -42,103 +42,110 @@ struct CropTools: View {
         }
     }
 
+    /// The controls scroll when the panel is short (iPad landscape, the iPhone with
+    /// large text); Reset and Done stay pinned below them, always in reach.
     private var cropTools: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    chip("Free", selected: model.crop.aspect == nil) { setAspect(nil) }
-                    chip("Original", selected: model.crop.aspect.map { abs($0.value - originalAspect.value) < 0.001 } ?? false) {
-                        setAspect(originalAspect)
-                    }
-                    ForEach(AspectRatio.presets, id: \.self) { aspect in
-                        let oriented = orient(aspect)
-                        chip(aspect == AspectRatio(65, 24) ? "\(oriented) XPan" : oriented.description,
-                             selected: model.crop.aspect == oriented) { setAspect(oriented) }
-                    }
-                    if let custom = customAspect {
-                        chip(custom.description, selected: true) { customizing = true }
-                    }
-                    chip("Custom…", selected: false) {
-                        customWidth = model.crop.aspect.map { "\($0.width)" } ?? ""
-                        customHeight = model.crop.aspect.map { "\($0.height)" } ?? ""
-                        customizing = true
-                    }
-                    Button {
-                        if let aspect = model.crop.aspect { setAspect(AspectRatio(aspect.height, aspect.width)) }
-                    } label: {
-                        Image(systemName: "rotate.right").frame(width: Theme.minTouch, height: 32)
-                    }
-                    .disabled(model.crop.aspect == nil)
-                    .accessibilityLabel("Swap orientation")
-                }
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 8) {
-                    Text("Straighten").foregroundStyle(Theme.textPrimary)
-                    if let method = model.crop.auto?.method {
-                        Text("Auto · \(method.displayName)")
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Theme.accent.opacity(0.18), in: Capsule())
-                            .foregroundStyle(Theme.accent)
-                            .accessibilityIdentifier("straighten.method")
-                    }
-                    Spacer()
-                    Button {
-                        model.autoStraighten()
-                    } label: {
-                        if model.isLeveling {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Label("Auto", systemImage: "level")
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            chip("Free", selected: model.crop.aspect == nil) { setAspect(nil) }
+                            chip("Original", selected: model.crop.aspect.map { abs($0.value - originalAspect.value) < 0.001 } ?? false) {
+                                setAspect(originalAspect)
+                            }
+                            ForEach(AspectRatio.presets, id: \.self) { aspect in
+                                let oriented = orient(aspect)
+                                chip(aspect == AspectRatio(65, 24) ? "\(oriented) XPan" : oriented.description,
+                                     selected: model.crop.aspect == oriented) { setAspect(oriented) }
+                            }
+                            if let custom = customAspect {
+                                chip(custom.description, selected: true) { customizing = true }
+                            }
+                            chip("Custom…", selected: false) {
+                                customWidth = model.crop.aspect.map { "\($0.width)" } ?? ""
+                                customHeight = model.crop.aspect.map { "\($0.height)" } ?? ""
+                                customizing = true
+                            }
+                            Button {
+                                if let aspect = model.crop.aspect { setAspect(AspectRatio(aspect.height, aspect.width)) }
+                            } label: {
+                                Image(systemName: "rotate.right").frame(width: Theme.minTouch, height: 32)
+                            }
+                            .disabled(model.crop.aspect == nil)
+                            .accessibilityLabel("Swap orientation")
                         }
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(model.isLeveling)
-                    .accessibilityHint("Levels the photo from the camera's level, or Apple's horizon detection")
-                    .accessibilityIdentifier("straighten.auto")
-                    Text(String(format: "%.1f°", model.crop.angle)).valueStyle()
-                }
-                .font(.subheadline)
-                FineSlider(
-                    position: (model.crop.angle + 45) / 90,
-                    origin: 0.5,
-                    onChange: { position in
-                        var geometry = model.crop
-                        // With Auto on, the slider fine-tunes the found angle.
-                        geometry.setAngle(((position * 90 - 45) * 10).rounded() / 10)
-                        model.setCropLive(geometry)
-                    },
-                    onEditingChanged: { if !$0 { model.commitCrop() } },
-                    onReset: {
-                        var geometry = model.crop
-                        geometry.angle = 0
-                        geometry.auto = nil
-                        model.set(.crop, .crop(geometry))
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 8) {
+                            Text("Straighten").foregroundStyle(Theme.textPrimary)
+                            if let method = model.crop.auto?.method {
+                                Text("Auto · \(method.displayName)")
+                                    .font(.caption.weight(.medium))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(Theme.accent.opacity(0.18), in: Capsule())
+                                    .foregroundStyle(Theme.accent)
+                                    .accessibilityIdentifier("straighten.method")
+                            }
+                            Spacer()
+                            Button {
+                                model.autoStraighten()
+                            } label: {
+                                if model.isLeveling {
+                                    ProgressView().controlSize(.small)
+                                } else {
+                                    Label("Auto", systemImage: "level")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(model.isLeveling)
+                            .accessibilityHint("Levels the photo from the camera's level, or Apple's horizon detection")
+                            .accessibilityIdentifier("straighten.auto")
+                            Text(String(format: "%.1f°", model.crop.angle)).valueStyle()
+                        }
+                        .font(.subheadline)
+                        FineSlider(
+                            position: (model.crop.angle + 45) / 90,
+                            origin: 0.5,
+                            onChange: { position in
+                                var geometry = model.crop
+                                // With Auto on, the slider fine-tunes the found angle.
+                                geometry.setAngle(((position * 90 - 45) * 10).rounded() / 10)
+                                model.setCropLive(geometry)
+                            },
+                            onEditingChanged: { if !$0 { model.commitCrop() } },
+                            onReset: {
+                                var geometry = model.crop
+                                geometry.angle = 0
+                                geometry.auto = nil
+                                model.set(.crop, .crop(geometry))
+                            }
+                        )
+                        .accessibilityLabel("Straighten")
+                        .accessibilityIdentifier("slider.straighten")
                     }
-                )
-                .accessibilityLabel("Straighten")
-                .accessibilityIdentifier("slider.straighten")
-            }
-            ParamSlider(model: model, key: .perspectiveVertical, label: "Vertical perspective")
-            ParamSlider(model: model, key: .perspectiveHorizontal, label: "Horizontal perspective")
-            HStack {
-                Text("Four corners").foregroundStyle(model.perspectiveCorners != nil ? Theme.textPrimary : Theme.textSecondary)
-                if model.perspectiveCorners != nil {
-                    Text("On").font(.caption.weight(.medium))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Theme.accent.opacity(0.18), in: Capsule())
-                        .foregroundStyle(Theme.accent)
+                    ParamSlider(model: model, key: .perspectiveVertical, label: "Vertical perspective")
+                    ParamSlider(model: model, key: .perspectiveHorizontal, label: "Horizontal perspective")
+                    HStack {
+                        Text("Four corners").foregroundStyle(model.perspectiveCorners != nil ? Theme.textPrimary : Theme.textSecondary)
+                        if model.perspectiveCorners != nil {
+                            Text("On").font(.caption.weight(.medium))
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Theme.accent.opacity(0.18), in: Capsule())
+                                .foregroundStyle(Theme.accent)
+                        }
+                        Spacer()
+                        Button(model.perspectiveCorners == nil ? "Set Corners…" : "Edit Corners…") { model.editingCorners = true }
+                            .buttonStyle(.bordered)
+                            .controlSize(.large)
+                            .accessibilityHint("Drag four corners onto a rectangle in the photo to correct its perspective")
+                            .accessibilityIdentifier("corners.edit")
+                    }
+                    .font(.subheadline)
                 }
-                Spacer()
-                Button(model.perspectiveCorners == nil ? "Set Corners…" : "Edit Corners…") { model.editingCorners = true }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .accessibilityHint("Drag four corners onto a rectangle in the photo to correct its perspective")
-                    .accessibilityIdentifier("corners.edit")
             }
-            .font(.subheadline)
+            .scrollBounceBehavior(.basedOnSize)
             HStack {
                 Button("Reset") {
                     model.reset(.crop)

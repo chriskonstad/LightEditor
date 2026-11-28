@@ -53,9 +53,8 @@ targets:
         buildPhase: resources
     dependencies:
       - package: EditorCore
-      # "Edit in LightEditor" in the share sheet of Photos (iOS and iPadOS).
+      # "Edit in LightEditor" in the Share menu of Photos (iOS, iPadOS and macOS).
       - target: LightEditorShare
-        destinationFilters: [iOS]
     settings:
       base:
         PRODUCT_NAME: LightEditor
@@ -64,6 +63,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         # Merged with the generated keys: the Bonjour service list, which needs an array.
         INFOPLIST_FILE: App/Resources/Info.plist
+        # The Mac's adds the photo types it can be handed (Photos' Edit With, Finder's Open With).
+        "INFOPLIST_FILE[sdk=macosx*]": App/Resources/Info-macOS.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -94,7 +95,9 @@ targets:
         # Only standard encryption from Apple's frameworks (HTTPS, and CryptoKit for the
         # device-to-device link), which is exempt, so TestFlight needs no export questions.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
-        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: NO
+        # iOS only: the Mac declares document types (Info-macOS.plist), where NO isn't allowed.
+        "INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace[sdk=iphone*]": NO
+        "INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace[sdk=macosx*]": YES
       configs:
         Debug:
           # Ad-hoc signed (above), which iCloud doesn't allow: presets stay on this Mac.
@@ -105,7 +108,7 @@ targets:
   # app (docs/spikes/open-from-photos.md).
   LightEditorShare:
     type: app-extension
-    supportedDestinations: [iOS]
+    supportedDestinations: [iOS, macOS]
     configFiles:
       Debug: Config/ShareExtension.xcconfig
       Release: Config/ShareExtension.xcconfig
@@ -122,6 +125,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         SKIP_INSTALL: YES
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": ShareExtension/LightEditorShare-macOS.entitlements
+        "CODE_SIGN_IDENTITY[config=Debug][sdk=macosx*]": "-"
+        ENABLE_HARDENED_RUNTIME: YES
 
   # UI tests: walk the main screens in the iOS simulator at several sizes and Dynamic
   # Type settings, audit them (clipped text, small hit targets, overflow) and save

@@ -120,6 +120,7 @@ Only re-record the baseline when a finding is accepted on purpose (say so in the
 
 - `MacEditorTests`: editing with the mouse, ⌘Z and ⇧⌘Z, every tab with a screenshot and Apple's accessibility audit (known findings in `MacUITests/audit-baseline.txt`; `--record` rewrites it), and typing and dragging a watermark.
 - `MacInterruptionTests`: hiding the app and coming back, and quitting (the draft brings the edit back).
+- `MacOpenFromPhotosTests`: hands the app a photo file (as Photos' Edit With does) and a share-extension link, and checks the matching library photo opens.
 - `MacPerformanceTests`: launch (`XCTApplicationLaunchMetric`), opening a 61 MP ARW until the editor is ready, and display frames while dragging a slider (`XCTOSSignpostMetric` on the app's `DisplayFrame` signpost). The script prints each average from the result bundle; `--no-perf` skips them.
 
 Both iOS scripts check `xcodebuild`'s own exit status before testing; a failed build used to fall through to testing the previous build.

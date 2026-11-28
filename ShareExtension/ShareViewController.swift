@@ -1,7 +1,36 @@
 import EditorCore
-import UIKit
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
+/// What both platforms' extensions do: read what identifies the shared copy.
+enum ShareHandoff {
+    static func photo(from items: [Any]?) async -> SharedPhoto? {
+        let providers = (items as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }),
+              let photo = await sharedPhoto(from: provider), photo.searchRange != nil else { return nil }
+        return photo
+    }
+
+    /// Reads the shared copy while the item provider keeps its temporary file.
+    private static func sharedPhoto(from provider: NSItemProvider) async -> SharedPhoto? {
+        let type = provider.registeredContentTypes.first { $0.conforms(to: .image) } ?? .image
+        let suggested = provider.suggestedName
+        return await withCheckedContinuation { continuation in
+            _ = provider.loadFileRepresentation(for: type) { url, _, _ in
+                continuation.resume(returning: url.flatMap { SharedPhoto(imageAt: $0, name: suggested) })
+            }
+        }
+    }
+
+    static let noDate = "This photo has no capture date, so LightEditor can't find it in your library. Open it from the LightEditor app instead."
+    static let cantOpen = "LightEditor couldn't be opened from here. Open the app and choose the photo there."
+}
+
+#if os(iOS)
 /// "Edit in LightEditor" in the share sheet of Apple Photos.
 ///
 /// Photos hands share extensions a rendered copy of the photo, never the library
@@ -58,27 +87,14 @@ final class ShareViewController: UIViewController {
     }
 
     private func handOff() async {
-        let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
-        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }),
-              let photo = await Self.sharedPhoto(from: provider), photo.searchRange != nil else {
-            show("This photo has no capture date, so LightEditor can't find it in your library. Open it from the LightEditor app instead.")
+        guard let photo = await ShareHandoff.photo(from: extensionContext?.inputItems) else {
+            show(ShareHandoff.noDate)
             return
         }
         if await openApp(PhotoHandoff(photo: photo).url) {
             finish()
         } else {
-            show("LightEditor couldn't be opened from here. Open the app and choose the photo there.")
-        }
-    }
-
-    /// Reads the shared copy while the item provider keeps its temporary file.
-    private static func sharedPhoto(from provider: NSItemProvider) async -> SharedPhoto? {
-        let type = provider.registeredContentTypes.first { $0.conforms(to: .image) } ?? .image
-        let suggested = provider.suggestedName
-        return await withCheckedContinuation { continuation in
-            _ = provider.loadFileRepresentation(for: type) { url, _, _ in
-                continuation.resume(returning: url.flatMap { SharedPhoto(imageAt: $0, name: suggested) })
-            }
+            show(ShareHandoff.cantOpen)
         }
     }
 
@@ -107,3 +123,63 @@ final class ShareViewController: UIViewController {
         extensionContext?.completeRequest(returningItems: nil)
     }
 }
+#else
+/// "Edit in LightEditor" in the Share menu of Photos for Mac: the same handoff as on
+/// iOS, opening the app with `NSWorkspace`. See docs/spikes/open-from-photos.md.
+final class ShareViewController: NSViewController {
+    private let message = NSTextField(wrappingLabelWithString: "Opening in LightEditor…")
+    private let spinner = NSProgressIndicator()
+    private lazy var closeButton = NSButton(title: "Close", target: self, action: #selector(close))
+
+    override func loadView() {
+        spinner.style = .spinning
+        spinner.controlSize = .small
+        spinner.startAnimation(nil)
+        message.alignment = .center
+        closeButton.isHidden = true
+        let stack = NSStackView(views: [spinner, message, closeButton])
+        stack.orientation = .vertical
+        stack.spacing = 12
+        stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 120))
+        container.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: container.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.widthAnchor.constraint(equalToConstant: 320),
+        ])
+        view = container
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        Task { await handOff() }
+    }
+
+    private func handOff() async {
+        guard let photo = await ShareHandoff.photo(from: extensionContext?.inputItems) else {
+            show(ShareHandoff.noDate)
+            return
+        }
+        if NSWorkspace.shared.open(PhotoHandoff(photo: photo).url) {
+            extensionContext?.completeRequest(returningItems: nil)
+        } else {
+            show(ShareHandoff.cantOpen)
+        }
+    }
+
+    private func show(_ text: String) {
+        spinner.stopAnimation(nil)
+        spinner.isHidden = true
+        message.stringValue = text
+        closeButton.isHidden = false
+    }
+
+    @objc private func close() {
+        extensionContext?.completeRequest(returningItems: nil)
+    }
+}
+#endif

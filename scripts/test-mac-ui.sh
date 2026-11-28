@@ -8,6 +8,7 @@
 #   scripts/test-mac-ui.sh --no-perf       skip MacPerformanceTests (about 2 minutes)
 #   scripts/test-mac-ui.sh --record        accept this run's audit findings into MacUITests/audit-baseline.txt
 #   scripts/test-mac-ui.sh --no-build      reuse the last build
+#   scripts/test-mac-ui.sh --only MacOpenFromPhotosTests   one class (or Class/method)
 #
 # The tests take over the mouse and keyboard while they run. macOS asks for an
 # administrator's password to allow UI automation unless it's been allowed once:
@@ -17,13 +18,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$PWD
 
-perf=1 record=0 build=1
+perf=1 record=0 build=1 only=""
 while (( $# )); do
     case $1 in
         --no-perf) perf=0 ;;
         --record) record=1 ;;
         --no-build) build=0 ;;
-        -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+        --only) shift; only=$1 ;;
+        -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
         *) echo "Unknown option $1" >&2; exit 2 ;;
     esac
     shift
@@ -82,6 +84,7 @@ echo "  both checkers report"
 
 filter=()
 (( perf )) || filter=(-skip-testing:LightEditorMacUITests/MacPerformanceTests)
+[[ -n $only ]] && filter=(-only-testing:"LightEditorMacUITests/$only")
 since=$(date "+%Y-%m-%d %H:%M:%S")
 echo "Testing the Mac app (it takes over the mouse and keyboard)…"
 set +e

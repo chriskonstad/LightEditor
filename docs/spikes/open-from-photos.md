@@ -1,6 +1,6 @@
 # Spike: open a photo from Apple Photos in LightEditor
 
-Status: **built as a share extension that hands the photo to the app. Works in the iOS 27.0 simulator; not yet tried on a device.**
+Status: **built as a share extension that hands the photo to the app, on iOS and (2026-11-27) the Mac, plus Image › Edit With on the Mac. Works in the iOS 27.0 simulator and against a folder library on the Mac; not yet tried from Photos on a device or a real Mac library.**
 
 The goal: a photo selected in the Photos app opens in LightEditor's editor, without finding it again in LightEditor's library. Edits still save non-destructively through `PhotoKitLibrary` (`PHContentEditingOutput` plus our `PHAdjustmentData`), so the recipe stays the source of truth.
 
@@ -41,6 +41,12 @@ Edge cases:
 - **No capture time** (some screenshots and downloads, or a LightEditor edit saved before 1.0.5): the extension says it can't find the photo. Saving the edit again from LightEditor fixes the old edits.
 - **Limited library access:** if the photo isn't in the selection, a toast points to Settings.
 - **Another device's library** (remote editing): the app switches back to this device's library first, since Photos shared a local photo.
+
+## The Mac (2026-11-27)
+
+- **Share › Edit in LightEditor.** The same extension target builds for macOS (`supportedDestinations: [iOS, macOS]`), with an AppKit `ShareViewController` that does the same handoff and opens the link with `NSWorkspace.shared.open`, which extensions may use on the Mac. It's sandboxed (Mac extensions must be) and only reads the shared file. `pluginkit` lists it under `com.apple.share-services` once the app has run; Photos may need it switched on in System Settings › General › Login Items & Extensions › Sharing.
+- **Image › Edit With › LightEditor** (and Finder's Open With). Photos lists apps that open the photo's type, so the Mac app declares RAW, JPEG, HEIC, TIFF and PNG (`App/Resources/Info-macOS.plist`, role Editor, rank Alternate so it's never the default). A file handed over goes through the same matcher (`AppModel.openFile`), so the library photo opens and is edited the usual way, with our adjustment data; the handed-over copy isn't changed, so Photos sees no external edit to import. To verify on a real library: that Photos doesn't hold the photo in an external-edit state that conflicts with the PhotoKit save.
+- **Tests.** `MacOpenFromPhotosTests` hands the app a fixture file (as Edit With does) and a share link, and checks the matching photo opens, against the folder library, which implements `SharedPhotoLookup` the same way. No Photos library is involved.
 
 ## Risks
 

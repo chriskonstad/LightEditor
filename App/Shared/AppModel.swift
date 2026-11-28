@@ -204,8 +204,26 @@ final class AppModel {
     /// Handles `lighteditor://edit?…` from the share extension: finds the shared photo
     /// in this device's library and opens it in the editor.
     func open(_ url: URL) {
+        if url.isFileURL {
+            openFile(url)
+            return
+        }
         guard let handoff = PhotoHandoff(url: url) else { return }
         pendingHandoff = handoff
+        Task { await openPendingHandoff() }
+    }
+
+    /// A photo file handed to the app (Mac: Photos' Image › Edit With, or Finder's Open
+    /// With): like the share extension, it's matched to its library photo, which is
+    /// edited the usual way. The file itself is never changed.
+    func openFile(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let photo = SharedPhoto(imageAt: url), photo.searchRange != nil else {
+            showToast("This photo has no capture date, so LightEditor can't find it in your library")
+            return
+        }
+        pendingHandoff = PhotoHandoff(photo: photo)
         Task { await openPendingHandoff() }
     }
 

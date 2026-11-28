@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_lighteditor._tcp</string>
+	</array>
+	<!-- lighteditor://edit?… opens a photo in the editor (the share extension, PhotoHandoff). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lighteditor</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Mac only: photos it can be handed, so Photos lists it under Image › Edit With and
+	     Finder under Open With. Alternate rank: never the default app for these files.
+	     A file handed over is matched to its library photo (AppModel.open), which is
+	     edited the usual way; the file itself isn't changed. -->
+	<!-- A handed-over photo is only read, where it is. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Photo</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.camera-raw-image</string>
+				<string>public.jpeg</string>
+				<string>public.heic</string>
+				<string>public.tiff</string>
+				<string>public.png</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

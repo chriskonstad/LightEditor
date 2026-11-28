@@ -211,3 +211,8 @@ The side-by-side workspace (filmstrip, photo with view bar, inspector) needs abo
 - **Allowed devices** in the Devices sheet lists trusted devices with Forget. Trusted devices reconnect without the code.
 - On the editing device, Import is disabled. Job tray entries for work done on the other device say so, e.g. "Saving edit to iPhone".
 
+## Opening from Photos
+
+- **iPhone and iPad:** Share › Edit in LightEditor opens the photo's original in the editor.
+- **Mac:** Share › Edit in LightEditor, or Image › Edit With › LightEditor (also Finder's Open With), opens the library photo in the editor. The edit saves to the library photo as usual; the file Photos hands over isn't changed.
+- A photo with no capture date can't be matched: a toast (Mac) or the extension's card says to open it from LightEditor instead.

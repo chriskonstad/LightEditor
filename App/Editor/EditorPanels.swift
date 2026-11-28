@@ -338,7 +338,7 @@ struct PresetsPanel: View {
                     )
                     .accessibilityLabel("Preset amount")
                     Text(preset.params.keys.contains(.lut)
-                         ? "Applies its LUT; the strength is under Color › Film LUT."
+                         ? "Applies its LUT; the strength is under Effects › Film LUT."
                          : "Sets the sliders in Light, Color and Effects. Fine-tune them there; this amount goes away once you do.")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)

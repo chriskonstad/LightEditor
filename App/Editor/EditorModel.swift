@@ -283,9 +283,7 @@ final class EditorModel: Identifiable {
     }
 
     private static func embeddedPreview(_ url: URL) async -> SendableImage? {
-        await Task.detached(priority: .userInitiated) {
-            EmbeddedPreview.load(url, maxPixelSize: 1600).map(SendableImage.init)
-        }.value
+        await EmbeddedPreview.loadInBackground(url, maxPixelSize: 1600).map(SendableImage.init)
     }
 
     private static func appName(_ identifier: String) -> String {

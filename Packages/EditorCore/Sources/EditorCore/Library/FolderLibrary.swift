@@ -58,7 +58,7 @@ public final class FolderLibrary: PhotoLibrary, @unchecked Sendable {
     public func thumbnail(for asset: PhotoAsset, pixelSize: CGSize) async -> CGImage? {
         let rendered = renderedURL(asset.id)
         let source = FileManager.default.fileExists(atPath: rendered.path) ? rendered : url(for: asset)
-        return EmbeddedPreview.load(source, maxPixelSize: Int(max(pixelSize.width, pixelSize.height)))
+        return await EmbeddedPreview.loadInBackground(source, maxPixelSize: Int(max(pixelSize.width, pixelSize.height)))
     }
 
     public func quickPreview(for asset: PhotoAsset, maxPixelSize: Int) async -> CGImage? {

@@ -372,6 +372,9 @@ struct PasteSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var groups = PasteGroup.defaultSelection
     @State private var mode: PasteMode = .set
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -432,7 +435,17 @@ struct PasteSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(detents)
+    }
+
+    /// Full height on iPhone: at half height an iPhone SE laid the sheet out taller than
+    /// it showed, hiding the title, Cancel and Paste (found by JourneyTests).
+    private var detents: Set<PresentationDetent> {
+        #if os(iOS)
+        sizeClass == .compact ? [.large] : [.medium, .large]
+        #else
+        [.medium, .large]
+        #endif
     }
 
     private var rows: [(title: String, subtitle: String?, groups: Set<PasteGroup>)] {

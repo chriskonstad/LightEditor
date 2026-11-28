@@ -107,9 +107,9 @@ for device in $devices; do destinations+=(-destination "id=${udids[$device]}"); 
 # FeatureTourTests (scripts/ui-tour.sh) and AppStoreScreenshotTests
 # (scripts/app-store-screenshots.sh) make pictures; they aren't audits.
 filter=(-skip-testing:LightEditorUITests/FeatureTourTests -skip-testing:LightEditorUITests/AppStoreScreenshotTests)
-# --only takes a ScreenAuditTests method, or Class/method for another class.
+# --only takes a ScreenAuditTests method, a whole class (JourneyTests), or Class/method.
 if [[ -n $only ]]; then
-    [[ $only == */* ]] && filter=(-only-testing:"LightEditorUITests/$only") || filter=(-only-testing:"LightEditorUITests/ScreenAuditTests/$only")
+    [[ $only == */* || $only == *Tests ]] && filter=(-only-testing:"LightEditorUITests/$only") || filter=(-only-testing:"LightEditorUITests/ScreenAuditTests/$only")
 fi
 
 bundle=$results/$(date +%Y%m%d-%H%M%S).xcresult

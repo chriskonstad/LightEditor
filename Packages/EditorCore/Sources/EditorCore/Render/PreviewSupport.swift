@@ -13,6 +13,19 @@ public enum EmbeddedPreview {
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
+
+    /// `load`, off the caller's thread at default priority. ImageIO hands part of the
+    /// work to its own default-priority threads and waits for them, so calling it from
+    /// a user-initiated task (a SwiftUI `.task`) was a priority inversion the Thread
+    /// Performance Checker flags as a hang risk.
+    public static func loadInBackground(_ url: URL, maxPixelSize: Int = 2560) async -> CGImage? {
+        await Task.detached(priority: .medium) { UncheckedImageBox(load(url, maxPixelSize: maxPixelSize)) }.value.image
+    }
+
+    private struct UncheckedImageBox: @unchecked Sendable {
+        let image: CGImage?
+        init(_ image: CGImage?) { self.image = image }
+    }
 }
 
 /// A luminance + RGB histogram of the current render, for the editor overlay.

@@ -30,6 +30,7 @@ targets:
       Release: Config/Base.xcconfig
     sources:
       - path: App
+        excludes: ["Resources/MacAppInfo.plist"]
       # LaMa for AI object removal, built by scripts/fetch-models.sh (not checked in).
       - path: Models/LaMa.mlpackage
         optional: true
@@ -64,7 +65,9 @@ targets:
         # Merged with the generated keys: the Bonjour service list, which needs an array.
         INFOPLIST_FILE: App/Resources/Info.plist
         # The Mac's adds the photo types it can be handed (Photos' Edit With, Finder's Open With).
-        "INFOPLIST_FILE[sdk=macosx*]": App/Resources/Info-macOS.plist
+        # Not named Info-macOS.plist: CoreFoundation reads a bundled Info-<platform>.plist
+        # as that platform's Info.plist, and broke the iOS bundle for the test tools.
+        "INFOPLIST_FILE[sdk=macosx*]": App/Resources/MacAppInfo.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -95,7 +98,7 @@ targets:
         # Only standard encryption from Apple's frameworks (HTTPS, and CryptoKit for the
         # device-to-device link), which is exempt, so TestFlight needs no export questions.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
-        # iOS only: the Mac declares document types (Info-macOS.plist), where NO isn't allowed.
+        # iOS only: the Mac declares document types (MacAppInfo.plist), where NO isn't allowed.
         "INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace[sdk=iphone*]": NO
         "INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace[sdk=macosx*]": YES
       configs:

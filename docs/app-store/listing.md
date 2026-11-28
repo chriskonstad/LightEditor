@@ -259,7 +259,7 @@ The first bullet is iPhone and iPad only, so it says so: the Mac version uses th
 
 ## What's New (1.0.6)
 
-Everything here works on the Mac too, so the notes are shared as they are.
+Shared by iOS and the Mac, so the Mac-only bullets say so.
 
 ```
 • Borders and watermarks for exports and shares: a border in any color, padding to shapes like 4:5, and a text or logo watermark (PNG, PDF or SVG) you can drag, resize and turn right on the photo. The photo saved in your library stays clean. "Last used" puts back the border or watermark from your last photo.
@@ -270,5 +270,8 @@ Everything here works on the Mac too, so the notes are shared as they are.
 • Color wheels open large, with exact Hue, Saturation and Luminance sliders.
 • Choose the background behind the photo: dark, black, gray or white.
 • The mask overlay hides while you adjust, so you can see the effect.
+• On the Mac, open a photo straight from Photos: Share › Edit in LightEditor, or Image › Edit With › LightEditor.
 • Fixed: vignette and grain could show outside the photo.
+• Fixed: on smaller iPhones the paste sheet could hide its Paste button.
+• Fixed: on the Mac, sliders now work with VoiceOver, and the photo's name in the toolbar is no longer cut off.
 ```
